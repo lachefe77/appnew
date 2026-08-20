@@ -1,0 +1,13 @@
+{
+  "name": "delay-xit-audit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Audit and clean-room rebuild workspace for the archived Chrome extension.",
+  "scripts": {
+    "format:legacy": "prettier --write \"audit/formatted/**/*.{js,html,css,json}\"",
+    "check:legacy": "prettier --check \"audit/formatted/**/*.{js,html,css,json}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6"
+  }
+}

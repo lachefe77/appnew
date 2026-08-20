@@ -1,0 +1,261 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Delay XIT</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="float-watermark" aria-hidden="true">Delay <b>XIT</b></div>
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo-wrap">
+        <span class="logo-pulse"></span>
+        <span class="logo-pulse d2"></span>
+        <img src="../../assets/icons/icon.png" alt="Delay XIT" class="logo" />
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">Delay <b>XIT</b></span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="detach" class="icon-btn" title="Abrir em janela fixa">⧉</button>
+      <label class="switch" title="Ativar aplicativo">
+        <input type="checkbox" id="active_app" />
+        <span class="slider"></span>
+      </label>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="panel">Dashboard</button>
+    <button class="tab" data-tab="settings">Config</button>
+    <button class="tab" data-tab="proxy">Proxy</button>
+    <button class="tab" data-tab="license">Key</button>
+  </nav>
+
+  <!-- PAINEL -->
+  <section class="tab-page active" id="tab-panel">
+   
+  
+    
+    <div class="stat-row">
+      <div class="stat">
+        <span class="stat-label">Saldo</span>
+        <span class="stat-value" id="stat-balance">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Vai apostar</span>
+        <span class="stat-value accent" id="stat-stake">—</span>
+      </div>
+    </div>
+
+    <div class="warmup-card">
+      <div class="warmup-head">
+        <span>Armar Bet</span>
+        <span class="badge-group">
+          <span class="badge" id="max-badge" hidden></span>
+          <span class="badge" id="calib-badge" hidden></span>
+          <span class="badge" id="warmup-badge">Stopped</span>
+        </span>
+      </div>
+      <div class="rings">
+        <div class="ring-wrap">
+          <div class="timer-ring" id="warm-ring"><span class="timer-num" id="warm-num">—</span></div>
+          <div class="ring-label">Carregamento</div>
+        </div>
+        <div class="ring-wrap">
+          <div class="timer-ring" id="win-ring"><span class="timer-num" id="win-num">—</span></div>
+          <div class="ring-label" id="win-label">Tempo de Aposta</div>
+        </div>
+      </div>
+      <div class="warmup-caption" id="warmup-caption"></div>
+      <div class="hold-field">
+        <div class="hold-text">
+          <span class="hold-title">Travar Cupom</span>
+          <span class="hold-sub"></span>
+        </div>
+        <label class="switch small">
+          <input type="checkbox" id="hold_window_enabled" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="hold-note" id="hold-note" hidden></div>
+      <div class="warmup-actions">
+        <button class="btn ghost" id="btn-warmup">Armar Bet</button>
+        <button class="btn primary" id="btn-fire" disabled>Apostar</button>
+      </div>
+    </div>
+
+    <div class="live-monitor" id="live-monitor" hidden>
+      <div class="lm-head">
+        <span id="lm-mode">Resumo</span>
+        <span class="lm-dot" id="lm-dot"></span>
+      </div>
+      <div class="lm-grid">
+        <div class="lm-cell">
+          <span class="lm-label" id="lm-odd-label">Odd atual</span>
+          <span class="lm-odd" id="lm-odd">—</span>
+        </div>
+        <div class="lm-cell">
+          <span class="lm-label" id="lm-timer-label">Tempo de Uso</span>
+          <span class="lm-timer" id="lm-timer">0.00s</span>
+        </div>
+      </div>
+      <div class="lm-status" id="lm-status">observando…</div>
+    </div>
+
+    <div class="coupon-box">
+      <div class="coupon-title">
+        <span>Cupom Selecionado</span>
+        <div class="coupon-title-right">
+          <span class="coupon-done" id="coupon-done" hidden>✓ apostado</span>
+          <button class="link-btn" id="btn-clear-coupon" title="Esvazia o bilhete (resolve seleção velha presa)">Limpar</button>
+        </div>
+      </div>
+      <div id="coupon-list" class="coupon-list"><div class="empty">Nenhum cupom selecionado no site.</div></div>
+    </div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section class="tab-page" id="tab-settings">
+    <div class="field">
+      <label>Valor da aposta</label>
+      <select id="stake_mode">
+        <option value="full">Saldo total</option>
+        <option value="fixed">Valor fixo</option>
+        <option value="percent">% do saldo</option>
+      </select>
+    </div>
+    <div class="field inline" id="field-fixed" hidden>
+      <label>Valor fixo (R$)</label>
+      <input type="number" id="stake_fixed" min="0" step="0.01" />
+    </div>
+    <div class="field inline" id="field-percent" hidden>
+      <label>Percentual (%)</label>
+      <input type="number" id="stake_percent" min="1" max="100" step="1" />
+    </div>
+
+    <div class="field">
+      <label>Aceitar Alteração de Odd</label>
+      <select id="accept_odds">
+        <option value="any">Sim aceitar qualquer odd (garante entrar)</option>
+        <option value="higher_or_equal">Só aceitar igual ou melhor</option>
+        <option value="exact">Só aceitar a odd exata</option>
+      </select>
+    </div>
+    <p class="hint" id="accept_odds_hint"></p>
+
+    <div class="field-grid">
+      <div class="field">
+        <label>Odd mínima</label>
+        <input type="number" id="min_odds" min="1" step="0.01" />
+      </div>
+      <div class="field">
+        <label>Odd máxima</label>
+        <input type="number" id="max_odds" min="1" step="0.01" />
+      </div>
+    </div>
+
+    <div class="field switch-field">
+      <label>Sound app</label>
+      <label class="switch small"><input type="checkbox" id="sound_enabled" /><span class="slider"></span></label>
+    </div>
+
+    <!-- CALIBRAR jogo -->
+    <div class="diag-card">
+      <div class="diag-head">Calcular o tempo de aposta (Travar Cupom)</div>
+      <p class="diag-desc">
+        Calcula o tempo de aposta <b>entre a casa e o usuario</b> clique aqui antes de <b>Iniciar</b>
+      </p>
+      <button class="btn primary" id="btn-calibrate">Calcular (mínimo da casa)</button>
+      <div class="diag-status" id="calib-status" hidden></div>
+      <div class="diag-result" id="calib-result" hidden></div>
+
+      <!-- diagnóstico avançado (opcional): teste de aborto -->
+      <details class="diag-adv">
+        <summary>Analise avançada</summary>
+        <p class="diag-desc">Teste de aborto: confirma que abortar cancela a aposta (o gateway Altenar é o mesmo nas casas, então rodar uma vez basta).</p>
+        <button class="btn" id="btn-diag-abort">Rodar teste de aborto (mínimo da casa)</button>
+        <div class="diag-status" id="diag-status" hidden></div>
+        <div class="diag-result" id="diag-result" hidden></div>
+      </details>
+    </div>
+
+  </section>
+
+  <!-- PROXY -->
+  <section class="tab-page" id="tab-proxy">
+    <div class="field switch-field">
+      <label>Usar proxy</label>
+      <label class="switch small"><input type="checkbox" id="proxy_enabled" /><span class="slider"></span></label>
+    </div>
+    <div class="field">
+      <label>Protocolo</label>
+      <select id="proxy_protocol">
+        <option value="http">HTTP(S)</option>
+        <option value="socks">SOCKS5</option>
+      </select>
+    </div>
+    <div class="field-grid">
+      <div class="field"><label>Endereço</label><input type="text" id="proxy_ip" placeholder="1.2.3.4" /></div>
+      <div class="field"><label>Porta</label><input type="text" id="proxy_port" placeholder="8080" /></div>
+    </div>
+    <div class="field-grid">
+      <div class="field"><label>Usuário</label><input type="text" id="proxy_user" /></div>
+      <div class="field"><label>Senha</label><input type="password" id="proxy_pwd" /></div>
+    </div>
+    <button class="btn secondary" id="btn-proxy-test">Testar conexão</button>
+    <p class="hint" id="proxy_status">A sessão da bet (login, odds e aposta) sai pelo IP do proxy. Teste antes de operar.</p>
+    <p class="hint">Se o proxy pedir usuário/senha, o Chrome pergunta uma vez e guarda. Para zero prompt, use um proxy com IP liberado (whitelist).</p>
+  </section>
+
+  <!-- LICENÇA -->
+  <section class="tab-page" id="tab-license">
+    <div class="field">
+      <label>Chave Key</label>
+      <div class="license-row">
+        <input type="text" id="license_key" placeholder="cole sua chave" />
+        <button class="btn primary" id="btn-license">Registrar!</button>
+      </div>
+    </div>
+    <div class="license-status">
+      <div class="ls-row"><span>Status</span><b id="ls-status">—</b></div>
+      <div class="ls-row"><span>Validade</span><b id="ls-end">—</b></div>
+      <div class="ls-row"><span>Versão</span><b id="ls-version">1.0.0</b></div>
+    </div>
+
+    <div class="houses-block">
+      <div class="houses-head">Suas casas</div>
+      <div class="houses-list" id="houses-list"></div>
+      <p class="houses-hint">Ferramenta apenas para estudos e testes <a href="" target="_blank" rel="noopener noreferrer"></a>.</p>
+    </div>
+    
+
+  </section>
+
+
+
+  <!-- Modal de confirmação (substitui o confirm() nativo) -->
+  <div class="modal-overlay" id="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-actions">
+        <button class="btn ghost" id="modal-cancel">Cancelar</button>
+        <button class="btn primary" id="modal-ok">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="houses-hint">   Bypassed & Developed by Delaymoney <a href="" target="_blank" rel="noopener noreferrer"></a>.</p>
+
+  <script src="../../js-clean/_local-bypass.js"></script>
+  <script src="../../js-clean/popup-core.js"></script>
+  <script type="module" src="../../js-clean/popup.js"></script>
+  <div data-et-build="V0N8YzBiMmQ1MzlkMWIwfDAuMS4w" style="display:none"></div>
+
+</body>
+</html>

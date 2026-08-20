@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Delay Xit Rebuild",
+  "version": "0.1.0",
+  "description": "Local-only clean-room rebuild baseline.",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": ["storage"]
+}

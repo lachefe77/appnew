@@ -1,0 +1,50 @@
+============================================================
+  PROFIT BOOST — Guia de Instalação
+============================================================
+
+Olá! Este é o seu PROFIT BOOST. Siga os passos abaixo — leva 2 minutos.
+
+------------------------------------------------------------
+1) INSTALAR NO CHROME / EDGE
+------------------------------------------------------------
+1. Extraia TODO o conteúdo deste ZIP em uma pasta (ex.: Documentos\PROFIT-BOOST).
+2. Abra o Google Chrome (ou Microsoft Edge).
+3. Na barra de endereços digite:  chrome://extensions  (ou edge://extensions)
+   e tecle Enter.
+4. No canto superior direito, ative o "Modo do desenvolvedor".
+5. Clique em "Carregar sem compactação".
+6. Selecione a pasta extraída (a que contém o arquivo manifest.json).
+7. Pronto! O ícone do PROFIT Boost aparece na barra do navegador.
+
+>> Não apague essa pasta depois — a extensão roda a partir dela.
+
+------------------------------------------------------------
+2) ATIVAR SUA LICENÇA
+------------------------------------------------------------
+1. Entre na casa de apostas e faça login na sua conta.
+2. Clique no ícone do PROFIT Boost → aba "Licença".
+3. Cole a sua CHAVE (a que você recebeu na compra) e clique "Validar".
+   → Deve aparecer "válida".
+4. Ligue o app no botão verde do topo.
+
+ATENÇÃO: sua chave fica vinculada a ESTE computador no primeiro uso.
+Para trocar de máquina, fale com o suporte.
+
+------------------------------------------------------------
+3) COMO USAR
+------------------------------------------------------------
+- Aba "Ajustes": defina o valor da aposta, aceitação de odds e odd mín/máx.
+- No site, selecione sua aposta normalmente.
+- Aperte "Apostar" no painel ou use o atalho Ctrl+B.
+
+------------------------------------------------------------
+OBSERVAÇÕES
+------------------------------------------------------------
+- O Chrome pode avisar sobre extensões em modo desenvolvedor — é normal.
+- Este pacote contém código ofuscado e protegido. É proibido copiar,
+  redistribuir ou fazer engenharia reversa.
+
+Precisa de ajuda? Fale com o suporte.
+
+PROFIT BOOST — Automatize. Analise. Vença.
+Versão 0.2.0
