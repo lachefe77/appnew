@@ -10,14 +10,20 @@
     <main>
       <h1>Delay Xit Rebuild</h1>
       <p id="status" role="status">Base local pronta para configuração.</p>
-      <label for="note">Nota de requisito</label>
-      <textarea
-        id="note"
-        rows="5"
-        placeholder="Descreva uma funcionalidade legítima que deseja construir."
-      ></textarea>
-      <button id="save" type="button">Salvar localmente</button>
+      <form id="requirement-form">
+        <label for="requirement">Próximo requisito</label>
+        <textarea
+          id="requirement"
+          rows="4"
+          placeholder="Descreva uma funcionalidade legítima que deseja construir."
+        ></textarea>
+        <button type="submit">Salvar requisito</button>
+      </form>
+      <section aria-labelledby="requirements-title">
+        <h2 id="requirements-title">Backlog local</h2>
+        <ul id="requirements"></ul>
+      </section>
     </main>
-    <script src="popup.js"></script>
+    <script type="module" src="src/popup.js"></script>
   </body>
 </html>
