@@ -1,0 +1,54 @@
+============================================================
+  DELAY XIT — Guia de Instalação
+============================================================
+
+Olá! Este é o seu DELAY XIT. Siga os passos abaixo — leva 2 minutos.
+
+------------------------------------------------------------
+1) INSTALAR NO CHROME / EDGE / BRAVE / OPERA
+------------------------------------------------------------
+1. Extraia TODO o conteúdo deste ZIP em uma pasta (ex.: Documentos\delay-xit).
+2. Abra o Google Chrome (ou Microsoft Edge / Brave / Opera).
+3. Na barra de endereços digite:  chrome://extensions  (ou edge://extensions)
+   e tecle Enter.
+4. No canto superior direito, ative o "Modo do desenvolvedor".
+5. Clique em "Carregar sem compactação" (ou "Load unpacked").
+6. Selecione a pasta onde está o arquivo manifest.json.
+7. Pronto! O ícone do Delay XIT aparecerá na barra de ferramentas de extensões do navegador.
+
+>> Não apague nem mova essa pasta depois — a extensão roda diretamente a partir dela.
+
+------------------------------------------------------------
+2) ATIVAR SUA LICENÇA
+------------------------------------------------------------
+1. Entre na casa de apostas compatível e faça login na sua conta.
+2. Clique no ícone do Delay XIT → aba "Key" (Licença).
+3. Insira sua CHAVE de licença (ou utilize o modo local automático já configurado).
+4. Clique em "Registrar!" → O status exibirá "válida".
+5. Ligue o app na chave liga/desliga no topo do painel.
+
+------------------------------------------------------------
+3) COMO USAR
+------------------------------------------------------------
+- Aba "Config": defina o valor da aposta (saldo total, fixo ou percentual),
+  aceitação de alteração de odds e faixas de odd mínima / máxima.
+- Clique em "Calcular (mínimo da casa)" para calibrar a latência/tempo da casa.
+- No site da casa de aposta, selecione o mercado/bilhete normalmente.
+- Use o botão "Armar Bet" / "Apostar" no painel ou utilize o atalho de teclado:
+  * Disparar Aposta: Ctrl+B (Mac: Command+B)
+  * Ligar/Desligar Aquecimento: Ctrl+Shift+Y (Mac: Command+Shift+Y)
+
+------------------------------------------------------------
+4) ABA PROXY (OPCIONAL)
+------------------------------------------------------------
+- Configure IP, Porta e credenciais HTTP/SOCKS5 para rotear a conexão caso necessário.
+- Teste a conexão antes de iniciar as operações.
+
+------------------------------------------------------------
+OBSERVAÇÕES
+------------------------------------------------------------
+- O Chrome pode exibir aviso de extensões em modo desenvolvedor ao iniciar — isso é o comportamento padrão do navegador.
+
+DELAY XIT — Automatize. Analise. Vença.
+Versão 1.0.0
+

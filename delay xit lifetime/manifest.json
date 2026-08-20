@@ -1,0 +1,131 @@
+{
+  "manifest_version": 3,
+  "name": "Delay Xit",
+  "version": "1.0.0",
+  "description": "Delay Xit - Automação e análise profissional para apostas esportivas",
+  "minimum_chrome_version": "116",
+  "icons": {
+    "16": "assets/icons/icon.png",
+    "32": "assets/icons/icon.png",
+    "48": "assets/icons/icon.png",
+    "128": "assets/icons/icon.png"
+  },
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_icon": "assets/icons/icon.png"
+  },
+  "background": {
+    "service_worker": "js-clean/service-worker.js",
+    "type": "module"
+  },
+  "permissions": [
+    "storage",
+    "notifications",
+    "tabs",
+    "alarms",
+    "scripting",
+    "offscreen",
+    "declarativeNetRequestWithHostAccess",
+    "proxy"
+  ],
+  "host_permissions": [
+    "https://estrelabet.bet.br/*",
+    "https://*.estrelabet.bet.br/*",
+    "https://*.estrelabet.com/*",
+    "https://pagol.bet.br/*",
+    "https://*.pagol.bet.br/*",
+    "https://vupi.bet.br/*",
+    "https://*.vupi.bet.br/*",
+    "https://br4.bet.br/*",
+    "https://*.br4.bet.br/*",
+    "https://esportiva.bet.br/*",
+    "https://*.esportiva.bet.br/*",
+    "https://*.biahosted.com/*",
+    "https://*.biahosted.net/*",
+    "https://api.ipify.org/*",
+    "https://profit-boost-api.ringed-authorization.workers.dev/*",
+    "https://*.workers.dev/*",
+    "https://179.197.231.55/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://estrelabet.bet.br/*",
+        "https://*.estrelabet.bet.br/*",
+        "https://*.estrelabet.com/*",
+        "https://pagol.bet.br/*",
+        "https://*.pagol.bet.br/*",
+        "https://vupi.bet.br/*",
+        "https://*.vupi.bet.br/*",
+        "https://br4.bet.br/*",
+        "https://*.br4.bet.br/*",
+        "https://esportiva.bet.br/*",
+        "https://*.esportiva.bet.br/*"
+      ],
+      "js": ["js-clean/page-hook.js"],
+      "run_at": "document_start",
+      "all_frames": false,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://estrelabet.bet.br/*",
+        "https://*.estrelabet.bet.br/*",
+        "https://*.estrelabet.com/*",
+        "https://pagol.bet.br/*",
+        "https://*.pagol.bet.br/*",
+        "https://vupi.bet.br/*",
+        "https://*.vupi.bet.br/*",
+        "https://br4.bet.br/*",
+        "https://*.br4.bet.br/*",
+        "https://esportiva.bet.br/*",
+        "https://*.esportiva.bet.br/*"
+      ],
+      "js": ["js-clean/collector.js"],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "world": "ISOLATED"
+    }
+  ],
+  "commands": {
+    "do_bet": {
+      "suggested_key": {
+        "default": "Ctrl+B",
+        "mac": "Command+B"
+      },
+      "description": "Disparar a aposta preparada"
+    },
+    "toggle_warmup": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      },
+      "description": "Iniciar / parar o aquecimento"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/audio/*",
+        "assets/icons/*"
+      ],
+      "matches": [
+        "https://estrelabet.bet.br/*",
+        "https://*.estrelabet.bet.br/*",
+        "https://*.estrelabet.com/*",
+        "https://pagol.bet.br/*",
+        "https://*.pagol.bet.br/*",
+        "https://vupi.bet.br/*",
+        "https://*.vupi.bet.br/*",
+        "https://br4.bet.br/*",
+        "https://*.br4.bet.br/*",
+        "https://esportiva.bet.br/*",
+        "https://*.esportiva.bet.br/*",
+        "https://*.biahosted.com/*",
+        "https://*.biahosted.net/*"
+      ],
+      "use_dynamic_url": true
+    }
+  ],
+  "version_name": "1.0.0 · Delay Xit"
+}
