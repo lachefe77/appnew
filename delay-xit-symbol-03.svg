@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640" fill="none">
+  <title>Delay Xit Axis symbol</title>
+  <desc>Original, app-ready symbol for Delay Xit on a transparent background.</desc>
+  <!-- A single, ownable silhouette: a framed X cut by an advancing axis. -->
+  <path d="M150 72H296L245 188L390 72H490L319 274L490 568H344L395 452L250 568H150L321 366L150 72Z" fill="#172033"/>
+  <path d="M296 72H490L319 274L245 188L296 72Z" fill="#4F6CFF"/>
+  <path d="M150 568H344L395 452L321 366L150 568Z" fill="#4F6CFF"/>
+</svg>
