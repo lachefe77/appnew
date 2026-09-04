@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="520" viewBox="0 0 1600 520" fill="none">
+  <title>Delay Xit  Ribbon Mark</title>
+  <desc>Original Delay Xit logo with a split-ribbon symbol and transparent background.</desc>
+  <!-- Transparent-background lockup. The mark is deliberately simple for icon-scale use. -->
+  <g transform="translate(76 78)">
+    <path d="M35 0H139L238 104L337 0H441L290 151L441 364H337L238 260L139 364H35L186 182L35 0Z" fill="#182238"/>
+    <path d="M35 0H139L238 104L186 182L35 0ZM441 364H337L238 260L290 151L441 364Z" fill="#4F6CFF"/>
+    <path d="M186 182L238 104L290 151L238 260L186 182Z" fill="#FFFFFF"/>
+  </g>
+  <g fill="#182238">
+    <text x="590" y="298" font-family="Arial, Helvetica, sans-serif" font-size="154" font-weight="700" letter-spacing="-7">Delay</text>
+    <text x="1007" y="298" fill="#4F6CFF" font-family="Arial, Helvetica, sans-serif" font-size="154" font-weight="700" letter-spacing="-7">Xit</text>
+  </g>
+</svg>
