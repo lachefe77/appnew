@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640" fill="none">
+  <title>Delay Xit Pulse symbol</title>
+  <desc>Original app-ready Delay Xit symbol on a transparent background.</desc>
+  <!-- The open form is deliberately asymmetric: an ownable signal that resolves into an X. -->
+  <path d="M320 52C176.4 52 60 168.4 60 312C60 455.6 176.4 572 320 572C408.5 572 486.7 527.8 533.6 460.2L449.8 402.1C424.3 438.9 375 463 320 463C236.6 463 169 395.4 169 312C169 228.6 236.6 161 320 161C375.5 161 424.4 185.4 449.8 222.4L533.6 164.3C486.7 96.4 408.5 52 320 52Z" fill="#172033"/>
+  <path d="M480.8 104L549.8 173L380 343L549.8 513L480.8 582L242 343L480.8 104Z" fill="#4F6CFF"/>
+  <path d="M160 257H273L359 343L273 429H160L246 343L160 257Z" fill="#172033"/>
+</svg>
