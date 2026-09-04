@@ -1,0 +1,4 @@
+{
+  "name": "Delay Xit — Chrome MV3 extension",
+  "install": "bash ./.cursor/install.sh"
+}
