@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Sorte">
+  <title>Sorte symbol</title>
+  <defs>
+    <linearGradient id="violet" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#6d28d9"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fcd34d"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="frame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a78bfa"/>
+      <stop offset="0.55" stop-color="#6d28d9"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="word" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f4f4f7"/>
+      <stop offset="0.82" stop-color="#f4f4f7"/>
+      <stop offset="1" stop-color="#fcd34d"/>
+    </linearGradient>
+    <g id="spade">
+      <path d="M50 6C50 6 13 37 13 60c0 13 10 23 23 23 6 0 12-3 16-8-2 14-8 24-18 30h32c-10-6-16-16-18-30 4 5 10 8 16 8 13 0 23-10 23-23C87 37 50 6 50 6z"/>
+    </g>
+    <g id="heart">
+      <path d="M50 94S6 62 6 35C6 19 18 8 31 8c9 0 17 5 19 12 2-7 10-12 19-12 13 0 25 11 25 27 0 27-44 59-44 59z"/>
+    </g>
+    <g id="club">
+      <circle cx="50" cy="24" r="21"/>
+      <circle cx="26" cy="55" r="21"/>
+      <circle cx="74" cy="55" r="21"/>
+      <path d="M42 60c2 16-3 28-13 34h42c-10-6-15-18-13-34z"/>
+    </g>
+    <g id="diamond">
+      <path d="M50 5Q63 33 93 50Q63 67 50 95Q37 67 7 50Q37 33 50 5z"/>
+    </g>
+    <g id="spark">
+      <path d="M50 0Q55 45 100 50Q55 55 50 100Q45 55 0 50Q45 45 50 0z"/>
+    </g>
+  </defs>
+  <g fill="url(#violet)">
+    <use href="#spade" transform="translate(124.00 124.00) scale(1.2500)"/>
+    <use href="#heart" transform="translate(263.00 124.00) scale(1.2500)"/>
+    <use href="#club" transform="translate(124.00 263.00) scale(1.2500)"/>
+  </g>
+  <g fill="url(#gold)">
+    <use href="#diamond" transform="translate(263.00 263.00) scale(1.2500)"/>
+    <use href="#spark" transform="translate(356.00 92.00) scale(0.5600)"/>
+  </g>
+</svg>
