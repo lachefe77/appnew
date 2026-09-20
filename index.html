@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Identidade Visual & Logos - SORTE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;600;800&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0B0D14;
+      --bg-card: #141824;
+      --accent-gold: #D4AF37;
+      --accent-green: #00FFA3;
+      --text-main: #FFFFFF;
+      --text-muted: #8E9AB0;
+      --border-color: #242B3D;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      padding: 40px 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: rgba(212, 175, 55, 0.15);
+      border: 1px solid var(--accent-gold);
+      color: var(--accent-gold);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+    }
+
+    h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 42px;
+      letter-spacing: 4px;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #FFE79A 0%, #D4AF37 50%, #9A7B1C 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 18px;
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 30px;
+      margin-bottom: 50px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      overflow: hidden;
+      transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      border-color: var(--accent-gold);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-preview {
+      width: 100%;
+      height: 340px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: radial-gradient(circle at center, #1C2333 0%, #0E111A 100%);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .card-preview img, .card-preview svg {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+    }
+
+    .card-body {
+      padding: 24px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .card-title {
+      font-family: 'Cinzel', serif;
+      font-size: 22px;
+      color: #FFFFFF;
+      margin-bottom: 8px;
+    }
+
+    .card-desc {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .features-list {
+      list-style: none;
+      margin-bottom: 20px;
+    }
+
+    .features-list li {
+      font-size: 13px;
+      color: #D1D5DB;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .features-list li::before {
+      content: "✦";
+      color: var(--accent-gold);
+    }
+
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #FFE79A 0%, #D4AF37 100%);
+      color: #0E1013;
+      font-weight: 700;
+      text-decoration: none;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: opacity 0.2s;
+    }
+
+    .btn-download:hover {
+      opacity: 0.9;
+    }
+
+    .color-palette-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 40px;
+    }
+
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .swatch {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .swatch-color {
+      height: 80px;
+      width: 100%;
+    }
+
+    .swatch-info {
+      padding: 10px;
+      background: #0E111A;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .swatch-info strong {
+      color: #FFF;
+      display: block;
+      font-size: 13px;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">Identidade Visual Profissional</div>
+      <h1>SORTE — SUÍTE DE LOGOMARCAS</h1>
+      <p class="subtitle">Coleção exclusiva de identidades visuais de alta definição combinando baralhos, naipes, trevos da sorte, coroas e elementos de cassino.</p>
+    </header>
+
+    <div class="grid">
+      <!-- Opção 1: Royal Gold Cards & Clover -->
+      <div class="card">
+        <div class="card-preview">
+          <img src="assets/logo-sorte-royal-gold.svg" alt="Logo SORTE Royal Gold">
+        </div>
+        <div class="card-body">
+          <div>
+            <h2 class="card-title">Opção 1: Royal Gold &amp; Trevo</h2>
+            <p class="card-desc">Fusão clássica luxuosa com leque de cartas (Ás de Espadas, Ouros e Copas), coroa dourada e o trevo de 4 folhas centralizado.</p>
+            <ul class="features-list">
+              <li>Estilo: Luxo / VIP / Cassino Tradicional</li>
+              <li>Símbolos: Baralho, Ás de Espadas, Trevo da Sorte, Coroa Real</li>
+              <li>Ideal para: Marcas de alto padrão, Clubes e Torneios</li>
+            </ul>
+          </div>
+          <a href="assets/logo-sorte-royal-gold.svg" download class="btn-download">Baixar Vetor SVG</a>
+        </div>
+      </div>
+
+      <!-- Opção 2: Modern App Icon -->
+      <div class="card">
+        <div class="card-preview">
+          <img src="assets/logo-sorte-modern-app.svg" alt="Logo SORTE Modern App">
+        </div>
+        <div class="card-body">
+          <div>
+            <h2 class="card-title">Opção 2: Modern Cyber &amp; App</h2>
+            <p class="card-desc">Design geométrico neon futurista com proporção de ícone de aplicativo (squircle), cartas sobrepostas e trevo de alta performance.</p>
+            <ul class="features-list">
+              <li>Estilo: Tech, Gamer, Apostas Online &amp; App Mobile</li>
+              <li>Símbolos: Escudo Hexagonal, Trevo Cyber Neon, Cartas estilizadas</li>
+              <li>Ideal para: Plataformas digitais, Apps iOS/Android, eSports</li>
+            </ul>
+          </div>
+          <a href="assets/logo-sorte-modern-app.svg" download class="btn-download">Baixar Vetor SVG</a>
+        </div>
+      </div>
+
+      <!-- Opção 3: VIP Emblem Casino -->
+      <div class="card">
+        <div class="card-preview">
+          <img src="assets/logo-sorte-vip-emblem.svg" alt="Logo SORTE VIP Emblem">
+        </div>
+        <div class="card-body">
+          <div>
+            <h2 class="card-title">Opção 3: VIP Casino Chip &amp; Laurel</h2>
+            <p class="card-desc">Emblema circular imitando ficha de cassino com ramos de louro, cartas reais (K, Q, Ás com trevo de 4 folhas) e estrelas de prestígio.</p>
+            <ul class="features-list">
+              <li>Estilo: Distintivo VIP / Brasão Premium</li>
+              <li>Símbolos: Ficha de Cassino, Ramos de Louro, Estrelas de Sorte, Cartas</li>
+              <li>Ideal para: Selos de garantia, marcas VIP, vestuário e produtos</li>
+            </ul>
+          </div>
+          <a href="assets/logo-sorte-vip-emblem.svg" download class="btn-download">Baixar Vetor SVG</a>
+        </div>
+      </div>
+
+      <!-- Opção 4: Minimal Suits & Luck -->
+      <div class="card">
+        <div class="card-preview" style="background: #FFFFFF;">
+          <img src="assets/logo-sorte-minimal-suits.svg" alt="Logo SORTE Minimal Suits">
+        </div>
+        <div class="card-body">
+          <div>
+            <h2 class="card-title" style="color: #FFFFFF;">Opção 4: Minimal Clean Naipes</h2>
+            <p class="card-desc">Versão minimalista e moderna dos 4 naipes de baralho (Espadas, Paus/Trevo, Copas, Ouros) formando um trevo geométrico.</p>
+            <ul class="features-list">
+              <li>Estilo: Minimalista / Corporativo / Clean</li>
+              <li>Símbolos: 4 Naipes do Baralho, Estrela da Sorte Central</li>
+              <li>Ideal para: Aplicações em fundo claro, papelaria, estampas e fintechs</li>
+            </ul>
+          </div>
+          <a href="assets/logo-sorte-minimal-suits.svg" download class="btn-download">Baixar Vetor SVG</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guia de Paleta de Cores & Tipografia -->
+    <div class="color-palette-section">
+      <h2 style="font-family: 'Cinzel', serif; font-size: 26px; color: var(--accent-gold); margin-bottom: 8px;">Guia de Cores &amp; Tipografia</h2>
+      <p style="color: var(--text-muted); font-size: 14px;">Paleta de cores recomendada para manter a coerência visual e sofisticação da marca SORTE.</p>
+
+      <div class="palette-grid">
+        <div class="swatch">
+          <div class="swatch-color" style="background: #D4AF37;"></div>
+          <div class="swatch-info">
+            <strong>Ouro Nobre</strong>
+            <span>#D4AF37</span>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #00FFA3;"></div>
+          <div class="swatch-info">
+            <strong>Verde Sorte / Neon</strong>
+            <span>#00FFA3</span>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #E63946;"></div>
+          <div class="swatch-info">
+            <strong>Vermelho Rubi (Copas/Ouros)</strong>
+            <span>#E63946</span>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #0A0B0E;"></div>
+          <div class="swatch-info">
+            <strong>Preto Ônix Profundo</strong>
+            <span>#0A0B0E</span>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #1C202B;"></div>
+          <div class="swatch-info">
+            <strong>Cinza Meia-Noite</strong>
+            <span>#1C202B</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>SORTE Brand Identity © 2026 — Arquivos vetoriais SVG prontos para uso em escala infinita (impressão, web, aplicativo e merchandising).</p>
+    </footer>
+  </div>
+</body>
+</html>

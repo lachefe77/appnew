@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
+  <defs>
+    <linearGradient id="rubyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF3366"/>
+      <stop offset="100%" stop-color="#C9184A"/>
+    </linearGradient>
+    <linearGradient id="charcoalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1A1E24"/>
+      <stop offset="100%" stop-color="#0E1013"/>
+    </linearGradient>
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD166"/>
+      <stop offset="100%" stop-color="#E5A93C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Clean Background -->
+  <rect width="800" height="800" rx="40" fill="#FFFFFF"/>
+  
+  <!-- Subtle circular grid background -->
+  <circle cx="400" cy="350" r="180" fill="none" stroke="#F0F2F5" stroke-width="2"/>
+  <circle cx="400" cy="350" r="130" fill="#F8FAFC"/>
+
+  <!-- Geometric 4-leaf clover combined with 4 Card Suits (Spade, Diamond, Heart, Club) -->
+  <g transform="translate(400, 350) scale(1.3)">
+    
+    <!-- Top Suit: Spade -->
+    <g transform="translate(0, -50)">
+      <path d="M 0 -26 C 14 -10 24 5 13 18 C 7 24 2 20 0 15 C -2 20 -7 24 -13 18 C -24 5 -14 -10 0 -26 Z" fill="url(#charcoalGrad)"/>
+      <path d="M -3 15 L -6 24 L 6 24 L 3 15 Z" fill="url(#charcoalGrad)"/>
+    </g>
+
+    <!-- Right Suit: Diamond -->
+    <g transform="translate(50, 0)">
+      <polygon points="0,-24 22,0 0,24 -22,0" fill="url(#rubyGrad)"/>
+    </g>
+
+    <!-- Bottom Suit: Club (Trevo) -->
+    <g transform="translate(0, 50)">
+      <circle cx="-11" cy="0" r="11" fill="url(#charcoalGrad)"/>
+      <circle cx="11" cy="0" r="11" fill="url(#charcoalGrad)"/>
+      <circle cx="0" cy="-13" r="11" fill="url(#charcoalGrad)"/>
+      <path d="M -3 6 L -7 22 L 7 22 L 3 6 Z" fill="url(#charcoalGrad)"/>
+    </g>
+
+    <!-- Left Suit: Heart -->
+    <g transform="translate(-50, 0)">
+      <path d="M 0 20 C -7 12 -22 -2 -22 -14 C -22 -22 -14 -26 -6 -22 C -2 -20 0 -16 0 -13 C 0 -16 2 -20 6 -22 C 14 -26 22 -22 22 -14 C 22 -2 7 12 0 20 Z" fill="url(#rubyGrad)"/>
+    </g>
+
+    <!-- Center Connecting Gold Spark of Luck -->
+    <circle cx="0" cy="0" r="14" fill="#FFFFFF" stroke="url(#goldAccent)" stroke-width="3"/>
+    <!-- 8-point Lucky Star -->
+    <polygon points="0,-8 2,-2 8,0 2,2 0,8 -2,2 -8,0 -2,-2" fill="url(#goldAccent)"/>
+  </g>
+
+  <!-- Wordmark 'SORTE' -->
+  <text x="400" y="580" 
+        font-family="'Plus Jakarta Sans', 'Inter', 'Montserrat', sans-serif" 
+        font-size="64" 
+        font-weight="900" 
+        letter-spacing="16" 
+        text-anchor="middle" 
+        fill="#0E1013">SORTE</text>
+
+  <!-- Tagline -->
+  <text x="400" y="625" 
+        font-family="'Inter', sans-serif" 
+        font-size="16" 
+        font-weight="700" 
+        letter-spacing="8" 
+        text-anchor="middle" 
+        fill="#FF3366">LUCK &amp; GAMING IDENTITY</text>
+
+  <!-- Minimal underline bar -->
+  <rect x="360" y="650" width="80" height="4" rx="2" fill="url(#goldAccent)"/>
+</svg>

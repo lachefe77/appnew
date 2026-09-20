@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
+  <defs>
+    <linearGradient id="neonGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFDF00"/>
+      <stop offset="100%" stop-color="#FF8800"/>
+    </linearGradient>
+    <linearGradient id="cyberGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00FFA3"/>
+      <stop offset="100%" stop-color="#00B86B"/>
+    </linearGradient>
+    <linearGradient id="cyberPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7928CA"/>
+      <stop offset="100%" stop-color="#4338CA"/>
+    </linearGradient>
+    <linearGradient id="iconBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#181B26"/>
+      <stop offset="100%" stop-color="#0D0F17"/>
+    </linearGradient>
+    <filter id="neonGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background App Squircle -->
+  <rect x="50" y="50" width="700" height="700" rx="160" fill="url(#iconBg)" stroke="#2A2F45" stroke-width="4"/>
+
+  <!-- Geometric Hexagon Shield -->
+  <polygon points="400,140 580,240 580,450 400,550 220,450 220,240" fill="none" stroke="url(#cyberGreen)" stroke-width="3" opacity="0.3"/>
+  <polygon points="400,160 560,250 560,440 400,530 240,440 240,250" fill="none" stroke="url(#neonGold)" stroke-width="2" opacity="0.5"/>
+
+  <!-- Modern Card / Spade / Clover Hybrid Icon -->
+  <!-- Back Card Left -->
+  <rect x="270" y="220" width="160" height="230" rx="20" fill="#202534" stroke="url(#cyberPurple)" stroke-width="3" transform="rotate(-15 350 335)"/>
+  
+  <!-- Back Card Right -->
+  <rect x="370" y="220" width="160" height="230" rx="20" fill="#202534" stroke="url(#cyberPurple)" stroke-width="3" transform="rotate(15 450 335)"/>
+
+  <!-- Front Hero Card -->
+  <rect x="310" y="200" width="180" height="260" rx="24" fill="#131620" stroke="url(#neonGold)" stroke-width="5" filter="url(#neonGlow)"/>
+
+  <!-- Clover + Spade Icon in Center -->
+  <g transform="translate(400, 315) scale(1.1)">
+    <!-- 4 Leaves represented as sleek dynamic geometry -->
+    <!-- Top Leaf -->
+    <path d="M0 0 C-25 -20 -25 -55 0 -60 C25 -55 25 -20 0 0 Z" fill="url(#cyberGreen)"/>
+    <!-- Bottom Left Leaf -->
+    <path d="M0 0 C-20 -25 -55 -25 -60 0 C-55 25 -20 25 0 0 Z" fill="url(#neonGold)"/>
+    <!-- Bottom Right Leaf -->
+    <path d="M0 0 C20 -25 55 -25 60 0 C55 25 20 25 0 0 Z" fill="url(#neonGold)"/>
+    <!-- Spade Peak overlay -->
+    <path d="M 0 -68 C 15 -45 35 -20 18 15 C 8 22 0 16 0 10 C 0 16 -8 22 -18 15 C -35 -20 -15 -45 0 -68 Z" fill="url(#neonGold)" opacity="0.95"/>
+    <path d="M -4 12 L -10 32 L 10 32 L 4 12 Z" fill="url(#neonGold)"/>
+
+    <!-- Center Glowing Core -->
+    <circle cx="0" cy="-10" r="10" fill="#FFFFFF" filter="url(#neonGlow)"/>
+    <circle cx="0" cy="-10" r="5" fill="#0D0F17"/>
+  </g>
+
+  <!-- Typography -->
+  <text x="400" y="590" 
+        font-family="'Inter', 'Poppins', 'Montserrat', sans-serif" 
+        font-size="62" 
+        font-weight="900" 
+        letter-spacing="14" 
+        text-anchor="middle" 
+        fill="#FFFFFF">SORTE</text>
+
+  <text x="400" y="635" 
+        font-family="'Inter', sans-serif" 
+        font-size="18" 
+        font-weight="700" 
+        letter-spacing="8" 
+        text-anchor="middle" 
+        fill="url(#cyberGreen)">BET &amp; GAMING APP</text>
+
+  <!-- Status Dots / Dice Elements -->
+  <g transform="translate(400, 675)">
+    <circle cx="-50" cy="0" r="4" fill="url(#cyberGreen)"/>
+    <circle cx="-25" cy="0" r="4" fill="url(#neonGold)"/>
+    <circle cx="0" cy="0" r="6" fill="#FFFFFF"/>
+    <circle cx="25" cy="0" r="4" fill="url(#neonGold)"/>
+    <circle cx="50" cy="0" r="4" fill="url(#cyberGreen)"/>
+  </g>
+</svg>
