@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 240" role="img" aria-label="Sorte logo light">
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e8c04a"/>
+      <stop offset="50%" stop-color="#c4920f"/>
+      <stop offset="100%" stop-color="#8a6a08"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="240" rx="24" fill="#f7f4ee"/>
+  <!-- mark -->
+  <g transform="translate(110 120)">
+    <g transform="rotate(-14)">
+      <rect x="-42" y="-56" width="84" height="112" rx="10" fill="#ffffff" stroke="#1a1a1e" stroke-width="3.5"/>
+      <path d="M0 -20 C-12 -34 -26 -20 -12 -2 C-26 14 -12 30 0 20 C12 30 26 14 12 -2 C26 -20 12 -34 0 -20 Z" fill="#9b1b2e"/>
+    </g>
+    <g transform="rotate(10)">
+      <rect x="-42" y="-56" width="84" height="112" rx="10" fill="#ffffff" stroke="#c4920f" stroke-width="3.5"/>
+      <path d="M0 -26 C-16 -42 -34 -20 -17 0 L0 20 L17 0 C34 -20 16 -42 0 -26 Z" fill="url(#gold)"/>
+    </g>
+  </g>
+  <!-- wordmark -->
+  <text x="210" y="148" font-family="Georgia, 'Times New Roman', serif" font-size="92" font-weight="700" letter-spacing="10" fill="#1a1a1e">SORTE</text>
+</svg>

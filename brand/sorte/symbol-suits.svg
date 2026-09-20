@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Sorte suits clover">
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0d078"/>
+      <stop offset="55%" stop-color="#d4a017"/>
+      <stop offset="100%" stop-color="#a67c0a"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" fill="none"/>
+  <!-- spade (top) -->
+  <path d="M128 28 C96 64 72 88 72 112 C72 132 86 144 104 144 C112 144 120 140 128 132 C136 140 144 144 152 144 C170 144 184 132 184 112 C184 88 160 64 128 28 Z M118 144 L128 176 L138 144 Z" fill="url(#gold)"/>
+  <!-- heart (right) -->
+  <path d="M168 128 C168 108 188 96 206 108 C224 96 244 112 236 132 C228 152 200 176 168 196 C136 176 108 152 100 132 C92 112 112 96 130 108 C148 96 168 108 168 128 Z" fill="#9b1b2e" transform="translate(28 -8) scale(0.72)"/>
+  <!-- diamond (bottom) -->
+  <path d="M128 148 L156 188 L128 228 L100 188 Z" fill="url(#gold)"/>
+  <!-- club (left) -->
+  <g fill="url(#gold)" transform="translate(52 118)">
+    <circle cx="0" cy="-10" r="16"/>
+    <circle cx="-14" cy="12" r="16"/>
+    <circle cx="14" cy="12" r="16"/>
+    <path d="M-4 18 L0 42 L4 18 Z"/>
+  </g>
+  <!-- center jewel -->
+  <circle cx="128" cy="128" r="14" fill="#0a0a0c" stroke="#f0d078" stroke-width="3"/>
+  <circle cx="128" cy="128" r="6" fill="url(#gold)"/>
+</svg>
