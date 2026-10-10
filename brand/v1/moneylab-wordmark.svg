@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="320" viewBox="0 0 1100 320">
+  <defs>
+    <style>
+      @font-face {
+        font-family: 'InterBrand';
+        src: url('file:///usr/share/fonts/truetype/macos/Inter-SemiBold.ttf') format('truetype');
+        font-weight: 600;
+      }
+    </style>
+  </defs>
+  <rect width="1100" height="320" fill="#07070C"/>
+  <polygon points="158.00,56.00 248.07,108.00 248.07,212.00 158.00,264.00 67.93,212.00 67.93,108.00" fill="#0C0D12" stroke="#D4AF37"
+           stroke-width="6.2" stroke-linejoin="round"/>
+  
+  <path d="M 147.80 104.52 L 147.80 137.16 L 103.60 210.60 Q 98.16 236.44 133.52 236.44 L 182.48 236.44 Q 217.84 236.44 212.40 210.60 L 168.20 137.16 L 168.20 104.52" fill="none" stroke="#D4AF37" stroke-width="6.0"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="141.68" y1="100.44" x2="174.32" y2="100.44"
+        stroke="#D4AF37" stroke-width="6.30" stroke-linecap="round"/>
+  <circle cx="158.00" cy="89.56" r="4.62" fill="#D4AF37"/>
+  <rect x="126.72" y="209.24" width="5.44" height="16.32" rx="1.09" fill="#12B886"/><line x1="129.44" y1="203.80" x2="129.44" y2="229.64" stroke="#12B886" stroke-width="1.22" stroke-linecap="round"/><rect x="141.00" y="199.72" width="5.44" height="25.84" rx="1.09" fill="#12B886"/><line x1="143.72" y1="192.92" x2="143.72" y2="229.64" stroke="#12B886" stroke-width="1.22" stroke-linecap="round"/><rect x="155.28" y="188.84" width="5.44" height="36.72" rx="1.09" fill="#12B886"/><line x1="158.00" y1="180.68" x2="158.00" y2="229.64" stroke="#12B886" stroke-width="1.22" stroke-linecap="round"/><rect x="169.56" y="177.96" width="5.44" height="47.60" rx="1.09" fill="#12B886"/><line x1="172.28" y1="169.12" x2="172.28" y2="229.64" stroke="#12B886" stroke-width="1.22" stroke-linecap="round"/><rect x="183.84" y="167.08" width="5.44" height="58.48" rx="1.09" fill="#12B886"/><line x1="186.56" y1="157.56" x2="186.56" y2="229.64" stroke="#12B886" stroke-width="1.22" stroke-linecap="round"/>
+
+  <text x="296" y="194.0" font-family="InterBrand, Inter, sans-serif"
+        font-size="108" font-weight="600" letter-spacing="-2">
+    <tspan fill="#F4F4F7">Money</tspan><tspan fill="#D4AF37">Lab</tspan>
+  </text>
+</svg>
