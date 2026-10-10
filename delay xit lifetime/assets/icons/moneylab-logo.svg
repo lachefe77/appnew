@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 300" role="img" aria-labelledby="title desc">
+  <title id="title">MoneyLab</title>
+  <desc id="desc">MoneyLab, inteligencia para decisoes financeiras</desc>
+  <defs>
+    <linearGradient id="background" x1="30" y1="20" x2="280" y2="280" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0D2B22"/>
+      <stop offset="1" stop-color="#061510"/>
+    </linearGradient>
+    <linearGradient id="liquid" x1="70" y1="150" x2="230" y2="244" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#36E79A"/>
+      <stop offset="1" stop-color="#13B874"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(20 20) scale(.508)">
+    <rect width="512" height="512" rx="112" fill="url(#background)"/>
+    <path d="M205 111h102" fill="none" stroke="#EDFFF7" stroke-width="24" stroke-linecap="round"/>
+    <path d="M225 112v101L132 369c-14 24 3 54 31 54h186c28 0 45-30 31-54l-93-156V112"
+          fill="#0A211A" stroke="#EDFFF7" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M147 348c50-28 93-22 132-6 34 14 65 11 92-4l23 39c12 21-3 46-27 46H145c-24 0-39-26-26-47z"
+          fill="url(#liquid)"/>
+    <path d="M169 357l55-54 43 36 72-77" fill="none" stroke="#EDFFF7" stroke-width="21" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M305 263h35v35" fill="none" stroke="#EDFFF7" stroke-width="21" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text x="326" y="150" fill="#0A211A" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="112" font-weight="760" letter-spacing="-5">Money</text>
+  <text x="676" y="150" fill="#13B874" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="112" font-weight="760" letter-spacing="-5">Lab</text>
+  <text x="334" y="211" fill="#527068" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="27" font-weight="600" letter-spacing="7">INTELIGENCIA FINANCEIRA</text>
+</svg>

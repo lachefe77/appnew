@@ -40,7 +40,7 @@ body {
              wmBreath 4s ease-in-out infinite;
 }
 .float-watermark b { color: var(--accent-2); }
-@keyframes wmX { from { left: 8px; } to { left: calc(100% - 82px); } }
+@keyframes wmX { from { left: 8px; } to { left: calc(100% - 74px); } }
 @keyframes wmY { from { top: 64px; } to { top: calc(100% - 22px); } }
 @keyframes wmBreath { 0%, 100% { opacity: .16; } 50% { opacity: .26; } }
 
@@ -70,16 +70,16 @@ body {
   position: relative;
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   background: transparent;
 }
 .logo {
-  width: 48px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   object-fit: contain;
   object-position: center;
-  border-radius: 6px;
+  border-radius: 9px;
   position: relative;
   z-index: 1;
   background: transparent;

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">MoneyLab</title>
+  <desc id="desc">Frasco de laboratorio com grafico financeiro ascendente</desc>
+  <defs>
+    <linearGradient id="background" x1="72" y1="48" x2="438" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0D2B22"/>
+      <stop offset="1" stop-color="#061510"/>
+    </linearGradient>
+    <linearGradient id="liquid" x1="138" y1="282" x2="383" y2="404" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#36E79A"/>
+      <stop offset="1" stop-color="#13B874"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000" flood-opacity=".28"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#background)"/>
+  <path d="M84 102c0-10 8-18 18-18h98" fill="none" stroke="#36E79A" stroke-width="8" stroke-linecap="round" opacity=".55"/>
+  <circle cx="410" cy="102" r="7" fill="#36E79A" opacity=".8"/>
+  <circle cx="388" cy="80" r="4" fill="#36E79A" opacity=".42"/>
+
+  <g filter="url(#shadow)">
+    <path d="M205 111h102" fill="none" stroke="#EDFFF7" stroke-width="24" stroke-linecap="round"/>
+    <path d="M225 112v101L132 369c-14 24 3 54 31 54h186c28 0 45-30 31-54l-93-156V112"
+          fill="#0A211A" stroke="#EDFFF7" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <path d="M147 348c50-28 93-22 132-6 34 14 65 11 92-4l23 39c12 21-3 46-27 46H145c-24 0-39-26-26-47z"
+          fill="url(#liquid)"/>
+
+    <path d="M169 357l55-54 43 36 72-77" fill="none" stroke="#EDFFF7" stroke-width="21" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M305 263h35v35" fill="none" stroke="#EDFFF7" stroke-width="21" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
