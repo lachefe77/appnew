@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 420" role="img" aria-label="MoneyLab">
+  <title>MoneyLab</title>
+  <defs>
+    <style>
+      .ml-navy { fill: #0B1F33; }
+      .ml-green { fill: #00C853; }
+      .ml-gold { fill: #C9A227; }
+      .ml-line { fill: none; stroke: #00C853; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+      .ml-word {
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        font-size: 56px;
+        font-weight: 700;
+        letter-spacing: -1.2px;
+      }
+    </style>
+  </defs>
+
+  <g transform="translate(90 28)">
+    <path
+      class="ml-navy"
+      d="M48 78
+         C48 58 62 46 82 46
+         H96
+         V72
+         L120 118
+         L144 72
+         V46
+         H158
+         C178 46 192 58 192 78
+         V168
+         C192 196 168 210 120 210
+         C72 210 48 196 48 168
+         Z"
+    />
+    <path
+      fill="#FFFFFF"
+      d="M72 88
+         H98
+         L120 132
+         L142 88
+         H168
+         V162
+         C168 182 150 192 120 192
+         C90 192 72 182 72 162
+         Z"
+    />
+    <rect class="ml-gold" x="90" y="38" width="60" height="10" rx="3"/>
+    <rect class="ml-green" x="86" y="158" width="10" height="18" rx="2"/>
+    <rect class="ml-green" x="104" y="146" width="10" height="30" rx="2"/>
+    <rect class="ml-green" x="122" y="136" width="10" height="40" rx="2"/>
+    <rect class="ml-green" x="140" y="122" width="10" height="54" rx="2"/>
+    <polyline class="ml-line" points="88,164 106,150 124,140 144,124 158,112"/>
+    <path class="ml-green" d="M152 104 L168 100 L160 116 Z"/>
+  </g>
+
+  <text class="ml-word" x="210" y="320" text-anchor="middle">
+    <tspan class="ml-navy">Money</tspan><tspan class="ml-green">Lab</tspan>
+  </text>
+</svg>

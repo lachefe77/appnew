@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MoneyLab — Brand Preview</title>
+  <style>
+    :root {
+      --navy: #0B1F33;
+      --green: #00C853;
+      --gold: #C9A227;
+      --bg: #f3f6f8;
+      --card: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(0, 200, 83, 0.08), transparent 36%),
+        radial-gradient(circle at 88% 10%, rgba(201, 162, 39, 0.10), transparent 32%),
+        var(--bg);
+      color: var(--navy);
+      padding: 48px 24px 72px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.8rem, 3vw, 2.4rem);
+      letter-spacing: -0.03em;
+    }
+    .lead {
+      margin: 0 0 40px;
+      color: #4a5b6a;
+      max-width: 52ch;
+    }
+    .grid {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      max-width: 1100px;
+    }
+    figure {
+      margin: 0;
+      background: var(--card);
+      border: 1px solid #e2e8ee;
+      border-radius: 18px;
+      padding: 28px;
+      display: grid;
+      place-items: center;
+      min-height: 280px;
+    }
+    figcaption {
+      margin-top: 18px;
+      font-size: 0.92rem;
+      color: #5a6b7a;
+      text-align: center;
+    }
+    img, object {
+      max-width: 100%;
+      height: auto;
+    }
+    .wide {
+      grid-column: 1 / -1;
+      min-height: 220px;
+    }
+    .swatches {
+      display: flex;
+      gap: 12px;
+      margin: 0 0 36px;
+      flex-wrap: wrap;
+    }
+    .swatch {
+      width: 88px;
+      height: 88px;
+      border-radius: 14px;
+      border: 1px solid #d7dee6;
+      display: grid;
+      align-content: end;
+      padding: 10px;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .swatch.light { color: var(--navy); }
+  </style>
+</head>
+<body>
+  <h1>MoneyLab</h1>
+  <p class="lead">Sistema de marca: frasco em forma de M + gráfico de crescimento. Navy, verde e dourado.</p>
+
+  <div class="swatches">
+    <div class="swatch" style="background:#0B1F33">Navy<br>#0B1F33</div>
+    <div class="swatch" style="background:#00C853">Green<br>#00C853</div>
+    <div class="swatch" style="background:#C9A227">Gold<br>#C9A227</div>
+    <div class="swatch light" style="background:#FFFFFF">White<br>#FFFFFF</div>
+  </div>
+
+  <div class="grid">
+    <figure>
+      <img src="moneylab-logo.jpg" alt="MoneyLab logo stacked" width="280" />
+      <figcaption>Lockup principal (JPG)</figcaption>
+    </figure>
+    <figure>
+      <img src="moneylab-icon.jpg" alt="MoneyLab icon" width="220" />
+      <figcaption>Ícone / app (JPG)</figcaption>
+    </figure>
+    <figure class="wide">
+      <img src="moneylab-wordmark.jpg" alt="MoneyLab horizontal wordmark" width="640" />
+      <figcaption>Wordmark horizontal (JPG)</figcaption>
+    </figure>
+    <figure>
+      <img src="moneylab-mark.svg" alt="MoneyLab SVG mark" width="180" />
+      <figcaption>Mark SVG</figcaption>
+    </figure>
+    <figure>
+      <img src="moneylab-lockup.svg" alt="MoneyLab SVG lockup" width="220" />
+      <figcaption>Lockup SVG</figcaption>
+    </figure>
+    <figure class="wide">
+      <img src="moneylab-horizontal.svg" alt="MoneyLab SVG horizontal" width="520" />
+      <figcaption>Horizontal SVG</figcaption>
+    </figure>
+  </div>
+</body>
+</html>
