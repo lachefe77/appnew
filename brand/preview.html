@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MoneyLab — Brand</title>
+  <style>
+    :root {
+      --bg: #07070c;
+      --panel: #101014;
+      --line: #272733;
+      --text: #f4f4f7;
+      --muted: #8b8b9e;
+      --gold: #d4af37;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "Segoe UI", system-ui, sans-serif;
+      padding: 40px 24px 80px;
+    }
+    h1 { font-size: 28px; letter-spacing: -0.4px; }
+    h1 span { color: var(--gold); }
+    .lead { color: var(--muted); margin: 8px 0 32px; font-size: 14px; }
+    section { margin-bottom: 40px; }
+    h2 { font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 28px;
+      display: grid;
+      place-items: center;
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card img { max-width: 100%; height: auto; display: block; }
+    .icon { width: 220px; }
+    .word { width: min(520px, 100%); }
+    .sizes { display: flex; align-items: end; gap: 18px; }
+    .sizes figure { text-align: center; color: var(--muted); font-size: 11px; }
+    .sizes img { display: block; margin: 0 auto 8px; background: #0b0b10; border-radius: 8px; }
+    .popup {
+      width: 360px;
+      background: #03030e;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .app-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px;
+      background: linear-gradient(135deg, #13111c, #09090b);
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand img { width: 36px; height: 36px; border-radius: 8px; background: #07070c; }
+    .brand-name { font-size: 15px; }
+    .brand-name b { color: var(--gold); }
+    .tabs { display: flex; background: #121217; }
+    .tab { flex: 1; padding: 10px 0; text-align: center; color: var(--muted); font-size: 12px; border-bottom: 2px solid transparent; }
+    .tab.active { color: #fff; border-bottom-color: #8b5cf6; font-weight: 600; }
+    .body { padding: 16px; color: var(--muted); font-size: 12px; min-height: 80px; }
+  </style>
+</head>
+<body>
+  <h1>Money<span>Lab</span></h1>
+  <p class="lead">Identidade oficial — hexágono, frasco e candles de alta. Ouro + esmeralda.</p>
+
+  <section>
+    <h2>Wordmark</h2>
+    <div class="card"><img class="word" src="moneylab-wordmark.png" alt="MoneyLab wordmark" /></div>
+  </section>
+
+  <section>
+    <h2>Ícone e stacked</h2>
+    <div class="grid">
+      <div class="card"><img class="icon" src="moneylab-icon.png" alt="MoneyLab icon dark" /></div>
+      <div class="card"><img class="icon" src="moneylab-stacked.png" alt="MoneyLab stacked" /></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Fundo claro</h2>
+    <div class="card" style="background:#f7f5ee"><img class="icon" src="moneylab-icon-light.png" alt="MoneyLab icon light" /></div>
+  </section>
+
+  <section>
+    <h2>Tamanhos da extensão</h2>
+    <div class="card sizes">
+      <figure>
+        <img src="../delay xit lifetime/assets/icons/icon-16.png" width="16" height="16" alt="16" />
+        16
+      </figure>
+      <figure>
+        <img src="../delay xit lifetime/assets/icons/icon-32.png" width="32" height="32" alt="32" />
+        32
+      </figure>
+      <figure>
+        <img src="../delay xit lifetime/assets/icons/icon-48.png" width="48" height="48" alt="48" />
+        48
+      </figure>
+      <figure>
+        <img src="../delay xit lifetime/assets/icons/icon-128.png" width="128" height="128" alt="128" />
+        128
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Header do popup</h2>
+    <div class="popup">
+      <header class="app-header">
+        <div class="brand">
+          <img src="moneylab-icon.png" alt="MoneyLab" />
+          <span class="brand-name">Money<b>Lab</b></span>
+        </div>
+        <span style="color:#8b8b9e;font-size:12px">On</span>
+      </header>
+      <nav class="tabs">
+        <div class="tab active">Dashboard</div>
+        <div class="tab">Config</div>
+        <div class="tab">Proxy</div>
+        <div class="tab">Key</div>
+      </nav>
+      <div class="body">Prévia da marca no painel de 360px.</div>
+    </div>
+  </section>
+</body>
+</html>
