@@ -7,9 +7,9 @@
   --text: #f4f4f7;
   --muted: #8b8b9e;
 
-  /* Roxo Profissional & Acentos Ultravioleta */
-  --accent: #8b5cf6;       /* Violeta / Roxo Primário */
-  --accent-2: #c084fc;     /* Roxo Claro / Iluminação */
+  /* Verdes da identidade MoneyLab */
+  --accent: #13b874;       /* Esmeralda primário */
+  --accent-2: #36e79a;     /* Verde de destaque */
   
   /* Status */
   --good: #10b981;         /* Verde Esmeralda Discreto para confirmações */
@@ -54,7 +54,7 @@ body {
 }
 .brand, .header-actions { position: relative; z-index: 1; }
 
-/* Watermark animado — ECG roxo neon */
+/* Watermark animado — pulso MoneyLab */
 .pulse-watermark { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
 .pulse-watermark svg { width: 100%; height: 100%; display: block; }
 .pulse-base { fill: none; stroke: var(--accent); stroke-width: 1.4; opacity: .12; }
