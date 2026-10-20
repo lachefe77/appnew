@@ -282,7 +282,7 @@ try {
     JSON.stringify(
       {
         phase: "ok",
-        hostPhase: 2,
+        hostPhase: launchPreview.mode === "stub" ? 2 : "4b",
         mode,
         sessions: sessions.length,
         elapsedMs: Date.now() - startedAt,
