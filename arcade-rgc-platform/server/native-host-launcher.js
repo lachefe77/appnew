@@ -2,6 +2,7 @@
  * Monta comando do Host Bot real (RetroArch/FBNeo) ou stub de lab.
  * Framebuffer: ver buildFfmpegFrameCapture em native-framebuffer.js.
  */
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { retroArchKeyboardLines } from "./native-input-map.js";
@@ -21,7 +22,36 @@ export function luaReporterPath() {
 }
 
 /**
- * @returns {{ mode: "stub"|"retroarch"|"custom", command: string, args: string[], workdir: string, env: Record<string,string> }}
+ * Resolve o core FBNeo para path absoluto (Windows: cores\fbneo_libretro.dll).
+ * Com cwd = pasta da ROM, o nome curto "fbneo_libretro" costuma falhar.
+ */
+export function resolveRetroArchCore(bin, env = process.env) {
+  const raw = String(env.HOST_BOT_CORE || "fbneo_libretro").trim();
+  if (!raw) return "fbneo_libretro";
+  if (path.isAbsolute(raw) && fs.existsSync(raw)) return raw;
+  if (fs.existsSync(raw)) return path.resolve(raw);
+
+  const dir = path.dirname(bin);
+  const base = raw.replace(/\.(dll|so|dylib)$/i, "");
+  const candidates = [
+    path.join(dir, "cores", base + ".dll"),
+    path.join(dir, "cores", base + ".so"),
+    path.join(dir, "cores", base + "_libretro.dll"),
+    path.join(dir, "cores", base + "_libretro.so"),
+    path.join(dir, "cores", "fbneo_libretro.dll"),
+    path.join(dir, "cores", "fbneo_libretro.so"),
+    path.join(dir, base + ".dll"),
+    path.join(dir, base + ".so"),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  // Último recurso: deixa o RetroArch resolver (pode falhar se cwd ≠ install).
+  return raw;
+}
+
+/**
+ * @returns {{ mode: "stub"|"retroarch"|"custom", command: string, args: string[], workdir: string, env: Record<string,string>, core?: string }}
  */
 export function buildNativeHostLaunch(env = process.env) {
   const workdir = env.HOST_BOT_WORKDIR
@@ -51,15 +81,20 @@ export function buildNativeHostLaunch(env = process.env) {
     String(env.HOST_BOT_KIND || "").toLowerCase() === "retroarch";
 
   if (isRetro) {
-    const rom =
-      env.HOST_BOT_ROM ||
-      path.join(workdir, "kof2002.zip");
+    const rom = path.resolve(
+      env.HOST_BOT_ROM || path.join(workdir, "kof2002.zip"),
+    );
+    const core = resolveRetroArchCore(bin, env);
+    const append =
+      env.HOST_BOT_APPENDCONFIG ||
+      path.join(root, "scripts/host-bot-lua/retroarch-lab.cfg");
     const args = [
       "-L",
-      env.HOST_BOT_CORE || "fbneo_libretro",
+      core,
       rom,
       "--appendconfig",
-      env.HOST_BOT_APPENDCONFIG || path.join(root, "scripts/host-bot-lua/retroarch-lab.cfg"),
+      append,
+      "-v",
       ...extra,
     ];
     return {
@@ -67,6 +102,7 @@ export function buildNativeHostLaunch(env = process.env) {
       command: bin,
       args,
       workdir,
+      core,
       env: {
         HOST_BOT_MODE: "lua-bridge",
         HOST_BOT_LUA: luaReporterPath(),

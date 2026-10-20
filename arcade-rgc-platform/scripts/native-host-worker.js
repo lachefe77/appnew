@@ -148,9 +148,18 @@ async function handle(msg) {
           },
           onExit: (code) => {
             if (state.started && code !== 0 && code != null) {
+              const err = (state.game?.stderr || "").trim().slice(-800);
               emit({
                 event: "failure",
-                message: "Core do jogo encerrou (código " + code + ").",
+                message:
+                  "Core do jogo encerrou (código " +
+                  code +
+                  ")." +
+                  (err ? " stderr=" + err : "") +
+                  " cmd=" +
+                  gameLaunch.command +
+                  " " +
+                  (gameLaunch.args || []).join(" "),
               });
             }
           },
@@ -160,6 +169,23 @@ async function handle(msg) {
           // Dá tempo à janela abrir antes do gdigrab.
           const waitMs = Number(process.env.HOST_BOT_GAME_BOOT_MS) || 2500;
           await new Promise((r) => setTimeout(r, waitMs));
+          // Se o core já morreu no boot, falha com stderr (não segue WebRTC stub).
+          if (state.game.child?.exitCode != null && state.game.child.exitCode !== 0) {
+            const err = (state.game.stderr || "").trim().slice(-800);
+            emit({
+              event: "failure",
+              message:
+                "Core do jogo encerrou no boot (código " +
+                state.game.child.exitCode +
+                ")." +
+                (err ? " stderr=" + err : "") +
+                " cmd=" +
+                gameLaunch.command +
+                " " +
+                (gameLaunch.args || []).join(" "),
+            });
+            return;
+          }
         } else {
           emit({
             event: "progress",

@@ -11,6 +11,7 @@ import { resolveHostedMaxSessions } from "../server/hosted-queue.js";
 import {
   buildNativeHostLaunch,
   resolveHostBotBin,
+  resolveRetroArchCore,
 } from "../server/native-host-launcher.js";
 import { buildFfmpegFrameCapture } from "../server/native-framebuffer.js";
 
@@ -69,6 +70,22 @@ const checks = [
     id: "bin",
     ok: launch.mode !== "stub" && binExists,
     detail: binDetail(),
+  },
+  {
+    id: "core",
+    ok: (() => {
+      if (launch.mode !== "retroarch" || !binPath) return true;
+      const core = launch.core || resolveRetroArchCore(binPath);
+      return path.isAbsolute(core) && fs.existsSync(core);
+    })(),
+    detail: (() => {
+      if (launch.mode !== "retroarch" || !binPath)
+        return "Core N/A (stub ou não-retroarch)";
+      const core = launch.core || resolveRetroArchCore(binPath);
+      return fs.existsSync(core)
+        ? `Core ok: ${core}`
+        : `Core FBNeo em falta (instala no RetroArch: Online Updater → FinalBurn Neo). Procurado: ${core}`;
+    })(),
   },
   {
     id: "rom",
