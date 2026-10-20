@@ -56,6 +56,7 @@ Produção leve: `HOSTED_ENGINE=native`.
 
 ### Fase 4c — checklist fliperama 100% (localhost)
 
+0. Grava `.env` correto (uma vez): `npm run env:host-bot`
 1. `npm run test:local` sobe com `.env` nativo (RetroArch + ROM + ffmpeg).
 2. Browser normal + anónimo → 2 contas → mesma sala → desafio com créditos.
 3. RetroArch abre; **stream nos browsers mostra o KOF** (não Explorer/desktop).

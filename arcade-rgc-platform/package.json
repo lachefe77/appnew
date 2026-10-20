@@ -21,6 +21,7 @@
     "bench:host-bot": "node scripts/bench-host-bot-capacity.js",
     "smoke:hosted-queue": "node scripts/smoke-hosted-queue.js",
     "smoke:retroarch-alive": "node scripts/smoke-retroarch-alive.js",
+    "env:host-bot": "node scripts/write-host-bot-env.js",
     "check:host-bot": "node scripts/check-host-bot-ready.js"
   },
   "engines": {
