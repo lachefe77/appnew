@@ -144,11 +144,6 @@ function stopCapture(reason) {
   } catch {
     /* ignore */
   }
-  try {
-    state.media?.frameSource?.close?.();
-  } catch {
-    /* ignore */
-  }
   if (state.gameWatch) {
     clearInterval(state.gameWatch);
     state.gameWatch = null;
