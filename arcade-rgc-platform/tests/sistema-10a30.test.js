@@ -198,7 +198,7 @@ test("23: multi-sessão documentada + cap configurável", () => {
   const src = fs.readFileSync(path.join(root, "server/platform.js"), "utf8");
   assert.match(src, /HOSTED_MAX_SESSIONS/);
   assert.match(src, /\/api\/ops\/hosted-cap/);
-  assert.match(src, /process-worker-per-session/);
+  assert.match(src, /host-bot-process-per-session|playwright-browser-per-session/);
 });
 
 test("24: warm pool acquire/release/drain", async () => {

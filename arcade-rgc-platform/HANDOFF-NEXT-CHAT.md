@@ -17,9 +17,11 @@ Continue o Arena Arcade em arcade-rgc-platform na branch cursor/sistema-1a9-85f1
 
 Leia HANDOFF-NEXT-CHAT.md e CONTEXT.md.
 
-CONCLUÍDO: melhorias 1–30 (partida hosted + estabilidade/escala/CI).
-PRÓXIMO: hillclimb / beta fechado / infra TURN real / container isolation em VPS.
+CONCLUÍDO: melhorias 1–30 + Fase 0 Host Bot (factory native stub, sem Chrome no path novo).
+PRÓXIMO: Fase 1–2 Host Bot real (FBNeo/libretro nativo + encode leve) visando ~5–8 X1 na VPS 4GB/2c e ~20 na VPS ~10GB/5c.
+Ler docs/HOST-BOT.md. HOSTED_ENGINE=native | chrome.
 NÃO gastar tempo com tema/layout/vitrine. PIX real e segundo jogo continuam OFF.
+NÃO usar modo juiz no cliente para APOSTADO (cheat).
 Responda em português.
 ```
 

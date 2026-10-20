@@ -28,6 +28,14 @@ import { HostedSession } from "./hosted-session.js";
 import { verifyHostedAssets } from "./hosted-assets.js";
 import { mintIceServers } from "./turn-credentials.js";
 import {
+  createHostedFactory,
+  resolveHostedEngine,
+} from "./host-bot-factory.js";
+import {
+  capacityForKnownVps,
+  estimateHostedCapacity,
+} from "./host-bot-capacity.js";
+import {
   makeRules,
   saveRules,
   appendEvent,
@@ -93,7 +101,8 @@ const root = path.resolve(
 );
 const production = process.env.NODE_ENV === "production";
 const simulation = !production && process.env.ENABLE_SIMULATED_FUNDS === "1";
-const defaultHostedFactory = (options) => new HostedSession(options);
+const hostedEngine = resolveHostedEngine();
+const defaultHostedFactory = createHostedFactory(hostedEngine);
 const graceMs = Number(process.env.RECONNECT_GRACE_MS) || 30000;
 const dailyLossLimitCents =
   Number(process.env.DAILY_LOSS_LIMIT_CENTS) || 5000;
@@ -757,7 +766,11 @@ export function startPlatform({
           "Este jogo ainda não possui perfil de execução oficial validado.",
           409,
         );
-      if (hostedFactory === defaultHostedFactory) verifyHostedAssets();
+      if (
+        hostedFactory === defaultHostedFactory &&
+        resolveHostedEngine() === "chrome"
+      )
+        verifyHostedAssets();
       return cents(stakeCents, { max: 100000 });
     }
     return 0;
@@ -1403,13 +1416,32 @@ export function startPlatform({
           return json(res, 200, { warmPool: warmPool.stats() });
         }
         if (p === "/api/ops/hosted-cap" && req.method === "GET") {
+          const engine = resolveHostedEngine();
           return json(res, 200, {
+            hostedEngine: engine,
             hostedMaxSessions: hostedCap(),
             hostedActiveSessions: hostedActiveCount(),
-            isolation: "process-worker-per-session",
+            isolation:
+              engine === "native"
+                ? "host-bot-process-per-session"
+                : "playwright-browser-per-session",
+            capacityEstimate: {
+              testVps4g2c: capacityForKnownVps("test4g2c", engine),
+              prodVps10g5c: capacityForKnownVps("prod10g5c", engine),
+            },
             note:
-              "Cada HostedSession usa browser Playwright isolado; container/cgroup é gap de infra VPS.",
+              engine === "native"
+                ? "Host Bot nativo (sem Chrome). Calibrar HOSTED_MAX_SESSIONS com carga real."
+                : "Engine chrome/Playwright — densidade baixa; use HOSTED_ENGINE=native.",
           });
+        }
+        if (p === "/api/ops/capacity" && req.method === "GET") {
+          const url = new URL(req.url, "http://local");
+          const ramMb = Number(url.searchParams.get("ramMb")) || 4096;
+          const vcpu = Number(url.searchParams.get("vcpu")) || 2;
+          const engine =
+            url.searchParams.get("engine") || resolveHostedEngine();
+          return json(res, 200, estimateHostedCapacity({ ramMb, vcpu, engine }));
         }
         const integrityRoute = /^\/api\/matches\/([^/]+)\/integrity$/.exec(p);
         if (integrityRoute && req.method === "GET") {
@@ -2427,7 +2459,8 @@ export function startPlatform({
               }
               if (
                 ch.mode === "APOSTADO" &&
-                hostedFactory === defaultHostedFactory
+                hostedFactory === defaultHostedFactory &&
+                resolveHostedEngine() === "chrome"
               )
                 verifyHostedAssets();
               // Só remove o desafio após createMatch/regras — falha financeira
