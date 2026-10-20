@@ -62,6 +62,8 @@ const state = {
   pendingCredits: false,
   readySent: false,
   creditsTopup: false,
+  gameWatch: null,
+  closing: false,
 };
 
 function emit(obj) {
@@ -106,69 +108,80 @@ async function waitForExternalFrames(frameSource, ms = 2000) {
   return (frameSource.externalCount || 0) > before;
 }
 
-async function startFramebufferWithFallback(frameSource) {
-  const tryStart = (label) => {
-    const fb = startFfmpegFramebuffer(frameSource, { ...process.env });
-    if (fb.ok) {
-      emit({
-        event: "progress",
-        stage: "framebuffer",
-        detail: {
-          via: "ffmpeg",
-          label,
-          input: fb.capture?.args?.slice(0, 10),
-        },
-      });
-    } else {
-      emit({
-        event: "progress",
-        stage: "framebuffer-skip",
-        detail: { error: fb.error || fb.reason || "skip", label },
-      });
-    }
-    return fb;
-  };
+function gameAlive() {
+  return !!(state.game?.ok && state.game.child && state.game.child.exitCode == null);
+}
 
-  let fb = tryStart(process.env.HOST_BOT_FFMPEG_INPUT || "default");
-  if (!fb.ok) return fb;
-
-  const got = await waitForExternalFrames(frameSource, 2500);
-  if (got) return fb;
-
-  // Re-tenta desktop+crop com foco na janela (não usa hwnd= — crasha o core).
-  const hwnd = state.gameHwnd;
-  if (hwnd && process.platform === "win32") {
-    try {
-      fb.stop?.();
-    } catch {
-      /* ignore */
-    }
-    await focusWindow(hwnd);
-    await new Promise((r) => setTimeout(r, 300));
-    const rect = await getWindowClientRect(hwnd);
-    if (rect) {
-      process.env.HOST_BOT_FFMPEG_INPUT_KIND = "gdigrab";
-      process.env.HOST_BOT_FFMPEG_INPUT = "desktop";
-      process.env.HOST_BOT_FFMPEG_OFFSET_X = String(rect.x);
-      process.env.HOST_BOT_FFMPEG_OFFSET_Y = String(rect.y);
-      process.env.HOST_BOT_FFMPEG_SIZE = `${rect.width}x${rect.height}`;
-      emit({
-        event: "progress",
-        stage: "framebuffer-fallback",
-        detail: { to: "desktop-crop", ...rect },
-      });
-      fb = tryStart("desktop-crop");
-      if (fb.ok) await waitForExternalFrames(frameSource, 2500);
-    }
+function stopCapture(reason) {
+  try {
+    state.ffmpegFb?.stop();
+  } catch {
+    /* ignore */
   }
-  if (!got && !(frameSource.externalCount > 0)) {
+  state.ffmpegFb = null;
+  if (state.gameWatch) {
+    clearInterval(state.gameWatch);
+    state.gameWatch = null;
+  }
+  if (reason) {
+    emit({ event: "progress", stage: "capture-stop", detail: { reason } });
+  }
+}
+
+function armGameWatchdog() {
+  if (state.gameWatch) clearInterval(state.gameWatch);
+  state.gameWatch = setInterval(() => {
+    if (!state.started || state.closing) return;
+    if (!state.game?.ok) return;
+    if (state.game.child?.exitCode == null) return;
+    stopCapture("game-pid-dead");
+    if (!state.closing) {
+      emit({
+        event: "failure",
+        message:
+          "RetroArch fechou (watchdog). Sem janela do jogo não há vídeo — sessão encerrada.",
+      });
+    }
+  }, 400);
+  state.gameWatch.unref?.();
+}
+
+async function startFramebufferWithFallback(frameSource) {
+  // Só title= / hwnd= — NUNCA desktop (mesmo com crop: se o jogo fecha, filma o PC).
+  const input = process.env.HOST_BOT_FFMPEG_INPUT || "title=RetroArch";
+  if (String(input).toLowerCase() === "desktop") {
+    process.env.HOST_BOT_FFMPEG_INPUT = "title=RetroArch";
+  }
+  delete process.env.HOST_BOT_FFMPEG_OFFSET_X;
+  delete process.env.HOST_BOT_FFMPEG_OFFSET_Y;
+  delete process.env.HOST_BOT_FFMPEG_SIZE;
+
+  const fb = startFfmpegFramebuffer(frameSource, { ...process.env });
+  if (fb.ok) {
     emit({
       event: "progress",
-      stage: "framebuffer-empty",
+      stage: "framebuffer",
       detail: {
-        stderr: (fb.stderr || "").slice(-400),
-        hint: "Deixa a janela RetroArch VISÍVEL (sem browsers por cima).",
+        via: "ffmpeg",
+        input: fb.capture?.args?.slice(0, 12),
       },
+    });
+    const got = await waitForExternalFrames(frameSource, 3000);
+    if (!got) {
+      emit({
+        event: "progress",
+        stage: "framebuffer-empty",
+        detail: {
+          stderr: (fb.stderr || "").slice(-400),
+          hint: "Sem frames de title=RetroArch. Confirma video_driver=sdl2 e janela aberta.",
+        },
+      });
+    }
+  } else {
+    emit({
+      event: "progress",
+      stage: "framebuffer-skip",
+      detail: { error: fb.error || fb.reason || "skip" },
     });
   }
   return fb;
@@ -221,6 +234,11 @@ async function handle(msg) {
       state.pendingCredits = false;
       state.readySent = false;
       state.creditsTopup = false;
+      state.closing = false;
+      if (state.gameWatch) {
+        clearInterval(state.gameWatch);
+        state.gameWatch = null;
+      }
       emit({ event: "progress", stage: "assets" });
       emit({ event: "progress", stage: "runtime" });
       emit({ event: "progress", stage: "boot" });
@@ -240,15 +258,8 @@ async function handle(msg) {
               stage: "game-exit",
               detail: { code, stderr: err.slice(0, 400) },
             });
-            // Para ffmpeg já — senão continua a transmitir o desktop!
-            try {
-              state.ffmpegFb?.stop();
-            } catch {
-              /* ignore */
-            }
-            state.ffmpegFb = null;
+            stopCapture("game-exit-" + code);
             if (!state.started || state.closing) return;
-            // Exit 0 também é falha: era isso que deixava stream da área de trabalho.
             emit({
               event: "failure",
               message:
@@ -277,75 +288,54 @@ async function handle(msg) {
             });
             return;
           }
-          // Limpa lixo do .env (HOST_BOT_FFMPEG_INPUT=desktop sem crop = PC inteiro).
+          // Nunca desktop: se o jogo fecha, desktop-crop filma o PC.
           delete process.env.HOST_BOT_FFMPEG_OFFSET_X;
           delete process.env.HOST_BOT_FFMPEG_OFFSET_Y;
           delete process.env.HOST_BOT_FFMPEG_SIZE;
           const grabMode = String(
-            process.env.HOST_BOT_FFMPEG_GRAB || "desktop",
+            process.env.HOST_BOT_FFMPEG_GRAB || "title",
           ).toLowerCase();
           process.env.HOST_BOT_FFMPEG_INPUT_KIND = "gdigrab";
-          let grabDetail = { mode: grabMode };
           if (!win?.hwnd) {
             emit({
               event: "failure",
               message:
-                "Janela do RetroArch não apareceu — não vou capturar o desktop. pid=" +
-                state.game.pid,
+                "Janela do RetroArch não apareceu. pid=" + state.game.pid,
             });
             return;
           }
           state.gameHwnd = win.hwnd;
           await focusWindow(win.hwnd);
-          await new Promise((r) => setTimeout(r, 400));
+          // Estabiliza: se fechar nos próximos 2s, falha antes do ffmpeg.
+          await new Promise((r) => setTimeout(r, 2000));
+          if (!gameAlive()) {
+            emit({
+              event: "failure",
+              message: "RetroArch fechou logo após abrir a janela.",
+            });
+            return;
+          }
           if (grabMode === "hwnd") {
             const grab = hwndGrabInput(win.hwnd);
-            if (!grab) {
-              emit({
-                event: "failure",
-                message: "HWND inválido para gdigrab.",
-              });
-              return;
-            }
-            process.env.HOST_BOT_FFMPEG_INPUT = grab;
-            grabDetail.grab = grab;
-          } else if (grabMode === "title") {
-            process.env.HOST_BOT_FFMPEG_INPUT = "title=RetroArch";
-            grabDetail.grab = "title=RetroArch";
+            process.env.HOST_BOT_FFMPEG_INPUT = grab || "title=RetroArch";
           } else {
-            const rect = await getWindowClientRect(win.hwnd);
-            if (
-              !rect ||
-              rect.width < 64 ||
-              rect.height < 64 ||
-              rect.width > 4000 ||
-              rect.height > 4000
-            ) {
-              emit({
-                event: "failure",
-                message:
-                  "Rect da janela RetroArch inválido — abortado (evita stream do PC). " +
-                  JSON.stringify(rect),
-              });
-              return;
-            }
-            process.env.HOST_BOT_FFMPEG_INPUT = "desktop";
-            process.env.HOST_BOT_FFMPEG_OFFSET_X = String(rect.x);
-            process.env.HOST_BOT_FFMPEG_OFFSET_Y = String(rect.y);
-            process.env.HOST_BOT_FFMPEG_SIZE = `${rect.width}x${rect.height}`;
-            grabDetail = { ...grabDetail, ...rect };
+            process.env.HOST_BOT_FFMPEG_INPUT = "title=RetroArch";
           }
           emit({
             event: "progress",
             stage: "game-window",
-            detail: { hwnd: win.hwnd, title: win.title, ...grabDetail },
+            detail: {
+              hwnd: win.hwnd,
+              title: win.title,
+              grab: process.env.HOST_BOT_FFMPEG_INPUT,
+              alive: true,
+            },
           });
           state.input = createInputInjector({
             hwnd: state.gameHwnd || null,
           });
-          // NÃO injectar créditos no boot — teclas cedo podem fechar o RetroArch.
-          // Fichas só quando os dois dão START (ver case input).
           state.pendingCredits = false;
+          armGameWatchdog();
         } else {
           emit({
             event: "progress",
@@ -534,7 +524,9 @@ async function handle(msg) {
       return;
     }
     case "stop":
+      state.closing = true;
       state.started = false;
+      stopCapture("stop");
       try {
         state.input?.stop();
       } catch {
@@ -547,12 +539,6 @@ async function handle(msg) {
         /* ignore */
       }
       state.game = null;
-      try {
-        state.ffmpegFb?.stop();
-      } catch {
-        /* ignore */
-      }
-      state.ffmpegFb = null;
       try {
         state.media?.stop();
       } catch {

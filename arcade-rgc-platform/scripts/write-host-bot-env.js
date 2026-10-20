@@ -86,9 +86,9 @@ const lines = [
   "HOST_BOT_WORKDIR=data/hosted/kof2002",
   "HOST_BOT_FFMPEG=ffmpeg",
   "HOST_BOT_FFMPEG_INPUT_KIND=gdigrab",
-  "HOST_BOT_FFMPEG_GRAB=desktop",
+  "HOST_BOT_FFMPEG_GRAB=title",
   "HOST_BOT_INPUT=auto",
-  "# NÃO definir HOST_BOT_FFMPEG_INPUT aqui — o worker calcula o crop da janela",
+  "# NÃO definir HOST_BOT_FFMPEG_INPUT=desktop — transmite o PC inteiro",
   "",
 ];
 
