@@ -159,12 +159,16 @@ npm run smoke:hosted-queue
 npm run setup:hosted -- --rom "D:\roms\kof2002.zip" --bios "D:\roms\neogeo.zip"
 ```
 
-3. Grava `.env` **sem BOM** (PowerShell). Ajusta `HOST_BOT_BIN` para o `retroarch.exe` real:
+3. Grava `.env` **sem BOM** (PowerShell 5 e 7). Ajusta `HOST_BOT_BIN` para o `retroarch.exe` real:
 
 ```powershell
-$ra = (Get-Command retroarch -ErrorAction SilentlyContinue)?.Source
-if (-not $ra) { $ra = "C:\Program Files\RetroArch\retroarch.exe" }
-@"
+$ra = (Get-Command retroarch -ErrorAction SilentlyContinue).Source
+if (-not $ra) {
+  $hit = Get-ChildItem "$env:ProgramFiles","$env:ProgramFiles(x86)","$env:LOCALAPPDATA" `
+    -Filter retroarch.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+  $ra = if ($hit) { $hit.FullName } else { "C:\RetroArch\retroarch.exe" }
+}
+$envText = @"
 HOSTED_ENGINE=native
 HOSTED_MAX_SESSIONS=6
 HOST_BOT_BIN=$ra
@@ -174,7 +178,10 @@ HOST_BOT_FFMPEG=ffmpeg
 HOST_BOT_FFMPEG_INPUT_KIND=gdigrab
 HOST_BOT_FFMPEG_INPUT=title=RetroArch
 HOST_BOT_INPUT=auto
-"@ | Set-Content -Path .env -Encoding utf8NoBOM
+"@
+# PS5 não tem utf8NoBOM — WriteAllText evita BOM que quebra a 1ª chave.
+[System.IO.File]::WriteAllText((Join-Path (Get-Location) ".env"), $envText)
+Write-Host "HOST_BOT_BIN=$ra"
 ```
 
 4. Testa:
