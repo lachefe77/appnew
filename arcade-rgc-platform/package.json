@@ -20,6 +20,7 @@
     "smoke:host-bot": "node scripts/smoke-host-bot.js",
     "bench:host-bot": "node scripts/bench-host-bot-capacity.js",
     "smoke:hosted-queue": "node scripts/smoke-hosted-queue.js",
+    "smoke:retroarch-alive": "node scripts/smoke-retroarch-alive.js",
     "check:host-bot": "node scripts/check-host-bot-ready.js"
   },
   "engines": {

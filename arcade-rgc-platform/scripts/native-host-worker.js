@@ -217,6 +217,10 @@ async function handle(msg) {
       state.scriptedWin = null;
       state.iceServers = msg.iceServers || [];
       state.peers.clear();
+      state.gameHwnd = null;
+      state.pendingCredits = false;
+      state.readySent = false;
+      state.creditsTopup = false;
       emit({ event: "progress", stage: "assets" });
       emit({ event: "progress", stage: "runtime" });
       emit({ event: "progress", stage: "boot" });
@@ -236,26 +240,23 @@ async function handle(msg) {
               stage: "game-exit",
               detail: { code, stderr: err.slice(0, 400) },
             });
-            // Antes do ready: falha dura. Depois: avisa (não mata sessão por exit 0).
-            if (state.started && !state.readySent && code !== 0 && code != null) {
-              emit({
-                event: "failure",
-                message:
-                  "Core do jogo encerrou no boot (código " +
-                  code +
-                  ")." +
-                  (err ? " stderr=" + err : ""),
-              });
-            } else if (state.started && state.readySent && code !== 0 && code != null) {
-              emit({
-                event: "failure",
-                message:
-                  "Core do jogo fechou durante a partida (código " +
-                  code +
-                  "). Evite HOST_BOT_FFMPEG_GRAB=hwnd — use desktop." +
-                  (err ? " stderr=" + err : ""),
-              });
+            // Para ffmpeg já — senão continua a transmitir o desktop!
+            try {
+              state.ffmpegFb?.stop();
+            } catch {
+              /* ignore */
             }
+            state.ffmpegFb = null;
+            if (!state.started || state.closing) return;
+            // Exit 0 também é falha: era isso que deixava stream da área de trabalho.
+            emit({
+              event: "failure",
+              message:
+                "Core do jogo fechou (código " +
+                (code == null ? "?" : code) +
+                "). Sem emulador não há vídeo do KOF." +
+                (err ? " stderr=" + err : ""),
+            });
           },
         });
         if (state.game.ok) {
@@ -323,8 +324,9 @@ async function handle(msg) {
           state.input = createInputInjector({
             hwnd: state.gameHwnd || null,
           });
-          // Créditos DEPOIS do media (evita spam de teclas a fechar menus no boot).
-          state.pendingCredits = true;
+          // NÃO injectar créditos no boot — teclas cedo podem fechar o RetroArch.
+          // Fichas só quando os dois dão START (ver case input).
+          state.pendingCredits = false;
         } else {
           emit({
             event: "progress",
@@ -335,15 +337,22 @@ async function handle(msg) {
       }
 
       emit({ event: "progress", stage: "media" });
+      // Só inicia captura se o core ainda estiver vivo.
+      if (state.game?.ok && state.game.child?.exitCode != null) {
+        emit({
+          event: "failure",
+          message: "RetroArch fechou antes da captura de vídeo.",
+        });
+        return;
+      }
       await ensureMedia(state.iceServers);
-      // Só agora: fichas no gabinete (core já estável + captura a correr).
-      if (state.pendingCredits && state.input) {
-        if (state.game?.child?.exitCode == null) {
-          await focusWindow(state.gameHwnd);
-          await injectCabinetCredits(state.input, { pulses: 3 });
-          emit({ event: "progress", stage: "cabinet-credits" });
-        }
-        state.pendingCredits = false;
+      if (state.game?.ok && state.game.child?.exitCode != null) {
+        emit({
+          event: "failure",
+          message:
+            "RetroArch fechou ao iniciar o ffmpeg. Usa HOST_BOT_FFMPEG_GRAB=desktop e janela visível.",
+        });
+        return;
       }
       emit({ event: "progress", stage: "credits" });
       // Fase 1 smoke / platform sem viewers: AUTO_PEERS marca mídia pronta.

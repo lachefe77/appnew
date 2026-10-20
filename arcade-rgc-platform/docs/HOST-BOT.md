@@ -63,9 +63,10 @@ Produção leve: `HOSTED_ENGINE=native`.
 5. Clique no vídeo → setas / Z X A S mexem no personagem.
 6. Round jogável; sem crash do host no terminal.
 
-Captura: `HOST_BOT_FFMPEG_GRAB=desktop` (crop DWM). **Não uses `hwnd=`** — em muitos PCs o gdigrab na janela GL/D3D **fecha o RetroArch**. Mantém a janela do jogo visível.  
-Input: binds RetroArch (`z`/`up`) + `PostMessage` no HWND.  
-Créditos: injectados depois da captura estável (FICHA desativada no hosted).
+Captura: `HOST_BOT_FFMPEG_GRAB=desktop` (crop DWM). **Não uses `hwnd=`**. Mantém a janela do jogo visível.  
+Se o RetroArch fechar, a sessão falha (já não transmite o desktop).  
+Diagnóstico: `npm run smoke:retroarch-alive` — tem de ficar aberto ≥15s.  
+Input: binds `z`/`up` + PostMessage. Fichas só após START dos dois.
 
 ## Fase 1 — sample sem Chrome
 
