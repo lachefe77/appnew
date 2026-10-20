@@ -277,50 +277,69 @@ async function handle(msg) {
             });
             return;
           }
+          // Limpa lixo do .env (HOST_BOT_FFMPEG_INPUT=desktop sem crop = PC inteiro).
+          delete process.env.HOST_BOT_FFMPEG_OFFSET_X;
+          delete process.env.HOST_BOT_FFMPEG_OFFSET_Y;
+          delete process.env.HOST_BOT_FFMPEG_SIZE;
           const grabMode = String(
             process.env.HOST_BOT_FFMPEG_GRAB || "desktop",
           ).toLowerCase();
-          process.env.HOST_BOT_FFMPEG_INPUT_KIND =
-            process.env.HOST_BOT_FFMPEG_INPUT_KIND || "gdigrab";
+          process.env.HOST_BOT_FFMPEG_INPUT_KIND = "gdigrab";
           let grabDetail = { mode: grabMode };
-          if (win?.hwnd) {
-            state.gameHwnd = win.hwnd;
-            await focusWindow(win.hwnd);
-            if (grabMode === "hwnd") {
-              const grab = hwndGrabInput(win.hwnd);
-              if (grab) process.env.HOST_BOT_FFMPEG_INPUT = grab;
-              grabDetail.grab = grab;
-              grabDetail.warn = "hwnd pode fechar o RetroArch em GL/D3D";
-            } else {
-              const rect = await getWindowClientRect(win.hwnd);
-              if (rect) {
-                process.env.HOST_BOT_FFMPEG_INPUT = "desktop";
-                process.env.HOST_BOT_FFMPEG_OFFSET_X = String(rect.x);
-                process.env.HOST_BOT_FFMPEG_OFFSET_Y = String(rect.y);
-                process.env.HOST_BOT_FFMPEG_SIZE = `${rect.width}x${rect.height}`;
-                grabDetail = { ...grabDetail, ...rect };
-              } else {
-                process.env.HOST_BOT_FFMPEG_INPUT = "title=RetroArch";
-                grabDetail.fallback = "title=RetroArch";
-              }
-            }
+          if (!win?.hwnd) {
             emit({
-              event: "progress",
-              stage: "game-window",
-              detail: { hwnd: win.hwnd, title: win.title, ...grabDetail },
+              event: "failure",
+              message:
+                "Janela do RetroArch não apareceu — não vou capturar o desktop. pid=" +
+                state.game.pid,
             });
-          } else {
-            process.env.HOST_BOT_FFMPEG_INPUT =
-              process.env.HOST_BOT_FFMPEG_INPUT || "title=RetroArch";
-            emit({
-              event: "progress",
-              stage: "game-window-miss",
-              detail: {
-                pid: state.game.pid,
-                fallback: process.env.HOST_BOT_FFMPEG_INPUT,
-              },
-            });
+            return;
           }
+          state.gameHwnd = win.hwnd;
+          await focusWindow(win.hwnd);
+          await new Promise((r) => setTimeout(r, 400));
+          if (grabMode === "hwnd") {
+            const grab = hwndGrabInput(win.hwnd);
+            if (!grab) {
+              emit({
+                event: "failure",
+                message: "HWND inválido para gdigrab.",
+              });
+              return;
+            }
+            process.env.HOST_BOT_FFMPEG_INPUT = grab;
+            grabDetail.grab = grab;
+          } else if (grabMode === "title") {
+            process.env.HOST_BOT_FFMPEG_INPUT = "title=RetroArch";
+            grabDetail.grab = "title=RetroArch";
+          } else {
+            const rect = await getWindowClientRect(win.hwnd);
+            if (
+              !rect ||
+              rect.width < 64 ||
+              rect.height < 64 ||
+              rect.width > 4000 ||
+              rect.height > 4000
+            ) {
+              emit({
+                event: "failure",
+                message:
+                  "Rect da janela RetroArch inválido — abortado (evita stream do PC). " +
+                  JSON.stringify(rect),
+              });
+              return;
+            }
+            process.env.HOST_BOT_FFMPEG_INPUT = "desktop";
+            process.env.HOST_BOT_FFMPEG_OFFSET_X = String(rect.x);
+            process.env.HOST_BOT_FFMPEG_OFFSET_Y = String(rect.y);
+            process.env.HOST_BOT_FFMPEG_SIZE = `${rect.width}x${rect.height}`;
+            grabDetail = { ...grabDetail, ...rect };
+          }
+          emit({
+            event: "progress",
+            stage: "game-window",
+            detail: { hwnd: win.hwnd, title: win.title, ...grabDetail },
+          });
           state.input = createInputInjector({
             hwnd: state.gameHwnd || null,
           });

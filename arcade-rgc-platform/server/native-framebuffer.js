@@ -47,12 +47,21 @@ export function buildFfmpegFrameCapture(env = process.env) {
 
   let args;
   if (kind === "gdigrab" || (!kind && process.platform === "win32")) {
-    // hwnd= de janela GL/D3D → frames pretos (GDI). Preferir desktop+crop (DWM)
-    // ou title= com video_driver sdl2/gdi no RetroArch.
-    const i = input || "desktop";
+    // desktop SEM offset/size = ecrã inteiro (bug clássico). Exigir crop ou title=/hwnd=.
+    const i = input || "title=RetroArch";
     const ox = Number(env.HOST_BOT_FFMPEG_OFFSET_X);
     const oy = Number(env.HOST_BOT_FFMPEG_OFFSET_Y);
     const size = String(env.HOST_BOT_FFMPEG_SIZE || "").trim();
+    const desktopCrop =
+      i === "desktop" &&
+      Number.isFinite(ox) &&
+      Number.isFinite(oy) &&
+      /^\d+x\d+$/.test(size);
+    if (i === "desktop" && !desktopCrop) {
+      throw Error(
+        "gdigrab desktop sem crop (OFFSET_X/Y + SIZE) — recusado para não transmitir o PC inteiro. Defina a janela do RetroArch ou use title=RetroArch.",
+      );
+    }
     const grabArgs = [
       "-y",
       "-f",
@@ -62,9 +71,9 @@ export function buildFfmpegFrameCapture(env = process.env) {
       "-draw_mouse",
       "0",
     ];
-    if (i === "desktop" && Number.isFinite(ox) && Number.isFinite(oy) && size) {
-      grabArgs.push("-offset_x", String(Math.max(0, ox)));
-      grabArgs.push("-offset_y", String(Math.max(0, oy)));
+    if (desktopCrop) {
+      grabArgs.push("-offset_x", String(Math.max(0, Math.floor(ox))));
+      grabArgs.push("-offset_y", String(Math.max(0, Math.floor(oy))));
       grabArgs.push("-video_size", size);
     }
     grabArgs.push("-i", i, ...outArgs);
