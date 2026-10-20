@@ -7,19 +7,29 @@
  *   npm run smoke:host-bot -- 4 peers
  *
  * Args: [sessions=2] [mode=auto|webrtc|peers|framebuffer]
+ * Com .env (HOST_BOT_BIN + ffmpeg gdigrab) spawna RetroArch — Fase 4b.
  */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
 import { NativeHostSession } from "../server/native-host-session.js";
 import { loadWrtc } from "../server/native-webrtc.js";
+import { buildNativeHostLaunch } from "../server/native-host-launcher.js";
 import {
   NATIVE_FRAME,
   paintSyntheticI420,
   i420ByteLength,
 } from "../server/native-frame-source.js";
 
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+dotenv.config({ path: path.join(root, ".env") });
+
 const n = Math.max(1, Math.min(20, Number(process.argv[2]) || 2));
 const modeArg = String(process.argv[3] || "auto").toLowerCase();
 const startedAt = Date.now();
 const sessions = [];
+const launchPreview = buildNativeHostLaunch();
 
 const wrtc = await loadWrtc();
 const mode =
@@ -29,15 +39,31 @@ const mode =
       : "peers"
     : modeArg;
 
+// Core real precisa de mais tempo (janela + gdigrab).
+if (launchPreview.mode !== "stub" && !process.env.HOST_BOT_GAME_BOOT_MS) {
+  process.env.HOST_BOT_GAME_BOOT_MS = "5000";
+}
+
 console.log(
   JSON.stringify({
     phase: "start",
-    engine: "native-stub",
-    hostPhase: 2,
+    engine:
+      launchPreview.mode === "stub" ? "native-stub" : "native-" + launchPreview.mode,
+    hostPhase: launchPreview.mode === "stub" ? 2 : "4b",
     sessions: n,
     mode,
     wrtc: !!wrtc,
-    hint: "webrtc|framebuffer = vídeo; peers = RSS leve; FBNeo gdigrab = env HOST_BOT_FFMPEG_*.",
+    launchMode: launchPreview.mode,
+    hostBotBin:
+      launchPreview.mode === "stub" ? null : launchPreview.command,
+    binExists:
+      launchPreview.mode === "stub"
+        ? false
+        : fs.existsSync(launchPreview.command),
+    hint:
+      launchPreview.mode === "stub"
+        ? "Stub lab. Para Fase 4b: HOST_BOT_BIN + ROM no .env e reexecuta."
+        : "RetroArch/gdigrab — a janela do core pode abrir uns segundos.",
   }),
 );
 
