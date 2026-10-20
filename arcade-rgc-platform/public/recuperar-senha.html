@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Recuperar senha — Arena Arcade</title>
+  <style>
+    body { margin:0; min-height:100vh; display:grid; place-items:center; background:#070708; color:#f3efe6; font-family:system-ui,sans-serif; }
+    form { background:#121214; border:1px solid #2a2a2e; padding:24px; width:min(400px,92vw); display:grid; gap:10px; }
+    input,button { padding:10px; font:inherit; }
+    input { background:#1c1c20; border:1px solid #2a2a2e; color:#fff; }
+    button { background:#e10600; color:#fff; border:0; cursor:pointer; font-weight:700; }
+    a { color:#f5c518; }
+    .muted { color:#9a958c; font-size:.9rem; }
+  </style>
+</head>
+<body>
+  <form id="f">
+    <h1 style="margin:0;font-size:1.3rem;">Recuperar senha</h1>
+    <p class="muted">Em lab, o token vem na resposta. Em produção, enviaria por e-mail.</p>
+    <input id="email" type="email" placeholder="E-mail" required />
+    <button type="button" id="forgot">Pedir token</button>
+    <input id="token" placeholder="Token de reset" />
+    <input id="password" type="password" placeholder="Nova senha (8+)" minlength="8" />
+    <button type="submit">Redefinir</button>
+    <p id="msg" class="muted"></p>
+    <a href="/">Voltar ao lobby</a>
+  </form>
+  <script>
+    const msg = document.getElementById("msg");
+    document.getElementById("forgot").onclick = async () => {
+      const r = await fetch("/api/auth/forgot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.value }),
+      });
+      const b = await r.json();
+      msg.textContent = b.resetToken
+        ? "Token (lab): " + b.resetToken
+        : b.message || "OK";
+      if (b.resetToken) token.value = b.resetToken;
+    };
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const r = await fetch("/api/auth/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: token.value, password: password.value }),
+      });
+      const b = await r.json().catch(() => ({}));
+      msg.textContent = r.ok ? "Senha atualizada. Faça login." : b.error || "Falha";
+    };
+  </script>
+</body>
+</html>
