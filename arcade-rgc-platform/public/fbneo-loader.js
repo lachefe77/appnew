@@ -490,8 +490,9 @@ export class FBNeoLoader {
   }
   sendInput(button, value) {
     if (this.ws?.readyState !== WebSocket.OPEN) return;
+    const clientSentAt = performance.now();
     if (this.hosted) {
-      this.pendingInputs.set(this.inputSeq + 1, performance.now());
+      this.pendingInputs.set(this.inputSeq + 1, clientSentAt);
       if (this.pendingInputs.size > 256)
         this.pendingInputs.delete(this.pendingInputs.keys().next().value);
     }
@@ -500,6 +501,7 @@ export class FBNeoLoader {
       value,
       epoch: this.inputEpoch,
       seq: ++this.inputSeq,
+      clientSentAt,
     });
     if (value) this.pressed.add(button);
     else this.pressed.delete(button);
@@ -544,16 +546,34 @@ export class FBNeoLoader {
           `P${this.slot} conectado. Enter = Start. CONTROLES permite testar e remapear.`,
         );
     };
+    const onVisibility = () => {
+      if (typeof document !== "undefined" && document.hidden) {
+        this.focused = false;
+        this.releaseAll();
+        this.status("Aba oculta — comandos liberados (anti stuck-button).");
+      }
+    };
+    const onPageHide = () => this.releaseAll();
     target.addEventListener("keydown", down, true);
     target.addEventListener("keyup", up, true);
     target.addEventListener("blur", blur);
     target.addEventListener("focus", focus);
+    const doc =
+      typeof document !== "undefined" && document?.addEventListener
+        ? document
+        : null;
+    const win =
+      typeof window !== "undefined" && window?.addEventListener ? window : null;
+    doc?.addEventListener("visibilitychange", onVisibility);
+    win?.addEventListener("pagehide", onPageHide);
     this.listeners ??= [];
     this.listeners.push(() => {
       target.removeEventListener("keydown", down, true);
       target.removeEventListener("keyup", up, true);
       target.removeEventListener("blur", blur);
       target.removeEventListener("focus", focus);
+      doc?.removeEventListener("visibilitychange", onVisibility);
+      win?.removeEventListener("pagehide", onPageHide);
     });
   }
   _padLoop() {
@@ -614,10 +634,33 @@ export class FBNeoLoader {
       this.lastAckMs = Math.round(performance.now() - sent);
       this.pendingInputs.delete(message.seq);
     }
+    // Latência comando→imagem: ecoa clientSentAt e marca o próximo frame decodificado.
+    const clientSentAt = message.clientSentAt ?? sent;
+    if (clientSentAt != null && this.video) {
+      const mark = () => {
+        const frameDecodedAt = performance.now();
+        this.send("LATENCY_SAMPLE", {
+          clientSentAt,
+          acceptedAt: message.acceptedAt,
+          frameDecodedAt,
+          seq: message.seq,
+        });
+        this.lastCmdImageMs = Math.round(frameDecodedAt - clientSentAt);
+      };
+      if (typeof this.video.requestVideoFrameCallback === "function")
+        this.video.requestVideoFrameCallback(() => mark());
+      else requestAnimationFrame(() => mark());
+    }
   }
   onHostedMetrics(metrics) {
-    const peer = metrics.peers.find((p) => p.slot === this.slot),
-      previous = this.metrics?.peers.find((p) => p.slot === this.slot);
+    const peers = Array.isArray(metrics.peers)
+      ? metrics.peers
+      : Object.values(metrics.peers || {});
+    const peer = peers.find((p) => p.slot === this.slot),
+      previousPeers = Array.isArray(this.metrics?.peers)
+        ? this.metrics.peers
+        : Object.values(this.metrics?.peers || {}),
+      previous = previousPeers.find((p) => p.slot === this.slot);
     let rate = "medindo";
     if (peer && previous) {
       const elapsed = (metrics.at - this.metrics.at) / 1000;
@@ -630,8 +673,10 @@ export class FBNeoLoader {
           ).toFixed(2) + " Mbps";
     }
     this.metrics = metrics;
+    const cmdImg =
+      this.lastCmdImageMs ?? metrics.commandLatency?.last ?? null;
     if (this.metricsEl)
-      this.metricsEl.textContent = `Vídeo: ${peer?.state || "conectando"} • Envio: ${rate} • RTT de mídia: ${peer?.rttSeconds != null ? Math.round(peer.rttSeconds * 1000) + " ms" : "medindo"} • Comando confirmado: ${this.lastAckMs ?? "—"} ms • Quadro do core: ${metrics.frame}. Não é medição do atraso completo até a imagem.`;
+      this.metricsEl.textContent = `Vídeo: ${peer?.state || "conectando"} • Envio: ${rate} • RTT de mídia: ${peer?.rttSeconds != null ? Math.round(peer.rttSeconds * 1000) + " ms" : metrics.rttMs != null ? metrics.rttMs + " ms" : "medindo"} • Comando confirmado: ${this.lastAckMs ?? "—"} ms • cmd→img: ${cmdImg ?? "—"} ms • Quadro do core: ${metrics.frame}.`;
   }
   async sampleMedia() {
     if (this.mediaSampling || this.stopped || !this.pc || !this.qualityEl)

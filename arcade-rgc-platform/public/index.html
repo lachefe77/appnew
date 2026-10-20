@@ -807,8 +807,12 @@
       </div>
       <div class="modal-body">
         <div style="background:var(--bg-dark); border:1px solid var(--border-color); padding:16px; border-radius:8px; text-align:center;">
-          <div style="font-size:0.75rem; color:var(--text-muted);">SALDO DISPONÍVEL — CRÉDITOS DE TESTE</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">DISPONÍVEL — CRÉDITOS DE TESTE</div>
           <div style="font-size:2rem; font-family:var(--font-mono); font-weight:700; color:var(--neon-green);" id="walletModalAmount">R$ 20,00</div>
+          <div style="display:flex; justify-content:space-around; gap:8px; margin-top:12px; font-family:var(--font-mono); font-size:0.72rem;">
+            <div><div style="color:var(--text-muted);">Reservado</div><div id="walletReservedVal">R$ 0,00</div></div>
+            <div><div style="color:var(--text-muted);">Disputa</div><div id="walletDisputeVal">R$ 0,00</div></div>
+          </div>
         </div>
         <div style="display:flex; gap:8px;">
           <button class="btn-auth-main" onclick="depositPix(1000)">+ R$ 10</button>
@@ -933,11 +937,16 @@
       <canvas id="arenaCanvas" width="800" height="450"></canvas>
       <button id="btnFullscreen" onclick="toggleFullscreen()" title="Tela cheia (F11)" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);border:1px solid #333;color:#aaa;padding:5px 9px;cursor:pointer;font-size:0.75rem;border-radius:4px;z-index:5;">⛶</button>
     </div>
+    <!-- Ready-check overlay (P1+P2 ACK → countdown) -->
+    <div id="readyCheckOverlay" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.72); z-index:20; align-items:center; justify-content:center; flex-direction:column; gap:12px;">
+      <div data-ready-label style="color:#fff; font-family:var(--font-display); font-size:1.1rem;">Confirme que está pronto</div>
+      <button type="button" onclick="ackReadyCheck()" style="background:var(--neon-gold); color:#000; border:none; padding:10px 22px; border-radius:6px; font-weight:800; cursor:pointer;">ESTOU PRONTO</button>
+    </div>
     <!-- Rematch banner (shown after match ends) -->
     <div id="rematchBanner" style="display:none; position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:#10141e; border:2px solid #ff4d00; border-radius:10px; padding:14px 24px; flex-direction:column; align-items:center; gap:10px; z-index:10;">
       <span style="font-size:0.9rem; color:#f0f4fa;">Revanche contra <b class="rematch-opponent"></b>?</span>
       <div style="display:flex; gap:10px;">
-        <button onclick="wsSend({type:'REMATCH_REQUEST', opponentId: document.getElementById('rematchBanner').dataset.opponentId}); document.getElementById('rematchBanner').style.display='none';" style="background:linear-gradient(135deg,#ff4d00,#ff0055);color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-weight:800;font-family:'Chakra Petch',sans-serif;">🔁 REVANCHE</button>
+        <button onclick="wsSend({type:'REMATCH_OFFER', matchId: document.getElementById('rematchBanner').dataset.matchId}); document.getElementById('rematchBanner').style.display='none';" style="background:linear-gradient(135deg,#ff4d00,#ff0055);color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-weight:800;font-family:'Chakra Petch',sans-serif;">🔁 REVANCHE</button>
         <button onclick="document.getElementById('rematchBanner').style.display='none';" style="background:#242e42;color:#8494ab;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;">Não</button>
       </div>
     </div>
@@ -1297,6 +1306,25 @@
             vibrateLoss?.();
           }
           if (window.ArcadeAudio) window.ArcadeAudio.play('VICTORY');
+          if (msg.rematchEligible) {
+            const rematchBanner = document.getElementById('rematchBanner');
+            if (rematchBanner) {
+              rematchBanner.style.display = 'flex';
+              rematchBanner.dataset.matchId = msg.matchId;
+              const peer = msg.winnerId === app.myId
+                ? (app._lastOpponentId || '')
+                : msg.winnerId;
+              rematchBanner.dataset.opponentId = peer;
+            }
+          }
+          break;
+        }
+
+        case 'REMATCH_OFFERED': {
+          app._pendingRematch = msg;
+          const nameEl = document.getElementById('rematchRequesterName');
+          if (nameEl) nameEl.textContent = 'Oponente';
+          document.getElementById('rematchModal').style.display = 'flex';
           break;
         }
 
@@ -1304,6 +1332,30 @@
           app._pendingRematch = msg;
           document.getElementById('rematchRequesterName').textContent = msg.fromUsername;
           document.getElementById('rematchModal').style.display = 'flex';
+          break;
+        }
+
+        case 'READY_CHECK_START':
+        case 'READY_CHECK_UPDATE':
+        case 'READY_CHECK_COUNTDOWN':
+        case 'READY_CHECK_DONE': {
+          const rc = document.getElementById('readyCheckOverlay');
+          if (rc) {
+            rc.style.display = msg.type === 'READY_CHECK_DONE' ? 'none' : 'flex';
+            const label = rc.querySelector('[data-ready-label]');
+            if (label) {
+              if (msg.type === 'READY_CHECK_COUNTDOWN') label.textContent = 'Começa em ' + msg.remaining + '…';
+              else if (msg.type === 'READY_CHECK_UPDATE') label.textContent = 'Prontos: ' + msg.acks + '/' + msg.need;
+              else label.textContent = 'Confirme que está pronto';
+            }
+          }
+          break;
+        }
+
+        case 'LATENCY_UPDATE': {
+          if (app.fbneo?.metricsEl && msg.commandToImageMs != null) {
+            app._lastCmdImageMs = msg.commandToImageMs;
+          }
           break;
         }
 
@@ -1340,7 +1392,11 @@
           break;
 
         case 'WALLET_UPDATE':
-          app.wallet.balanceReais = msg.balanceReais;
+          app.wallet.balanceReais = msg.balanceReais ?? msg.availableReais;
+          app.wallet.availableReais = msg.availableReais ?? msg.balanceReais;
+          app.wallet.reservedReais = msg.reservedReais ?? '0.00';
+          app.wallet.disputeReais = msg.disputeReais ?? '0.00';
+          app.wallet.lockedReais = msg.lockedReais ?? '0.00';
           renderHeader();
           if (msg.newElo && app.user) {
             app.user.elo = msg.newElo;
@@ -1394,8 +1450,12 @@
     function renderHeader() {
       const verification=document.getElementById('accountVerification');
       if(verification)verification.textContent=app.user?.kycStatus==='APROVADO'?'KYC APROVADO':app.user?.email?'CONTA CADASTRADA':'VISITANTE';
-      document.getElementById('navWalletVal').innerText = 'R$ ' + app.wallet.balanceReais;
-      document.getElementById('walletModalAmount').innerText = 'R$ ' + app.wallet.balanceReais;
+      document.getElementById('navWalletVal').innerText = 'R$ ' + (app.wallet.availableReais || app.wallet.balanceReais);
+      document.getElementById('walletModalAmount').innerText = 'R$ ' + (app.wallet.availableReais || app.wallet.balanceReais);
+      const wr = document.getElementById('walletReservedVal');
+      const wd = document.getElementById('walletDisputeVal');
+      if (wr) wr.textContent = 'R$ ' + (app.wallet.reservedReais || '0.00');
+      if (wd) wd.textContent = 'R$ ' + (app.wallet.disputeReais || '0.00');
       if (app.user) {
         document.getElementById('userNameTitle').innerText = app.user.username;
         document.getElementById('btnAuthTrigger').innerText = app.user.email ? `👤 ${app.user.username}` : 'ENTRAR';
@@ -1567,7 +1627,17 @@
       const b = msg.seriesScore?.b ?? msg.score?.b ?? 0;
       const bo = msg.seriesBestOf || 1;
       const m = msg.metrics || {};
-      el.innerHTML = `BO${bo} · P1 ${a} x ${b} P2 · fase ${msg.phase || '—'}<br>RTT ${m.rttMs ?? '—'}ms · perda ${m.packetLoss ?? '—'} · FPS ${m.fps ?? '—'}`;
+      const rtt = m.rttMs ?? (m.rttSeconds != null ? Math.round(m.rttSeconds * 1000) : null);
+      const loss = m.packetLoss ?? m.packetsLost ?? '—';
+      const fps = m.fps ?? m.framesPerSecond ?? '—';
+      const cmd = m.commandLatency?.last ?? app._lastCmdImageMs;
+      el.innerHTML = `BO${bo} · P1 ${a} x ${b} P2 · fase ${msg.phase || '—'}<br>RTT ${rtt ?? '—'}ms · perda ${loss} · FPS ${fps}` +
+        (cmd != null ? `<br>cmd→img ${cmd}ms` : '');
+    }
+
+    function ackReadyCheck() {
+      const mid = app.currentMatchId || app.activeMatch?.matchId;
+      if (mid) wsSend({ type: 'READY_ACK', matchId: mid });
     }
 
     function openQuickChallengeModal() {
@@ -1738,7 +1808,7 @@
     function acceptRematch() {
       const rm = app._pendingRematch;
       closeModal('rematchModal');
-      if (rm) wsSend({ type: 'REMATCH_ACCEPT', requesterId: rm.fromId });
+      if (rm) wsSend({ type: 'REMATCH_ACCEPT', challengeId: rm.challengeId, requesterId: rm.fromId || rm.requesterId });
       app._pendingRematch = null;
     }
     function openWalletModal() { openModal('walletModal'); }

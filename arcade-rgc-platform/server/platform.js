@@ -18,6 +18,10 @@ import db, {
   InviteCodes,
   UserLimits,
   UserStats,
+  ControlProfiles,
+  UserPrefs,
+  AdminMfaStore,
+  MatchHistory,
 } from "./db.js";
 import { finance, cents, recoverMatches } from "./finance.js";
 import { HostedSession } from "./hosted-session.js";
@@ -61,6 +65,25 @@ import {
   getActiveTheme,
   setActiveTheme,
 } from "./theme-settings.js";
+import {
+  createReadyCheck,
+  ackReady,
+  tickCountdown,
+  resetReadyCheck,
+} from "./ready-check.js";
+import { createPaymentProvider } from "./payment-provider.js";
+import { assertAdminMfa, generateTotpSecret } from "./admin-mfa.js";
+import { WarmPool } from "./warm-pool.js";
+import {
+  createFreerollRegistration,
+  registerFreerollPlayer,
+  reportFreerollWinner,
+  FREEROLL_SIZE,
+} from "./freeroll.js";
+import {
+  computeCommandToImageMs,
+  latencyRollingStats,
+} from "./command-latency.js";
 
 const scrypt = promisify(crypto.scrypt),
   uuid = () => crypto.randomUUID();
@@ -129,13 +152,36 @@ const adminUserView = (u) => {
     amlRisk: "Não avaliado",
   };
 };
+const disputeLockedCents = (id) => {
+  if (!id) return 0;
+  const row = db
+    .prepare(
+      `
+      SELECT COALESCE(SUM(stake_cents),0) AS c
+      FROM matches
+      WHERE status='DISPUTE' AND (player_a_id=? OR player_b_id=?)
+    `,
+    )
+    .get(id, id);
+  return Number(row?.c) || 0;
+};
 const walletView = (id) => {
   const w = id ? Wallets.get(id) : null;
+  const availableCents = w?.balance || 0;
+  const lockedCents = w?.locked || 0;
+  const disputeCents = Math.min(lockedCents, disputeLockedCents(id));
+  const reservedCents = Math.max(0, lockedCents - disputeCents);
   return {
-    balanceCents: w?.balance || 0,
-    locked: w?.locked || 0,
-    balanceReais: ((w?.balance || 0) / 100).toFixed(2),
-    lockedReais: ((w?.locked || 0) / 100).toFixed(2),
+    balanceCents: availableCents,
+    locked: lockedCents,
+    availableCents,
+    reservedCents,
+    disputeCents,
+    balanceReais: (availableCents / 100).toFixed(2),
+    lockedReais: (lockedCents / 100).toFixed(2),
+    availableReais: (availableCents / 100).toFixed(2),
+    reservedReais: (reservedCents / 100).toFixed(2),
+    disputeReais: (disputeCents / 100).toFixed(2),
   };
 };
 async function hashPassword(p) {
@@ -172,11 +218,28 @@ export function startPlatform({
 } = {}) {
   recoverMatches();
   ensureDefaultTheme();
+  const payments = createPaymentProvider({ simulation });
+  const freerolls = new Map();
+  const warmPool = new WarmPool({
+    size: Number(process.env.HOSTED_WARM_POOL) || 0,
+    factory: async (meta) => {
+      // Pool só pré-aloca handles leves; a sessão real nasce no launchHosted.
+      return {
+        meta,
+        async warmReady() {},
+        async bind() {},
+        async reset() {},
+        async stop() {},
+      };
+    },
+  });
+  warmPool.start().catch((e) => console.error("[WARM_POOL]", e.message));
   const clients = new Map(),
     matches = new Map(),
     challenges = new Map(),
     foundMatches = new Map(), // MATCH_FOUND pendentes (fila Find Match)
     rematchOffers = new Map(), // ofertas de revanche pós-série
+    spectators = new Map(), // matchId -> Set(userId)
     hostedWaitQueue = []; // match ids aguardando slot server-stream
   const tournaments = new TournamentEngine();
   const parseSeriesBestOf = (value, fallback = 1) => {
@@ -366,6 +429,8 @@ export function startPlatform({
     clearTimeout(m.deadline);
     clearTimeout(m.reportTimer);
     clearInterval(m.scoreboardTimer);
+    clearInterval(m.readyCheckTimer);
+    spectators.delete(m.id);
     matches.delete(m.id);
     const qi = hostedWaitQueue.indexOf(m.id);
     if (qi >= 0) hostedWaitQueue.splice(qi, 1);
@@ -420,6 +485,9 @@ export function startPlatform({
         win: false,
       });
     } catch {}
+    try {
+      replayEngine.finishRecording(m.id, winner);
+    } catch {}
     both(m, {
       type: "MATCH_ENDED",
       matchId: m.id,
@@ -431,6 +499,18 @@ export function startPlatform({
       seriesBestOf: m.seriesBestOf || 1,
       rematchEligible: true,
     });
+    for (const id of [m.a, m.b]) {
+      const peer = id === m.a ? m.b : m.a;
+      send(connection(id)?.[0], {
+        type: "REMATCH_AVAILABLE",
+        matchId: m.id,
+        opponentId: peer,
+        opponentUsername: Users.getById(peer).username,
+        mode: m.mode,
+        stakeCents: m.stake,
+        seriesBestOf: m.seriesBestOf || 1,
+      });
+    }
     for (const id of [m.a, m.b]) walletUpdate(id, "Partida encerrada.");
     audit({ id: "SYSTEM", role: "SYSTEM" }, "MATCH_SETTLE", {
       targetType: "match",
@@ -495,8 +575,11 @@ export function startPlatform({
     // Série continua: reservas preservadas; limpa reports/ready do game.
     m.reports = new Map();
     m.ready = new Set();
+    resetReadyCheck(m.readyCheck);
     clearTimeout(m.reportTimer);
     m.reportTimer = null;
+    clearInterval(m.readyCheckTimer);
+    m.readyCheckTimer = null;
     if (m.phase === "AWAITING_RESULT") {
       try {
         phase(m, "RUNNING");
@@ -513,6 +596,7 @@ export function startPlatform({
       seriesBestOf: m.seriesBestOf,
       message: "Próximo game da série. Reservas mantidas até o fechamento.",
     });
+    broadcastScoreboard(m);
   }
   function onGraceExpired(m, userId) {
     if (!matches.has(m.id) || !m.grace.has(userId)) return;
@@ -909,6 +993,7 @@ export function startPlatform({
       self.stake_cents,
       self.room_id,
       self.series_best_of || 1,
+      { region: self.region || "", maxRttMs: Number(process.env.MATCH_MAX_RTT_MS) || 250 },
     );
     if (!opp) return null;
     if (isBusyUser(opp.user_id) || connection(opp.user_id)?.[1]?.matchId) {
@@ -918,6 +1003,67 @@ export function startPlatform({
     return createFoundMatch(self, opp);
   }
 
+  function beginReadyCheck(m) {
+    if (m.readyCheck?.phase === "COUNTDOWN" || m.readyCheck?.phase === "DONE")
+      return;
+    m.readyCheck = createReadyCheck({ matchId: m.id });
+    both(m, {
+      type: "READY_CHECK_START",
+      matchId: m.id,
+      need: 2,
+      message: "Confirme prontidão (P1 e P2) para o countdown.",
+    });
+  }
+
+  function finishReadyCheckToRunning(m) {
+    if (!matches.has(m.id) || m.phase !== "LOADING") return;
+    phase(m, "RUNNING");
+    clearTimeout(m.deadline);
+    clearInterval(m.readyCheckTimer);
+    m.readyCheckTimer = null;
+    m.deadline = setTimeout(
+      () => cancel(m, "Tempo máximo de partida esgotado."),
+      m.rules.durationMs,
+    );
+    m.worker?.resume().catch((error) => cancel(m, error.message));
+    try {
+      replayEngine.startRecording(m.id, m.a, m.b, m.stake);
+    } catch {}
+    both(m, { type: "GAME_RUNNING", matchId: m.id, readyCheck: true });
+    armScoreboard(m);
+  }
+
+  function armReadyCountdown(m) {
+    clearInterval(m.readyCheckTimer);
+    m.readyCheckTimer = setInterval(() => {
+      const tick = tickCountdown(m.readyCheck);
+      if (!tick || !matches.has(m.id)) {
+        clearInterval(m.readyCheckTimer);
+        return;
+      }
+      both(m, tick);
+      if (tick.type === "READY_CHECK_DONE") {
+        clearInterval(m.readyCheckTimer);
+        m.readyCheckTimer = null;
+        finishReadyCheckToRunning(m);
+      }
+    }, 1000);
+    m.readyCheckTimer.unref?.();
+  }
+
+  function handleReadyAck(m, userId) {
+    if (!m || m.phase !== "LOADING") return;
+    if (!m.readyCheck) beginReadyCheck(m);
+    const ev = ackReady(m.readyCheck, userId);
+    if (!ev) return;
+    both(m, ev);
+    if (ev.type === "READY_CHECK_DONE") {
+      finishReadyCheckToRunning(m);
+      return;
+    }
+    if (ev.type === "READY_CHECK_COUNTDOWN") armReadyCountdown(m);
+  }
+
   function startIfReady(m) {
     if (
       m.phase !== "LOADING" ||
@@ -925,15 +1071,15 @@ export function startPlatform({
       (m.worker && (!m.workerReady || m.mediaConnected.size !== 2))
     )
       return;
-    phase(m, "RUNNING");
-    clearTimeout(m.deadline);
-    m.deadline = setTimeout(
-      () => cancel(m, "Tempo máximo de partida esgotado."),
-      m.rules.durationMs,
-    );
-    m.worker?.resume().catch((error) => cancel(m, error.message));
-    both(m, { type: "GAME_RUNNING", matchId: m.id });
-    armScoreboard(m);
+    // GAME_READY dos dois conta como ACK do ready-check (overlay pode reenviar READY_ACK).
+    if (!m.readyCheck) beginReadyCheck(m);
+    if (m.readyCheck.phase === "DONE") {
+      finishReadyCheckToRunning(m);
+      return;
+    }
+    if (m.readyCheck.phase === "WAITING_ACKS") {
+      for (const uid of m.ready) handleReadyAck(m, uid);
+    }
   }
 
   async function launchHosted(m) {
@@ -1007,8 +1153,40 @@ export function startPlatform({
         },
         onMetrics: (metrics) => {
           if (!matches.has(m.id)) return;
-          m.lastMetrics = metrics;
-          both(m, { type: "HOSTED_METRICS", matchId: m.id, metrics });
+          // Normaliza peers (rttSeconds/packetsLost) → HUD (rttMs/packetLoss/fps).
+          const peers = metrics?.peers || {};
+          const samples = Object.values(peers);
+          const rttSec = samples
+            .map((p) => p?.rttSeconds)
+            .filter((v) => typeof v === "number");
+          const loss = samples
+            .map((p) => p?.packetsLost ?? p?.packetLoss)
+            .filter((v) => typeof v === "number");
+          const fps = samples
+            .map((p) => p?.framesPerSecond ?? p?.fps)
+            .filter((v) => typeof v === "number");
+          m.lastMetrics = {
+            ...metrics,
+            rttMs: rttSec.length
+              ? Math.round(
+                  (rttSec.reduce((a, b) => a + b, 0) / rttSec.length) * 1000,
+                )
+              : null,
+            packetLoss: loss.length
+              ? Number(
+                  (loss.reduce((a, b) => a + b, 0) / loss.length).toFixed(3),
+                )
+              : null,
+            fps: fps.length
+              ? Math.round(fps.reduce((a, b) => a + b, 0) / fps.length)
+              : metrics?.frameRate || null,
+            commandLatency: m.latencyStats || null,
+          };
+          both(m, {
+            type: "HOSTED_METRICS",
+            matchId: m.id,
+            metrics: m.lastMetrics,
+          });
           broadcastScoreboard(m);
         },
         iceServers: iceBundle.iceServers,
@@ -1109,17 +1287,130 @@ export function startPlatform({
               roomId: m.room,
               mode: m.mode,
               stakeReais: (m.stake / 100).toFixed(2),
-              spectators: 0,
+              spectators: spectators.get(m.id)?.size || 0,
             })),
           });
         if (p === "/api/matches/recent")
           return json(res, 200, {
             matches: db
               .prepare(
-                "SELECT m.*,a.username p1_name,b.username p2_name FROM matches m JOIN users a ON a.id=m.player_a_id JOIN users b ON b.id=m.player_b_id ORDER BY started_at DESC LIMIT 20",
+                `SELECT m.*,
+                        a.username AS p1_name,
+                        b.username AS p2_name,
+                        a.username AS player_a_username,
+                        b.username AS player_b_username
+                 FROM matches m
+                 JOIN users a ON a.id=m.player_a_id
+                 JOIN users b ON b.id=m.player_b_id
+                 ORDER BY started_at DESC LIMIT 20`,
               )
               .all(),
           });
+        if (p === "/api/me/matches" && req.method === "GET") {
+          const u = httpAccount(req);
+          return json(res, 200, {
+            matches: MatchHistory.forUser(u.id),
+          });
+        }
+        if (p === "/api/me/controls") {
+          const u = httpAccount(req);
+          if (req.method === "GET") {
+            return json(res, 200, {
+              controls: ControlProfiles.get(u.id)?.controls || null,
+              updatedAt: ControlProfiles.get(u.id)?.updatedAt || null,
+            });
+          }
+          if (req.method === "PUT" || req.method === "POST") {
+            const d = await body(req);
+            const saved = ControlProfiles.save(u.id, d.controls || d);
+            return json(res, 200, { ok: true, ...saved });
+          }
+        }
+        if (p === "/api/me/tutorial") {
+          const u = httpAccount(req);
+          if (req.method === "GET")
+            return json(res, 200, { prefs: UserPrefs.get(u.id) });
+          if (req.method === "POST") {
+            const d = await body(req);
+            return json(res, 200, {
+              prefs: UserPrefs.setTutorial(u.id, {
+                done: d.done,
+                step: d.step,
+              }),
+            });
+          }
+        }
+        if (p === "/api/freeroll" && req.method === "GET") {
+          const list = [...freerolls.values()].map((f) => ({
+            id: f.id,
+            status: f.status,
+            size: f.size,
+            buyInCents: f.buyInCents,
+            registered: f.players.length,
+            championId: f.championId,
+          }));
+          return json(res, 200, { freerolls: list, size: FREEROLL_SIZE });
+        }
+        if (p === "/api/freeroll/register" && req.method === "POST") {
+          const u = httpAccount(req);
+          if (!simulation)
+            throw fail("Freeroll só em crédito fictício (lab).", 409);
+          const d = await body(req);
+          let fr = freerolls.get(d.freerollId);
+          if (!fr) {
+            fr = createFreerollRegistration({ id: d.freerollId || "freeroll_daily" });
+            freerolls.set(fr.id, fr);
+          }
+          registerFreerollPlayer(fr, u.id);
+          return json(res, 200, {
+            ok: true,
+            freeroll: {
+              id: fr.id,
+              status: fr.status,
+              registered: fr.players.length,
+              size: fr.size,
+              rounds: fr.rounds?.length || 0,
+            },
+          });
+        }
+        if (p === "/api/freeroll/report" && req.method === "POST") {
+          const admin = httpAccount(req);
+          if (!roleAtLeast(admin.role, "ADMIN")) throw fail("Acesso negado.", 403);
+          const d = await body(req);
+          const fr = freerolls.get(d.freerollId);
+          if (!fr) throw fail("Freeroll não encontrado.", 404);
+          reportFreerollWinner(
+            fr,
+            Number(d.roundIndex),
+            Number(d.matchIndex),
+            d.winnerId,
+          );
+          return json(res, 200, { ok: true, freeroll: fr });
+        }
+        if (p === "/api/admin/mfa/setup" && req.method === "POST") {
+          const admin = httpAccount(req);
+          if (!roleAtLeast(admin.role, "ADMIN")) throw fail("Acesso negado.", 403);
+          assertAdminIpAllowed(req);
+          const secret = generateTotpSecret();
+          AdminMfaStore.enable(admin.id, secret);
+          return json(res, 200, {
+            ok: true,
+            secret,
+            message: "Guarde o secret TOTP. MFA_ENFORCE=1 exige código.",
+          });
+        }
+        if (p === "/api/ops/warm-pool" && req.method === "GET") {
+          return json(res, 200, { warmPool: warmPool.stats() });
+        }
+        if (p === "/api/ops/hosted-cap" && req.method === "GET") {
+          return json(res, 200, {
+            hostedMaxSessions: hostedCap(),
+            hostedActiveSessions: hostedActiveCount(),
+            isolation: "process-worker-per-session",
+            note:
+              "Cada HostedSession usa browser Playwright isolado; container/cgroup é gap de infra VPS.",
+          });
+        }
         const integrityRoute = /^\/api\/matches\/([^/]+)\/integrity$/.exec(p);
         if (integrityRoute && req.method === "GET") {
           const u = httpAccount(req),
@@ -1220,14 +1511,10 @@ export function startPlatform({
             if (Wallets.get(u.id).balance < stake)
               throw fail("Saldo insuficiente para a fila.");
           }
-          MatchmakingQueue.join(
-            u.id,
-            u.elo,
-            d.mode,
-            stake,
-            roomId,
-            seriesBestOf,
-          );
+          MatchmakingQueue.join(u.id, u.elo, d.mode, stake, roomId, seriesBestOf, {
+            region: d.region || room.region || UserPrefs.get(u.id)?.region || "",
+            rttMs: Number(d.rttMs) || 9999,
+          });
           const found = tryFindMatch(u.id);
           return json(res, 200, {
             ok: true,
@@ -1293,6 +1580,11 @@ export function startPlatform({
           );
           if (decisionRoute && req.method === "POST") {
             const d = await body(req);
+            assertAdminMfa({
+              userId: admin.id,
+              code: d.mfaCode || d.otp,
+              secret: AdminMfaStore.getSecret(admin.id),
+            });
             const result = resolveReview(
               decisionRoute[1],
               admin.id,
@@ -1471,6 +1763,11 @@ export function startPlatform({
                   "UPDATE users SET elo=1200,wins=0,losses=0 WHERE id=?",
                 ).run(u.id);
               else if (d.action === "SET_ROLE") {
+                assertAdminMfa({
+                  userId: admin.id,
+                  code: d.mfaCode || d.otp,
+                  secret: AdminMfaStore.getSecret(admin.id),
+                });
                 const nextRole = normalizeRole(d.role);
                 if (
                   !nextRole ||
@@ -1521,8 +1818,13 @@ export function startPlatform({
           ) {
             if (!simulation && p.endsWith("/approve"))
               throw fail("PIX indisponível: provedor não integrado.", 409);
-            const d = await body(req),
-              r = db.transaction(() => {
+            const d = await body(req);
+            assertAdminMfa({
+              userId: admin.id,
+              code: d.mfaCode || d.otp,
+              secret: AdminMfaStore.getSecret(admin.id),
+            });
+            const r = db.transaction(() => {
                 const r = finance.resolveWithdrawal(
                   d.withdrawalId,
                   p.endsWith("/approve"),
@@ -1950,32 +2252,38 @@ export function startPlatform({
               return;
             }
             if (d.type === "DEPOSIT_PIX") {
-              if (!simulation)
-                throw fail("PIX real ainda não está integrado.", 409);
-              finance.credit(
-                u.id,
-                cents(d.amountCents),
-                "TEST_CREDIT",
-                uuid(),
-                "Créditos de teste",
-              );
-              walletUpdate(u.id, "Créditos de teste adicionados.");
+              const deposit = await payments.createDeposit({
+                userId: u.id,
+                amountCents: cents(d.amountCents),
+                idempotencyKey: d.idempotencyKey || uuid(),
+              });
+              if (deposit.mock) {
+                finance.credit(
+                  u.id,
+                  deposit.amountCents,
+                  "TEST_CREDIT",
+                  deposit.idempotencyKey || uuid(),
+                  "Créditos de teste (PaymentProvider mock)",
+                );
+                walletUpdate(u.id, "Créditos de teste adicionados.");
+              }
               return;
             }
             if (d.type === "SPIN_LUCKY_WHEEL")
               throw fail("Roleta indisponível.");
             if (d.type === "WITHDRAW_PIX") {
-              if (!simulation)
-                throw fail(
-                  "Saques PIX reais ainda não estão habilitados.",
-                  409,
-                );
+              const pixKey = text(d.pixKey || d.key || "", 120);
+              await payments.createWithdraw({
+                userId: u.id,
+                amountCents: cents(d.amountCents),
+                pixKey,
+              });
               if (u.kyc_status !== "APROVADO")
                 throw fail("KYC obrigatório para saque.");
               const ref = finance.requestWithdrawal(
                 u.id,
                 cents(d.amountCents),
-                d.pixKey,
+                pixKey,
               );
               walletUpdate(u.id);
               send(ws, {
@@ -2196,6 +2504,13 @@ export function startPlatform({
                   throw fail("Saldo insuficiente para a fila.");
               }
               MatchmakingQueue.leave(u.id);
+              const region =
+                d.region ||
+                room.region ||
+                UserPrefs.get(u.id)?.region ||
+                "";
+              const rttMs = Number(d.rttMs ?? c.ping) || 9999;
+              if (d.region) UserPrefs.setRegion(u.id, d.region);
               MatchmakingQueue.join(
                 u.id,
                 u.elo,
@@ -2203,13 +2518,16 @@ export function startPlatform({
                 stake,
                 c.roomId,
                 seriesBestOf,
+                { region, rttMs },
               );
               send(ws, {
                 type: "FIND_MATCH_QUEUED",
                 mode: d.mode,
                 stakeCents: stake,
                 seriesBestOf,
-                message: "Procurando oponente compatível…",
+                region,
+                rttMs,
+                message: "Procurando oponente compatível (região + RTT)…",
               });
               const found = tryFindMatch(u.id);
               if (!found)
@@ -2283,6 +2601,64 @@ export function startPlatform({
               foundMatches.delete(found.id);
               return;
             }
+            if (d.type === "READY_ACK") {
+              const m = matches.get(d.matchId || c.matchId);
+              if (!m || ![m.a, m.b].includes(u.id))
+                throw fail("Partida inválida para ready-check.");
+              handleReadyAck(m, u.id);
+              return;
+            }
+            if (d.type === "LATENCY_SAMPLE") {
+              const m = matches.get(d.matchId || c.matchId);
+              if (!m || ![m.a, m.b].includes(u.id)) return;
+              const sample = computeCommandToImageMs({
+                clientSentAt: d.clientSentAt,
+                acceptedAt: d.acceptedAt,
+                frameDecodedAt: d.frameDecodedAt,
+              });
+              if (!sample) return;
+              m.latencySamples = m.latencySamples || [];
+              m.latencySamples.push({ ...sample, at: Date.now(), userId: u.id });
+              m.latencyStats = latencyRollingStats(m.latencySamples);
+              send(ws, {
+                type: "LATENCY_UPDATE",
+                matchId: m.id,
+                ...sample,
+                stats: m.latencyStats,
+              });
+              return;
+            }
+            if (d.type === "SPECTATE_JOIN") {
+              const m = matches.get(d.matchId);
+              if (!m || !["LOADING", "RUNNING", "QUEUED"].includes(m.phase))
+                throw fail("Partida indisponível para espectador.");
+              if ([m.a, m.b].includes(u.id))
+                throw fail("Participantes não entram como espectador.");
+              if (!spectators.has(m.id)) spectators.set(m.id, new Set());
+              spectators.get(m.id).add(u.id);
+              c.spectateMatchId = m.id;
+              send(ws, {
+                type: "SPECTATE_STARTED",
+                matchId: m.id,
+                playerA: Users.getById(m.a).username,
+                playerB: Users.getById(m.b).username,
+                readOnly: true,
+                seriesScore: m.seriesScore || { a: 0, b: 0 },
+                seriesBestOf: m.seriesBestOf || 1,
+              });
+              return;
+            }
+            if (d.type === "SPECTATE_LEAVE") {
+              const mid = d.matchId || c.spectateMatchId;
+              if (mid && spectators.has(mid)) spectators.get(mid).delete(u.id);
+              c.spectateMatchId = null;
+              send(ws, { type: "SPECTATE_LEFT", matchId: mid || null });
+              return;
+            }
+            if (d.type === "REMATCH_REQUEST") {
+              // Alias legado do cliente → REMATCH_OFFER.
+              d.type = "REMATCH_OFFER";
+            }
             if (d.type === "REMATCH_OFFER") {
               const prev =
                 rematchOffers.get(d.matchId) ||
@@ -2328,8 +2704,19 @@ export function startPlatform({
             }
             if (d.type === "REMATCH_ACCEPT") {
               // Aceita o desafio gerado pelo REMATCH_OFFER (mesmo fluxo de ACCEPT_CHALLENGE).
-              if (!d.challengeId) throw fail("challengeId obrigatório.");
-              const ch = challenges.get(d.challengeId);
+              // Compat: requesterId legado → localiza challenge pendente.
+              let challengeId = d.challengeId;
+              if (!challengeId && d.requesterId) {
+                const found = [...challenges.values()].find(
+                  (ch) =>
+                    ch.from === d.requesterId &&
+                    ch.to === u.id &&
+                    ch.expires > Date.now(),
+                );
+                challengeId = found?.id;
+              }
+              if (!challengeId) throw fail("challengeId obrigatório.");
+              const ch = challenges.get(challengeId);
               if (!ch || ch.to !== u.id || ch.expires < Date.now())
                 throw fail("Revanche inválida ou expirada.");
               if (
@@ -2459,6 +2846,14 @@ export function startPlatform({
                   epoch: c.input.epoch,
                   slot: u.id === m.a ? 1 : 2,
                 });
+                try {
+                  replayEngine.recordInput(m.id, {
+                    slot: u.id === m.a ? 1 : 2,
+                    button: d.button,
+                    value: d.value,
+                    seq: input.seq,
+                  });
+                } catch {}
                 if (m.worker) {
                   await m.worker.input(u.id === m.a ? 1 : 2, d.button, d.value);
                   send(ws, {
@@ -2467,6 +2862,7 @@ export function startPlatform({
                     seq: input.seq,
                     slot: u.id === m.a ? 1 : 2,
                     acceptedAt: Date.now(),
+                    clientSentAt: d.clientSentAt ?? null,
                   });
                   return;
                 }

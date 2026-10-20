@@ -153,11 +153,45 @@ function save() {
   } catch {
     saved = false;
   }
+  // Espelha no perfil da conta (SQLite) quando autenticado.
+  try {
+    const token =
+      window.app?.sessionToken || localStorage.getItem("arenaToken");
+    if (token) {
+      fetch("/api/me/controls", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify({ controls: settings }),
+      }).catch(() => {});
+    }
+  } catch {}
   window.dispatchEvent(new Event("arena-controls-changed"));
   if (dialog)
     dialog.querySelector("[data-save]").textContent = saved
-      ? "Configuração salva neste navegador."
+      ? "Configuração salva neste navegador e na conta."
       : "Aplicado nesta sessão; o navegador bloqueou o armazenamento.";
+}
+/** Carrega perfil da conta e mescla sobre localStorage (login). */
+export async function syncControlsFromAccount(token) {
+  if (!token) return settings;
+  try {
+    const r = await fetch("/api/me/controls", {
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (!r.ok) return settings;
+    const data = await r.json();
+    if (data.controls) {
+      settings = normalizeSettings(data.controls);
+      try {
+        localStorage.setItem(KEY, JSON.stringify(settings));
+      } catch {}
+      window.dispatchEvent(new Event("arena-controls-changed"));
+    }
+  } catch {}
+  return settings;
 }
 export function keyLabel(code) {
   return code

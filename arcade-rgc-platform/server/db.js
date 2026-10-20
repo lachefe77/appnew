@@ -202,12 +202,36 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_trail_ts  ON audit_trail(at_ms);
   CREATE INDEX IF NOT EXISTS idx_trail_action ON audit_trail(action);
   CREATE INDEX IF NOT EXISTS idx_seasons_active ON seasons(active);
+
+  CREATE TABLE IF NOT EXISTS control_profiles (
+    user_id     TEXT PRIMARY KEY REFERENCES users(id),
+    payload     TEXT NOT NULL DEFAULT '{}',
+    updated_at  TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS admin_mfa (
+    user_id     TEXT PRIMARY KEY REFERENCES users(id),
+    secret      TEXT NOT NULL,
+    enabled     INTEGER NOT NULL DEFAULT 1,
+    updated_at  TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS user_prefs (
+    user_id           TEXT PRIMARY KEY REFERENCES users(id),
+    tutorial_done     INTEGER NOT NULL DEFAULT 0,
+    tutorial_step     INTEGER NOT NULL DEFAULT 0,
+    region            TEXT DEFAULT '',
+    updated_at        TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // Colunas extras em wallets (perda diária) — convivem com user_limits.
 ensureColumn("wallets", "daily_loss_cents", "INTEGER NOT NULL DEFAULT 0");
 ensureColumn("wallets", "daily_loss_day", "TEXT DEFAULT ''");
 ensureColumn("matchmaking_queue", "series_best_of", "INTEGER NOT NULL DEFAULT 1");
+ensureColumn("matchmaking_queue", "region", "TEXT DEFAULT ''");
+ensureColumn("matchmaking_queue", "rtt_ms", "INTEGER NOT NULL DEFAULT 9999");
+ensureColumn("users", "mfa_secret", "TEXT DEFAULT ''");
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 export const Users = {
@@ -844,14 +868,31 @@ export const SeasonsStore = {
 // ─── Matchmaking Queue ────────────────────────────────────────────────────────
 /** Faixa de stake: mesmo valor exato (±0). Elo ±200. Mesma sala ou qualquer sala KOF. */
 export const MatchmakingQueue = {
-  join(userId, elo, mode, stakeCents, roomId, seriesBestOf = 1) {
+  join(
+    userId,
+    elo,
+    mode,
+    stakeCents,
+    roomId,
+    seriesBestOf = 1,
+    { region = "", rttMs = 9999 } = {},
+  ) {
     db.prepare(
       `
       INSERT OR REPLACE INTO matchmaking_queue
-        (user_id,elo,mode,stake_cents,room_id,series_best_of)
-      VALUES (?,?,?,?,?,?)
+        (user_id,elo,mode,stake_cents,room_id,series_best_of,region,rtt_ms)
+      VALUES (?,?,?,?,?,?,?,?)
     `,
-    ).run(userId, elo, mode, stakeCents, roomId || "", seriesBestOf);
+    ).run(
+      userId,
+      elo,
+      mode,
+      stakeCents,
+      roomId || "",
+      seriesBestOf,
+      region || "",
+      Math.max(0, Number(rttMs) || 9999),
+    );
   },
   leave(userId) {
     db.prepare("DELETE FROM matchmaking_queue WHERE user_id=?").run(userId);
@@ -864,9 +905,18 @@ export const MatchmakingQueue = {
   /**
    * Compatível: mesmo mode, mesmo stake, elo ±200, mesmo series_best_of,
    * e (mesma room_id OU ambas em salas KOF — room_id vazio = qualquer KOF).
+   * Preferência: mesma região, depois menor soma de RTT.
    */
-  findMatch(userId, elo, mode, stakeCents, roomId = "", seriesBestOf = 1) {
-    return db
+  findMatch(
+    userId,
+    elo,
+    mode,
+    stakeCents,
+    roomId = "",
+    seriesBestOf = 1,
+    { region = "", maxRttMs = Number(process.env.MATCH_MAX_RTT_MS) || 250 } = {},
+  ) {
+    const rows = db
       .prepare(
         `
       SELECT * FROM matchmaking_queue
@@ -880,10 +930,10 @@ export const MatchmakingQueue = {
           OR room_id = ''
           OR ? = ''
         )
-      ORDER BY joined_at ASC LIMIT 1
+      ORDER BY joined_at ASC
     `,
       )
-      .get(
+      .all(
         userId,
         mode,
         stakeCents,
@@ -892,11 +942,138 @@ export const MatchmakingQueue = {
         roomId || "",
         roomId || "",
       );
+    if (!rows.length) return null;
+    const selfRtt = Number(
+      db.prepare("SELECT rtt_ms FROM matchmaking_queue WHERE user_id=?").get(userId)
+        ?.rtt_ms ?? 9999,
+    );
+    const preferredRegion = region || "";
+    const scored = rows
+      .map((r) => {
+        const peerRtt = Number(r.rtt_ms ?? 9999);
+        const sumRtt = selfRtt + peerRtt;
+        const sameRegion =
+          preferredRegion && r.region && preferredRegion === r.region ? 0 : 1;
+        const rttPenalty = sumRtt > maxRttMs * 2 ? 100 : 0;
+        return { row: r, score: sameRegion * 10 + rttPenalty + sumRtt / 1000 };
+      })
+      .sort((a, b) => a.score - b.score);
+    return scored[0]?.row || null;
   },
   cleanup() {
     db.prepare(
       "DELETE FROM matchmaking_queue WHERE joined_at < datetime('now', '-5 minutes')",
     ).run();
+  },
+};
+
+export const ControlProfiles = {
+  get(userId) {
+    const row = db
+      .prepare("SELECT payload, updated_at FROM control_profiles WHERE user_id=?")
+      .get(userId);
+    if (!row) return null;
+    try {
+      return { controls: JSON.parse(row.payload), updatedAt: row.updated_at };
+    } catch {
+      return null;
+    }
+  },
+  save(userId, controls) {
+    if (!userId || typeof controls !== "object" || controls === null)
+      throw new Error("Perfil de controle inválido.");
+    const payload = JSON.stringify(controls);
+    if (payload.length > 20000) throw new Error("Perfil de controle muito grande.");
+    db.prepare(
+      `
+      INSERT INTO control_profiles(user_id,payload,updated_at)
+      VALUES(?,?,datetime('now'))
+      ON CONFLICT(user_id) DO UPDATE SET
+        payload=excluded.payload, updated_at=datetime('now')
+    `,
+    ).run(userId, payload);
+    return this.get(userId);
+  },
+};
+
+export const UserPrefs = {
+  ensure(userId) {
+    db.prepare(
+      "INSERT OR IGNORE INTO user_prefs(user_id) VALUES(?)",
+    ).run(userId);
+  },
+  get(userId) {
+    this.ensure(userId);
+    return db.prepare("SELECT * FROM user_prefs WHERE user_id=?").get(userId);
+  },
+  setTutorial(userId, { done, step } = {}) {
+    this.ensure(userId);
+    if (done !== undefined)
+      db.prepare("UPDATE user_prefs SET tutorial_done=?, updated_at=datetime('now') WHERE user_id=?").run(
+        done ? 1 : 0,
+        userId,
+      );
+    if (step !== undefined)
+      db.prepare("UPDATE user_prefs SET tutorial_step=?, updated_at=datetime('now') WHERE user_id=?").run(
+        Math.max(0, Number(step) || 0),
+        userId,
+      );
+    return this.get(userId);
+  },
+  setRegion(userId, region) {
+    this.ensure(userId);
+    db.prepare(
+      "UPDATE user_prefs SET region=?, updated_at=datetime('now') WHERE user_id=?",
+    ).run(String(region || "").slice(0, 40), userId);
+    return this.get(userId);
+  },
+};
+
+export const AdminMfaStore = {
+  getSecret(userId) {
+    return (
+      db.prepare("SELECT secret FROM admin_mfa WHERE user_id=? AND enabled=1").get(
+        userId,
+      )?.secret ||
+      Users.getById(userId)?.mfa_secret ||
+      ""
+    );
+  },
+  enable(userId, secret) {
+    db.prepare(
+      `
+      INSERT INTO admin_mfa(user_id,secret,enabled,updated_at)
+      VALUES(?,?,1,datetime('now'))
+      ON CONFLICT(user_id) DO UPDATE SET
+        secret=excluded.secret, enabled=1, updated_at=datetime('now')
+    `,
+    ).run(userId, secret);
+  },
+};
+
+export const MatchHistory = {
+  forUser(userId, { limit = 30 } = {}) {
+    return db
+      .prepare(
+        `
+      SELECT m.id, m.room_id, m.stake_cents, m.prize_cents, m.rake_cents,
+             m.status, m.winner_id, m.started_at, m.ended_at, m.dispute,
+             COALESCE(ms.mode, 'APOSTADO') AS mode,
+             a.username AS player_a_username,
+             b.username AS player_b_username,
+             CASE WHEN m.winner_id=? THEN 1
+                  WHEN m.winner_id IS NULL THEN NULL
+                  ELSE 0 END AS won
+      FROM matches m
+      JOIN users a ON a.id=m.player_a_id
+      JOIN users b ON b.id=m.player_b_id
+      LEFT JOIN match_state ms ON ms.match_id=m.id
+      WHERE m.player_a_id=? OR m.player_b_id=?
+      ORDER BY COALESCE(m.ended_at, m.started_at) DESC
+      LIMIT ?
+    `,
+      )
+      .all(userId, userId, userId, Math.min(100, Math.max(1, limit)));
   },
 };
 

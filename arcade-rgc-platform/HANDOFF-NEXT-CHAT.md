@@ -17,9 +17,8 @@ Continue o Arena Arcade em arcade-rgc-platform na branch cursor/sistema-1a9-85f1
 
 Leia HANDOFF-NEXT-CHAT.md e CONTEXT.md.
 
-CONCLUÍDO: melhorias de sistema 1–9 (partida hosted 100% funcional).
-PRÓXIMO: implementar 10–30 da lista abaixo, todas funcionais, com testes npm test,
-commit/push na mesma branch (ou cursor/sistema-10a30-85f1) e atualizar o PR.
+CONCLUÍDO: melhorias 1–30 (partida hosted + estabilidade/escala/CI).
+PRÓXIMO: hillclimb / beta fechado / infra TURN real / container isolation em VPS.
 NÃO gastar tempo com tema/layout/vitrine. PIX real e segundo jogo continuam OFF.
 Responda em português.
 ```
@@ -40,41 +39,42 @@ Responda em português.
 | 8 | `recoverMatches`: REVIEW fica; LOADING/QUEUED estorna | `finance.js` + teste child |
 | 9 | Fila `placeInQueue` + `etaSeconds`; cancel QUEUED estorna (bugfix) | `platform.js` |
 
-**Testes:** `npm test` → **84 pass** (inclui `tests/sistema-1a9.test.js`).  
-**Env nova:** `TURN_URLS`, `TURN_SECRET`, `TURN_TTL_SEC`, `HOSTED_AVG_MATCH_SEC` (ver `.env.example`).
-
-**Tema:** WIP de Neo Geo ficou em `git stash` nome `tema-wip-pause` — **não priorizar**. Design depois.
-
 ---
 
-## Próximo: implementar 10–30 (nesta ordem)
+## O que já foi feito (10–30) — NÃO refazer
 
-### Estabilidade (10–22)
-10. Ready-check sincronizado (overlay P1+P2 ACK → countdown → Start)  
-11. Placar Bo3/Bo5 ao vivo oficial (HUD + eventos do observer)  
-12. Rematch 1-clique mesmo stake/regras  
-13. Perfil de controle na conta (SQLite, não só localStorage)  
-14. Anti stuck-button + foco (Alt-Tab / painel controles)  
-15. Métrica comando→imagem (latência percebida)  
-16. Wallet UI: disponível / reservado / disputa  
-17. Replay/input journal persistente (hoje `replays.js` é Map em memória)  
-18. Health → alerta externo (webhook Slack/Telegram)  
-19. Backup automático off-box (cron + cópia remota)  
-20. Tutorial primeira partida jogável (wizard)  
-21. Find-match com região + RTT  
-22. Áudio estável nos dois lados  
+| # | Entrega | Onde |
+|---|---|---|
+| 10 | Ready-check P1+P2 ACK → countdown → RUNNING | `ready-check.js`, overlay `#readyCheckOverlay`, `READY_ACK` |
+| 11 | Placar Bo3/Bo5 + métricas HUD alinhadas | `SCOREBOARD_UPDATE`, normalização rttMs/packetLoss/fps |
+| 12 | Rematch 1-clique (REMATCH_OFFER/AVAILABLE/ACCEPT) | `platform.js` + cliente index.html |
+| 13 | Perfil de controle na conta (SQLite) | `control_profiles`, `/api/me/controls`, sync em `controller-settings.js` |
+| 14 | Anti stuck-button (visibilitychange/pagehide) | `fbneo-loader.js` |
+| 15 | Latência comando→imagem | `command-latency.js`, `LATENCY_SAMPLE`, `requestVideoFrameCallback` |
+| 16 | Wallet 3 buckets (disponível/reservado/disputa) | `walletView` + UI carteira |
+| 17 | Replay/input journal persistente (JSONL) | `replays.js` + `REPLAY_DIR` |
+| 18 | Health → webhook Slack/Telegram | `alerts.js`, `check-health.js` + `ALERT_WEBHOOK_URL` |
+| 19 | Backup off-box (local + cp/comando remoto) | `scripts/offbox-backup.js`, `npm run db:offbox` |
+| 20 | Tutorial prefs (step/done) na conta | `user_prefs`, `/api/me/tutorial` |
+| 21 | Find-match região + RTT | `MatchmakingQueue` region/rtt_ms |
+| 22 | Áudio: stream tracks + ATIVAR SOM estável | worker `getTracks`/`addTrack`, loader unmute |
+| 23 | Multi-sessão: cap + isolamento por worker Playwright | `/api/ops/hosted-cap` (container/cgroup = gap VPS) |
+| 24 | Warm pool | `warm-pool.js`, `HOSTED_WARM_POOL` |
+| 25 | Espectador read-only | `SPECTATE_JOIN` / `SPECTATE_STARTED` |
+| 26 | PaymentProvider mock (PIX real 409) | `payment-provider.js` |
+| 27 | Freeroll 8 jogadores (crédito fictício) | `freeroll.js`, `/api/freeroll/*` |
+| 28 | MFA admin TOTP em settle/saque/role | `admin-mfa.js`, `MFA_ENFORCE` |
+| 29 | Histórico de partidas no perfil | `MatchHistory`, `/api/me/matches`, `perfil.html` |
+| 30 | E2E partida 100% | `tests/partida-100-child.js` |
 
-### Escala (23–29)
-23. `HOSTED_MAX_SESSIONS > 1` isolado (processo/container)  
-24. Warm pool de worker  
-25. Espectador read-only  
-26. `PaymentProvider` mock (PIX continua 409 / off)  
-27. Freeroll 8 jogadores (crédito fictício)  
-28. MFA admin em settle/saque/role  
-29. Histórico de partidas no perfil  
+**Testes:** `npm test` → **104 pass** (inclui `sistema-1a9` + `sistema-10a30`).  
 
-### CI (30)
-30. Suite E2E “partida 100%”: challenge → hosted → observer win → settle → conciliação  
+**Gaps de infra externa (documentados, não bloqueiam o lote):**
+- TURN coturn real em produção (`TURN_URLS`/`TURN_SECRET`)
+- Cópia remota S3/SCP dedicada (`BACKUP_REMOTE_CMD`)
+- Isolamento por container/cgroup em VPS (hoje: processo Playwright por sessão)
+
+**Tema:** WIP Neo Geo em stash `tema-wip-pause` — **não priorizar**.
 
 ---
 
@@ -83,9 +83,8 @@ Responda em português.
 - Entrada: `server/index.js` → `platform.js` (HTTP/WS/salas/matches)  
 - Dinheiro: `finance.js` + SQLite (`db.js`)  
 - Hosted: `hosted-session.js` + `hosted-worker.js` + `kof2002-observer.js`  
-- Integridade: `match-integrity.js` (rules, events, reviews)  
-- Cliente partida: `public/fbneo-loader.js`, `public/index.html`  
-- Docs: `README.md`, `docs/HOSTED-GAMES.md`, `docs/UPGRADE-V13.md`
+- Novos módulos 10–30: `ready-check.js`, `payment-provider.js`, `alerts.js`, `admin-mfa.js`, `warm-pool.js`, `freeroll.js`, `command-latency.js`  
+- Cliente: `public/fbneo-loader.js`, `public/index.html`, `public/perfil.html`  
 
 ## Comandos
 
@@ -94,6 +93,8 @@ cd arcade-rgc-platform
 npm ci
 npm test
 npm run test:local   # http://127.0.0.1:3001
+npm run db:offbox
+npm run health:check
 ```
 
 Node ≥ 22. Créditos só com `NODE_ENV=development` + `ENABLE_SIMULATED_FUNDS=1`.
@@ -105,10 +106,3 @@ Node ≥ 22. Créditos só com `NODE_ENV=development` + `ENABLE_SIMULATED_FUNDS=
 - Sem confiar em VENCI/PERDI do cliente no modo APOSTADO  
 - Sem anunciar “zero fraude”  
 - Tema/layout: só se o usuário pedir explicitamente  
-
-## Critério de pronto do próximo lote
-
-- Itens 10–30 implementados ou com gap documentado só se bloqueado por infra externa (TURN real, S3, etc.)  
-- `npm test` verde  
-- Commit + push + PR atualizado  
-- Resumo em PT: antes → depois → impacto  

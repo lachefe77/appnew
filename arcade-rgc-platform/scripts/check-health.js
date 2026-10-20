@@ -1,3 +1,5 @@
+import { sendAlert, alertOnHealthFailure } from "../server/alerts.js";
+
 const target = process.argv[2] || "http://127.0.0.1:3001";
 try {
   const response = await fetch(new URL("/health", target), {
@@ -23,6 +25,20 @@ try {
     ),
   );
 } catch (error) {
-  console.error(JSON.stringify({ status: "failed", reason: error.message }));
+  const reason = error.message;
+  console.error(JSON.stringify({ status: "failed", reason }));
+  const alertResult = await alertOnHealthFailure({
+    ok: false,
+    status: "failed",
+    reason,
+    reconciliation: false,
+  });
+  if (alertResult.sent)
+    console.error(JSON.stringify({ alert: "sent", ...alertResult }));
+  else if (!alertResult.skipped)
+    console.error(JSON.stringify({ alert: "failed", ...alertResult }));
   process.exitCode = 1;
 }
+
+// Re-export helpers for tests (side-effect free when imported? — this file is a CLI).
+void sendAlert;
