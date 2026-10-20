@@ -24,6 +24,11 @@ import {
   startNativeGameProcess,
 } from "../server/native-game-process.js";
 import { createInputInjector } from "../server/native-input-inject.js";
+import {
+  waitForWindowByPid,
+  focusWindow,
+  hwndGrabInput,
+} from "../server/native-win-window.js";
 
 const mode = String(process.env.HOST_BOT_MODE || "stub").toLowerCase();
 const autoPeers =
@@ -165,11 +170,11 @@ async function handle(msg) {
           },
         });
         if (state.game.ok) {
-          state.input = createInputInjector();
-          // Dá tempo à janela abrir antes do gdigrab.
-          const waitMs = Number(process.env.HOST_BOT_GAME_BOOT_MS) || 2500;
-          await new Promise((r) => setTimeout(r, waitMs));
-          // Se o core já morreu no boot, falha com stderr (não segue WebRTC stub).
+          // Espera a janela real do RetroArch (título FinalBurn Neo…) antes do gdigrab.
+          const waitMs = Number(process.env.HOST_BOT_GAME_BOOT_MS) || 8000;
+          const win = await waitForWindowByPid(state.game.pid, {
+            timeoutMs: waitMs,
+          });
           if (state.game.child?.exitCode != null && state.game.child.exitCode !== 0) {
             const err = (state.game.stderr || "").trim().slice(-800);
             emit({
@@ -186,6 +191,36 @@ async function handle(msg) {
             });
             return;
           }
+          if (win?.hwnd) {
+            state.gameHwnd = win.hwnd;
+            await focusWindow(win.hwnd);
+            const grab = hwndGrabInput(win.hwnd);
+            if (grab) {
+              // hwnd=… é fiável; title=RetroArch às vezes captura outra janela.
+              process.env.HOST_BOT_FFMPEG_INPUT_KIND =
+                process.env.HOST_BOT_FFMPEG_INPUT_KIND || "gdigrab";
+              process.env.HOST_BOT_FFMPEG_INPUT = grab;
+            }
+            emit({
+              event: "progress",
+              stage: "game-window",
+              detail: { hwnd: win.hwnd, title: win.title, grab },
+            });
+          } else {
+            emit({
+              event: "progress",
+              stage: "game-window-miss",
+              detail: {
+                pid: state.game.pid,
+                fallback: process.env.HOST_BOT_FFMPEG_INPUT || "title=RetroArch",
+              },
+            });
+          }
+          state.input = createInputInjector({
+            hwnd: state.gameHwnd || null,
+          });
+          // Frame extra para o FBNeo pintar INSERT COIN antes do 1º frame.
+          await new Promise((r) => setTimeout(r, 800));
         } else {
           emit({
             event: "progress",

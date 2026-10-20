@@ -43,14 +43,26 @@ Produção leve: `HOSTED_ENGINE=native`.
 
 | Fase | Entrega | Critério de pronto |
 |---|---|---|
-| **0** | Plano + factory + stub IPC + testes | `npm test` verde; engine selecionável |
+| **0** | Plano + factory + stub IPC + testes | `npm test` verde; engine selecionável ✅ |
 | **1** | Bot Windows: spawn + input + sample de estado | 1 X1 lab sem Playwright ✅ |
 | **2** | Encode leve + WebRTC para 2 peers (320p30) | 2 viewers com track sem Chrome ✅ |
 | **2b** | Framebuffer FBNeo/ffmpeg → WebRTC | injectFrame + pipe ffmpeg (gdigrab/lavfi) ✅ |
 | **3** | Capacidade medida na VPS 4 GB | Bench N sessões + relatório; ≥600s na VPS ✅ |
 | **4** | `HOSTED_MAX_SESSIONS=6` + fila QUEUED | Smoke fila + env ✅ |
-| **4b** | RetroArch/FBNeo + input + gdigrab | Spawn core + teclado Win + ffmpeg |
+| **4b** | RetroArch/FBNeo + input + gdigrab | Smoke webrtc com `launchMode:retroarch` ✅ |
+| **4c** | E2E localhost 2 browsers (fliperama) | Vídeo = janela do KOF; input joga; START/fichas |
+| **4d** | Endurecer settle/observer na UI real | Partida fecha com resultado server-side |
 | **5** | VPS 10 GB / 5 vCPU (depois) | Validar ~20 X1 — **adiar** até VPS dedicado |
+
+### Fase 4c — checklist fliperama 100% (localhost)
+
+1. `npm run test:local` sobe com `.env` nativo (RetroArch + ROM + ffmpeg).
+2. Browser normal + anónimo → 2 contas → mesma sala → desafio com créditos.
+3. RetroArch abre; **stream nos browsers mostra o KOF** (não Explorer/desktop).
+4. FICHA / START nos dois; personagem mexe com setas/Z X A S.
+5. Round jogável; sem crash do host no terminal.
+
+Captura: worker resolve `hwnd` do PID do RetroArch e usa `gdigrab -i hwnd=…` (evita `title=RetroArch` apanhar janela errada). Input: foca esse HWND antes do `keybd_event`.
 
 ## Fase 1 — sample sem Chrome
 

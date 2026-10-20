@@ -39,9 +39,11 @@ export function vkForKey(key) {
 }
 
 /**
+ * @param {{ hwnd?: number|null, env?: NodeJS.ProcessEnv }} [opts]
  * @returns {{ apply: (slot, button, value) => void, stop: () => void, backend: string }}
  */
-export function createInputInjector(env = process.env) {
+export function createInputInjector(opts = {}) {
+  const env = opts.env || process.env;
   const enabled =
     String(env.HOST_BOT_INPUT || "auto").toLowerCase() !== "off" &&
     String(env.HOST_BOT_INPUT || "auto").toLowerCase() !== "0";
@@ -51,7 +53,7 @@ export function createInputInjector(env = process.env) {
   }
 
   if (process.platform === "win32") {
-    return createWindowsInjector();
+    return createWindowsInjector(opts.hwnd || null);
   }
 
   // Linux lab: regista só (sem X11 fake); encode/lab não precisa.
@@ -64,7 +66,7 @@ export function createInputInjector(env = process.env) {
   };
 }
 
-function createWindowsInjector() {
+function createWindowsInjector(hwnd) {
   const script = path.join(root, "scripts/host-bot-lua/host-bot-input-win.ps1");
   const child = spawn(
     "powershell.exe",
@@ -72,9 +74,14 @@ function createWindowsInjector() {
     {
       stdio: ["pipe", "ignore", "pipe"],
       windowsHide: true,
+      env: {
+        ...process.env,
+        ...(hwnd ? { ARENA_HWND: String(hwnd) } : {}),
+      },
     },
   );
   let dead = false;
+  let lastFocusAt = 0;
   child.on("exit", () => {
     dead = true;
   });
@@ -95,7 +102,17 @@ function createWindowsInjector() {
       const mapped = mapArenaInput(slot, button, value);
       const vk = vkForKey(mapped.key);
       if (vk == null) return;
-      send({ vk, down: mapped.value === 1 ? 1 : 0, key: mapped.key });
+      // Re-foca a janela do core de tempos a tempos (browser rouba o foco).
+      const now = Date.now();
+      const needFocus = hwnd && now - lastFocusAt > 700;
+      if (needFocus) lastFocusAt = now;
+      send({
+        vk,
+        down: mapped.value === 1 ? 1 : 0,
+        key: mapped.key,
+        hwnd: hwnd || undefined,
+        focus: needFocus ? 1 : 0,
+      });
     },
     stop() {
       try {

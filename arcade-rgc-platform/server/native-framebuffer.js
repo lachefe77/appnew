@@ -46,9 +46,20 @@ export function buildFfmpegFrameCapture(env = process.env) {
 
   let args;
   if (kind === "gdigrab" || (!kind && process.platform === "win32")) {
-    // Ex.: title=RetroArch  ou  desktop
+    // Preferir hwnd=12345 (resolvido pelo worker). title= é fallback frágil.
     const i = input || "title=RetroArch";
-    args = ["-y", "-f", "gdigrab", "-framerate", String(fps), "-i", i, ...outArgs];
+    args = [
+      "-y",
+      "-f",
+      "gdigrab",
+      "-framerate",
+      String(fps),
+      "-draw_mouse",
+      "0",
+      "-i",
+      i,
+      ...outArgs,
+    ];
   } else if (kind === "x11grab") {
     const i = input || ":0.0";
     args = [
