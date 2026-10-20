@@ -1,0 +1,28 @@
+{
+  "name": "arcade-rgc-platform",
+  "version": "1.0.0",
+  "description": "Next-Gen Arcade Netplay Platform with Real-Time Rooms, Crossplay & PIX Escrow",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test tests/critical-flow.test.js tests/rom-check.test.js tests/hosted.test.js tests/controls.test.js tests/controller-settings.test.js tests/snapshot.test.js tests/hardening.test.js",
+    "db:backup": "node scripts/database-backup.js backup",
+    "db:verify": "node scripts/database-backup.js verify",
+    "db:restore": "node scripts/database-backup.js restore",
+    "health:check": "node scripts/check-health.js",
+    "setup:emulator": "node scripts/setup-emulatorjs.js",
+    "setup:hosted": "node scripts/setup-hosted-game.js",
+    "test:local": "node scripts/start-local-test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "dotenv": "^18.0.8",
+    "playwright-core": "1.64.1",
+    "ws": "^8.18.0"
+  }
+}

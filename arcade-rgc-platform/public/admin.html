@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arena Arcade — Painel Administrativo</title>
+<style>
+  :root {
+    --bg0: #05080f; --bg1: #0a0e1a; --bg2: #10141e; --bg3: #161c2b;
+    --border: #1e2738; --border2: #242e42;
+    --accent: #00e5ff; --accent2: #ff4d00; --accent3: #00ff88;
+    --gold: #ffcc00; --danger: #ff0055; --warn: #ff8800;
+    --text: #f0f4fa; --text2: #8494ab; --text3: #4a5568;
+    --vip-bronze: #cd7f32; --vip-silver: #c0c0c0; --vip-gold: #ffd700;
+    --vip-dia: #00e5ff; --vip-onyx: #a855f7;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg0); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
+
+  /* ── Layout ── */
+  #app { display: flex; height: 100vh; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 220px; min-width: 220px; background: var(--bg1);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .sidebar-logo {
+    padding: 20px 16px 16px; border-bottom: 1px solid var(--border);
+    font-size: 1.1rem; font-weight: 800; color: var(--accent);
+    letter-spacing: 1px;
+  }
+  .sidebar-logo small { display: block; font-size: 0.65rem; color: var(--text2); font-weight: 400; margin-top: 2px; }
+  .nav-group { padding: 12px 0 4px 16px; font-size: 0.65rem; font-weight: 700; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 16px; cursor: pointer; border-left: 3px solid transparent;
+    transition: all 0.15s; color: var(--text2); font-size: 0.85rem;
+  }
+  .nav-item:hover { background: rgba(0,229,255,0.05); color: var(--text); }
+  .nav-item.active { background: rgba(0,229,255,0.08); border-left-color: var(--accent); color: var(--accent); }
+  .nav-item .badge {
+    margin-left: auto; background: var(--danger); color: #fff;
+    font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 10px;
+  }
+  #sidebar-footer {
+    margin-top: auto; padding: 12px 16px; border-top: 1px solid var(--border);
+    font-size: 0.75rem; color: var(--text3);
+  }
+  #onlineCount { color: var(--accent3); font-weight: 700; }
+
+  /* ── Main content ── */
+  #content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+  .topbar {
+    background: var(--bg1); border-bottom: 1px solid var(--border);
+    padding: 12px 24px; display: flex; align-items: center; gap: 12px;
+    flex-shrink: 0;
+  }
+  .topbar h1 { font-size: 1.1rem; font-weight: 700; flex: 1; }
+  #loginOverlay {
+    position: fixed; inset: 0; background: rgba(5,8,15,0.97); z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .login-card {
+    background: var(--bg2); border: 1px solid var(--border2); border-radius: 12px;
+    padding: 32px 40px; width: 360px;
+  }
+  .login-card h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 6px; color: var(--accent); }
+  .login-card p { font-size: 0.8rem; color: var(--text2); margin-bottom: 20px; }
+
+  /* ── Tabs ── */
+  .tab-panel { display: none; padding: 24px; flex: 1; }
+  .tab-panel.active { display: block; }
+
+  /* ── Cards ── */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; position: relative; overflow: hidden;
+  }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); }
+  .stat-card.red::before { background: var(--danger); }
+  .stat-card.green::before { background: var(--accent3); }
+  .stat-card.gold::before { background: var(--gold); }
+  .stat-card.orange::before { background: var(--warn); }
+  .stat-label { font-size: 0.7rem; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; }
+  .stat-value { font-size: 1.6rem; font-weight: 800; margin: 4px 0; }
+  .stat-sub { font-size: 0.7rem; color: var(--text3); }
+
+  /* ── Tables ── */
+  .table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
+  .table-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .table-header h3 { font-size: 0.85rem; font-weight: 700; flex: 1; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: var(--bg3); padding: 10px 14px; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); font-weight: 700; }
+  tbody tr { border-top: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  td { padding: 10px 14px; font-size: 0.82rem; vertical-align: middle; }
+
+  /* ── Badges ── */
+  .badge-role { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; }
+  .badge-role.ADMIN    { background: rgba(255,77,0,0.2);  color: var(--accent2); }
+  .badge-role.MOD      { background: rgba(0,229,255,0.15); color: var(--accent); }
+  .badge-role.USER     { background: rgba(255,255,255,0.06); color: var(--text2); }
+  .badge-kyc { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; }
+  .badge-kyc.APROVADO  { background: rgba(0,255,136,0.15); color: var(--accent3); }
+  .badge-kyc.PENDENTE  { background: rgba(255,204,0,0.15); color: var(--gold); }
+  .badge-kyc.REJEITADO { background: rgba(255,0,85,0.15);  color: var(--danger); }
+  .badge-kyc.NAO_ENVIADO { background: rgba(255,255,255,0.06); color: var(--text3); }
+  .badge-status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; }
+  .badge-status.ativo   { background: rgba(0,255,136,0.15); color: var(--accent3); }
+  .badge-status.inativo { background: rgba(255,0,85,0.12);  color: var(--danger); }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    border: none; border-radius: 6px; padding: 7px 14px; font-size: 0.78rem;
+    font-weight: 700; transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #33ebff; }
+  .btn-danger  { background: var(--danger); color: #fff; }
+  .btn-danger:hover { background: #ff3370; }
+  .btn-success { background: var(--accent3); color: #000; }
+  .btn-success:hover { background: #33ffaa; }
+  .btn-warn    { background: var(--warn); color: #000; }
+  .btn-warn:hover { background: #ffaa33; }
+  .btn-ghost   { background: transparent; border: 1px solid var(--border2); color: var(--text2); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm { padding: 4px 10px; font-size: 0.72rem; }
+  .btn-xs { padding: 3px 8px; font-size: 0.68rem; }
+
+  /* ── Forms ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 0.72rem; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  input, select, textarea {
+    background: var(--bg3); border: 1px solid var(--border2); border-radius: 6px;
+    color: var(--text); padding: 8px 12px; font-size: 0.85rem; width: 100%;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 70px; }
+  .search-input { max-width: 280px; }
+
+  /* ── Modals ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal-box {
+    background: var(--bg2); border: 1px solid var(--border2); border-radius: 12px;
+    padding: 24px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+  }
+  .modal-title { font-size: 1rem; font-weight: 800; margin-bottom: 16px; color: var(--accent); }
+
+  /* ── KYC Photo ── */
+  .kyc-photo { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border2); background: var(--bg3); }
+
+  /* ── Room card ── */
+  .room-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; display: flex; flex-direction: column; gap: 8px;
+    transition: border-color 0.15s;
+  }
+  .room-card:hover { border-color: var(--border2); }
+  .room-card-title { font-weight: 700; font-size: 0.9rem; }
+  .room-meta { font-size: 0.72rem; color: var(--text2); display: flex; gap: 12px; flex-wrap: wrap; }
+  .room-meta span { display: flex; align-items: center; gap: 4px; }
+  .room-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .room-moderators { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text2); }
+  .rooms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+
+  /* ── Ledger ── */
+  .ledger-type { font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
+  .ledger-type.PIX_DEPOSIT         { background: rgba(0,255,136,0.12); color: var(--accent3); }
+  .ledger-type.PIX_WITHDRAWAL_LIQUIDATED { background: rgba(255,204,0,0.12); color: var(--gold); }
+  .ledger-type.ESCROW_LOCK         { background: rgba(0,229,255,0.12); color: var(--accent); }
+  .ledger-type.ESCROW_PAYOUT       { background: rgba(0,255,136,0.12); color: var(--accent3); }
+  .ledger-type.HOUSE_RAKE          { background: rgba(255,77,0,0.12); color: var(--accent2); }
+  .ledger-type.ADMIN_CREDIT        { background: rgba(255,136,0,0.12); color: var(--warn); }
+  .ledger-type.ADMIN_DEBIT         { background: rgba(255,0,85,0.12); color: var(--danger); }
+
+  /* ── Toast ── */
+  #adminToast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 999;
+    display: flex; flex-direction: column-reverse; gap: 8px;
+  }
+  .admin-toast-item {
+    background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px;
+    padding: 12px 16px; font-size: 0.82rem; min-width: 280px;
+    animation: slideIn 0.2s ease;
+  }
+  .admin-toast-item.ok  { border-left: 3px solid var(--accent3); }
+  .admin-toast-item.err { border-left: 3px solid var(--danger); }
+  @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  .section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .flex-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .divider  { height: 1px; background: var(--border); margin: 20px 0; }
+  .text-center { text-align: center; }
+  .text-right  { text-align: right; }
+  .text-accent { color: var(--accent); }
+  .text-danger { color: var(--danger); }
+  .text-success { color: var(--accent3); }
+  .text-gold  { color: var(--gold); }
+  .text-warn  { color: var(--warn); }
+  .mt8 { margin-top: 8px; }
+  .empty-state { padding: 32px; text-align: center; color: var(--text3); font-size: 0.82rem; }
+</style>
+</head>
+<body>
+
+<div id="loginOverlay">
+  <div class="login-card">
+    <h2>🛡️ Arena Admin</h2>
+    <p>Acesso restrito. Insira suas credenciais de administrador.</p>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>E-mail</label>
+      <input id="loginEmail" type="email" placeholder="admin@arena.gg" value="admin@arena.gg">
+    </div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Senha</label>
+      <input id="loginPass" type="password" placeholder="Senha">
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="adminLogin()">ENTRAR NO PAINEL</button>
+    <div id="loginError" style="color:var(--danger);font-size:0.78rem;margin-top:8px;text-align:center"></div>
+  </div>
+</div>
+
+<div id="app">
+  <nav id="sidebar">
+    <div class="sidebar-logo">⚡ ARENA ADMIN <small>Sistema de Controle</small></div>
+    <div class="nav-group">VISÃO GERAL</div>
+    <div class="nav-item active" onclick="showTab('dashboard')" data-tab="dashboard">📊 Dashboard</div>
+    <div class="nav-item" onclick="showTab('live')" data-tab="live">⚔️ Partidas ao Vivo</div>
+    <div class="nav-group">GESTÃO</div>
+    <div class="nav-item" onclick="showTab('users')" data-tab="users">👥 Usuários</div>
+    <div class="nav-item" onclick="showTab('rooms')" data-tab="rooms">🏟️ Salas</div>
+    <div class="nav-group">FINANCEIRO</div>
+    <div class="nav-item" onclick="showTab('withdrawals')" data-tab="withdrawals">💸 Saques <span class="badge" id="badgeWithdrawals">0</span></div>
+    <div class="nav-item" onclick="showTab('kyc')" data-tab="kyc">🪪 KYC Queue <span class="badge" id="badgeKyc">0</span></div>
+    <div class="nav-item" onclick="showTab('ledger')" data-tab="ledger">📒 Ledger</div>
+    <div class="nav-group">FERRAMENTAS</div>
+    <div class="nav-item" onclick="showTab('coupons')" data-tab="coupons">🎟️ Cupons</div>
+    <div class="nav-item" onclick="showTab('broadcast')" data-tab="broadcast">📢 Broadcast</div>
+    <div class="nav-item" onclick="showTab('auditlog')" data-tab="auditlog">🔍 Audit Log</div>
+    <div id="sidebar-footer">
+      Online agora: <span id="onlineCount">0</span><br>
+      <span id="adminUser" style="color:var(--text2)">—</span>
+    </div>
+  </nav>
+
+  <div id="content">
+    <div class="topbar">
+      <h1 id="topbarTitle">Dashboard</h1>
+      <button class="btn btn-ghost btn-sm" onclick="refreshData()">↻ Atualizar</button>
+      <button class="btn btn-danger btn-sm" onclick="adminLogout()">Sair</button>
+    </div>
+
+    <!-- ── Dashboard ── -->
+    <div id="tab-dashboard" class="tab-panel active">
+      <div class="cards-grid" id="statsCards">
+        <div class="stat-card green">
+          <div class="stat-label">Capital Total</div>
+          <div class="stat-value" id="statCapital">R$ —</div>
+          <div class="stat-sub">Empresa + rake acumulado</div>
+        </div>
+        <div class="stat-card gold">
+          <div class="stat-label">Rake / Lucro</div>
+          <div class="stat-value" id="statRake">R$ —</div>
+          <div class="stat-sub">Receita da plataforma</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Em Circulação</div>
+          <div class="stat-value" id="statCirc">R$ —</div>
+          <div class="stat-sub">Saldos + escrow ativo</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Saques Pendentes</div>
+          <div class="stat-value" id="statPendingWdr">R$ —</div>
+          <div class="stat-sub">Aguardando liberação</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Usuários</div>
+          <div class="stat-value" id="statUsers">—</div>
+          <div class="stat-sub" id="statOnline">Online: 0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Partidas (total)</div>
+          <div class="stat-value" id="statMatches">—</div>
+          <div class="stat-sub" id="statMatchesLive">Ao vivo: 0</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">Dep. Total</div>
+          <div class="stat-value" id="statDep">R$ —</div>
+          <div class="stat-sub">Desde o início</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Tickets Abertos</div>
+          <div class="stat-value" id="statTickets">—</div>
+          <div class="stat-sub">Suporte ao jogador</div>
+        </div>
+      </div>
+      <div class="section-title">RESULTADO OPERACIONAL (DRE RESUMIDO)</div>
+      <div id="dreTable"></div>
+
+      <!-- Charts -->
+      <div class="section-title" style="margin-top:24px;">GRÁFICOS — ÚLTIMOS 7 DIAS</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:8px;">
+        <div style="background:#0e1322; border:1px solid #242e42; padding:16px;">
+          <div style="font-size:0.72rem; color:#8494ab; margin-bottom:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Partidas / dia</div>
+          <canvas id="chartMatches" height="100"></canvas>
+        </div>
+        <div style="background:#0e1322; border:1px solid #242e42; padding:16px;">
+          <div style="font-size:0.72rem; color:#8494ab; margin-bottom:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Novos usuários / dia</div>
+          <canvas id="chartUsers" height="100"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Partidas ao Vivo ── -->
+    <div id="tab-live" class="tab-panel">
+      <div class="section-title">PARTIDAS EM ANDAMENTO</div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>Duelos Ativos</h3>
+          <button class="btn btn-ghost btn-sm" onclick="loadLiveMatches()">↻</button>
+        </div>
+        <table>
+          <thead><tr><th>Match ID</th><th>Jogador A</th><th>Jogador B</th><th>Modo</th><th>Aposta</th><th>Sala</th><th>Espectadores</th></tr></thead>
+          <tbody id="liveMatchesBody"><tr><td colspan="7" class="empty-state">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Usuários ── -->
+    <div id="tab-users" class="tab-panel">
+      <div class="flex-row" style="margin-bottom:16px">
+        <input class="search-input" type="text" id="userSearch" placeholder="🔍 Buscar por nick, email, ID..." oninput="filterUsers()">
+        <button class="btn btn-ghost btn-sm" onclick="loadUsers()">↻</button>
+        <span id="userCount" style="font-size:0.78rem;color:var(--text2)"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Usuário</th><th>Email / CPF</th><th>ELO</th><th>Saldo</th><th>Role</th><th>KYC</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Salas ── -->
+    <div id="tab-rooms" class="tab-panel">
+      <div class="flex-row" style="margin-bottom:20px">
+        <button class="btn btn-primary" onclick="openRoomModal()">+ Nova Sala</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadRooms()">↻</button>
+        <span id="roomCount" style="font-size:0.78rem;color:var(--text2)"></span>
+      </div>
+      <div class="rooms-grid" id="roomsGrid"></div>
+    </div>
+
+    <!-- ── Saques ── -->
+    <div id="tab-withdrawals" class="tab-panel">
+      <div class="section-title">FILA DE SAQUES PIX — APROVAÇÃO MANUAL</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>Jogador</th><th>CPF</th><th>Chave PIX</th><th>Valor</th><th>Score</th><th>Horário</th><th>Ações</th></tr></thead>
+          <tbody id="withdrawalsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── KYC Queue ── -->
+    <div id="tab-kyc" class="tab-panel">
+      <div class="section-title">FILA DE VERIFICAÇÃO DE IDENTIDADE</div>
+      <div id="kycGrid"></div>
+    </div>
+
+    <!-- ── Ledger ── -->
+    <div id="tab-ledger" class="tab-panel">
+      <div class="flex-row" style="margin-bottom:12px">
+        <div class="stat-card" style="padding:12px 20px;flex:1">
+          <div class="stat-label">Exportar CSV</div>
+          <div class="mt8"><button class="btn btn-ghost btn-sm" onclick="exportCSV()">📥 Baixar Ledger Completo</button></div>
+        </div>
+        <div class="stat-card" style="padding:12px 20px;flex:1">
+          <div class="stat-label">Relatório Diário</div>
+          <div class="flex-row mt8">
+            <input type="date" id="reportDate" style="width:160px" value="">
+            <button class="btn btn-ghost btn-sm" onclick="exportDaily()">📥 Baixar</button>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><h3>Últimas 50 Transações</h3></div>
+        <table>
+          <thead><tr><th>ID</th><th>Tipo</th><th>Usuário</th><th>Valor</th><th>Saldo Após</th><th>Data/Hora</th></tr></thead>
+          <tbody id="ledgerBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Cupons ── -->
+    <div id="tab-coupons" class="tab-panel">
+      <div class="flex-row" style="margin-bottom:20px;align-items:flex-end;gap:12px;flex-wrap:wrap">
+        <div class="form-group">
+          <label>Código</label>
+          <input id="couponCode" type="text" placeholder="NOVOCODIGO" style="width:160px" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="form-group">
+          <label>Valor (R$)</label>
+          <input id="couponValue" type="number" min="1" max="500" value="5.00" step="0.50" style="width:120px">
+        </div>
+        <div class="form-group">
+          <label>Usos Máx.</label>
+          <input id="couponMaxUses" type="number" min="1" max="10000" value="100" style="width:100px">
+        </div>
+        <button class="btn btn-primary" onclick="createCoupon()">+ Criar Cupom</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Código</th><th>Valor</th><th>Usos</th><th>Máx.</th><th>Status</th></tr></thead>
+          <tbody id="couponsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Broadcast ── -->
+    <div id="tab-broadcast" class="tab-panel">
+      <div class="table-wrap" style="max-width:600px">
+        <div class="table-header"><h3>📢 Mensagem para Jogadores</h3></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+          <div class="form-group">
+            <label>Mensagem</label>
+            <textarea id="broadcastMsg" rows="3" placeholder="Escreva um comunicado..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Destino</label>
+            <select id="broadcastRoom">
+              <option value="">Todos os jogadores online</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="sendBroadcast()">📢 ENVIAR MENSAGEM</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Audit Log ── -->
+    <div id="tab-auditlog" class="tab-panel">
+      <div class="section-title">LOG DE AÇÕES ADMINISTRATIVAS</div>
+      <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-ghost" onclick="loadAuditLog()">↺ Atualizar</button>
+        <span style="font-size:0.8rem;color:#8494ab;">Últimas 100 ações</span>
+      </div>
+      <div class="table-wrap">
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+          <thead>
+            <tr style="background:#0e1322;">
+              <th style="padding:8px 12px;text-align:left;color:#8494ab;border-bottom:1px solid #242e42;">Data</th>
+              <th style="padding:8px 12px;text-align:left;color:#8494ab;border-bottom:1px solid #242e42;">Admin</th>
+              <th style="padding:8px 12px;text-align:left;color:#8494ab;border-bottom:1px solid #242e42;">Ação</th>
+              <th style="padding:8px 12px;text-align:left;color:#8494ab;border-bottom:1px solid #242e42;">Alvo</th>
+              <th style="padding:8px 12px;text-align:left;color:#8494ab;border-bottom:1px solid #242e42;">Detalhe</th>
+            </tr>
+          </thead>
+          <tbody id="auditLogBody"><tr><td colspan="5" style="padding:20px;text-align:center;color:#8494ab;">Clique em Atualizar para carregar.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── User Action Modal ── -->
+<div class="modal-overlay hidden" id="userModal">
+  <div class="modal-box">
+    <div class="modal-title">Gerenciar Usuário</div>
+    <div id="userModalContent"></div>
+    <div class="flex-row mt8">
+      <button class="btn btn-ghost" onclick="closeModal('userModal')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Room Modal ── -->
+<div class="modal-overlay hidden" id="roomModal">
+  <div class="modal-box">
+    <div class="modal-title" id="roomModalTitle">Nova Sala</div>
+    <div class="form-grid">
+      <input type="hidden" id="roomEditId">
+      <div class="form-group full">
+        <label>Nome da Sala</label>
+        <input id="roomName" type="text" placeholder="Ex: KOF 2002 — Nordeste" maxlength="60">
+      </div>
+      <div class="form-group">
+        <label>Jogo</label>
+        <select id="roomGame">
+          <option>KOF 2002</option><option>KOF 98</option><option>SF3 3rd Strike</option>
+          <option>Metal Slug 3</option><option>Multi-Arcade</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Região</label>
+        <input id="roomRegion" type="text" placeholder="Ex: Nordeste (CE/BA)" value="Brasil Geral">
+      </div>
+      <div class="form-group">
+        <label>Rake (%)</label>
+        <input id="roomRake" type="number" min="0" max="20" value="10">
+      </div>
+      <div class="form-group">
+        <label>Tier</label>
+        <select id="roomTier">
+          <option value="LIVRE">LIVRE</option>
+          <option value="PRO">PRO</option>
+          <option value="VIP">VIP</option>
+          <option value="DIAMANTE">DIAMANTE</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Capacidade máx.</label>
+        <input id="roomMaxPlayers" type="number" min="2" max="500" value="100">
+      </div>
+      <div class="form-group">
+        <label>Senha (opcional)</label>
+        <input id="roomPassword" type="text" placeholder="Deixe vazio para sala pública">
+      </div>
+      <div class="form-group full">
+        <label>Descrição</label>
+        <textarea id="roomDesc" placeholder="Descrição da sala..."></textarea>
+      </div>
+    </div>
+    <div class="flex-row mt8">
+      <button class="btn btn-primary" onclick="saveRoom()">Salvar Sala</button>
+      <button class="btn btn-ghost" onclick="closeModal('roomModal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add Moderator Modal ── -->
+<div class="modal-overlay hidden" id="modModal">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-title">Adicionar Moderador</div>
+    <input type="hidden" id="modRoomId">
+    <div class="form-group" style="margin-bottom:12px">
+      <label>ID ou Username do Usuário</label>
+      <input id="modUserId" type="text" placeholder="ID do usuário">
+    </div>
+    <div class="flex-row mt8">
+      <button class="btn btn-primary" onclick="addModerator()">Adicionar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modModal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="adminToast"></div>
+
+<script>
+const API = '';
+
+    function escapeHTML(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+    function safeImage(value){return typeof value==='string'&&value.length<=400000&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value)?value:'';}
+    function emailArg(value){return encodeURIComponent(String(value)).replaceAll("'",'%27');}
+
+let adminToken = null;
+let overviewData = null;
+let allUsers = [];
+let allRooms = [];
+let refreshTimer = null;
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+async function adminLogin() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const errEl    = document.getElementById('loginError');
+  errEl.textContent = '';
+
+  try {
+    // Authenticate through the platform WebSocket.
+    await wsLogin(email, password);
+  } catch (e) {
+    errEl.textContent = 'Erro de conexão.';
+  }
+}
+
+function wsLogin(email, password) {
+  return new Promise((resolve, reject) => {
+    const wsUrl = location.protocol === 'https:' ? `wss://${location.host}/ws` : `ws://${location.host}/ws`;
+    const ws = new WebSocket(wsUrl);
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'LOGIN_ACCOUNT', email, password }));
+    };
+    ws.onmessage = e => {
+      const data = JSON.parse(e.data);
+      if (data.type === 'AUTH_SUCCESS') {
+        if (data.user.role !== 'ADMIN') {
+          document.getElementById('loginError').textContent = 'Acesso negado: não é administrador.';
+          ws.close();
+          reject();
+          return;
+        }
+        adminToken = data.sessionToken;sessionStorage.setItem('arenaAdminToken',adminToken);
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('adminUser').textContent = data.user.username;
+        ws.close();
+        startAutoRefresh();
+        refreshData();
+        resolve();
+      } else if (data.type === 'AUTH_ERROR') {
+        document.getElementById('loginError').textContent = data.message;
+        ws.close();
+        reject();
+      }
+    };
+    ws.onerror = () => { document.getElementById('loginError').textContent = 'Sem conexão com o servidor.'; reject(); };
+  });
+}
+
+function adminLogout() {
+  fetch('/api/logout',{method:'POST',headers:{Authorization:'Bearer '+adminToken}}).catch(()=>{});
+  sessionStorage.removeItem('arenaAdminToken');
+  adminToken = null;
+  clearInterval(refreshTimer);
+  document.getElementById('loginOverlay').style.display = 'flex';
+}
+
+// ── API helper ────────────────────────────────────────────────────────────────
+async function apiFetch(url, opts = {}) {
+  const r = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    ...opts
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `HTTP ${r.status}`);
+  return r.json();
+}
+
+// ── Auto refresh ──────────────────────────────────────────────────────────────
+function startAutoRefresh() {
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(refreshData, 15000);
+}
+
+async function refreshData() {
+  try {
+    overviewData = await apiFetch('/api/admin/overview');
+    const d = overviewData;
+    // Stats
+    setText('statCapital', `R$ ${d.vault.totalCompanyCapitalReais}`);
+    setText('statRake', `R$ ${d.vault.platformRakeProfitReais}`);
+    setText('statCirc', `R$ ${d.vault.activeInPlayReais}`);
+    setText('statPendingWdr', `R$ ${d.vault.pendingWithdrawalsReais}`);
+    setText('statUsers', d.stats.totalUsers);
+    setText('statOnline', `Online: ${d.stats.onlineNow}`);
+    setText('statMatches', d.stats.totalMatchesAllTime);
+    setText('statMatchesLive', `Ao vivo: ${d.stats.activeMatches}`);
+    setText('statTickets', d.stats.openTickets);
+    setText('statDep', `R$ ${d.vault.totalDepositsReais}`);
+    setText('onlineCount', d.stats.onlineNow);
+
+    // Badges
+    const wdrBadge = document.getElementById('badgeWithdrawals');
+    const kycBadge = document.getElementById('badgeKyc');
+    wdrBadge.textContent = d.pendingWithdrawals.length;
+    wdrBadge.style.display = d.pendingWithdrawals.length ? '' : 'none';
+    kycBadge.textContent = d.pendingKyc.length;
+    kycBadge.style.display = d.pendingKyc.length ? '' : 'none';
+
+    // DRE
+    const dr = d.dre;
+    setText('dreTable', '');
+    document.getElementById('dreTable').innerHTML = `
+      <div class="table-wrap"><table>
+        <thead><tr><th>Métrica</th><th class="text-right">Valor</th></tr></thead>
+        <tbody>
+          <tr><td>Volume Bruto Transacionado</td><td class="text-right text-accent">R$ ${dr.volumeBrutoTransacionado}</td></tr>
+          <tr><td>Receita Bruta de Rake</td><td class="text-right text-success">R$ ${dr.receitaBrutaRake}</td></tr>
+          <tr><td>(-) Custos Gateway PIX</td><td class="text-right text-danger">− R$ ${dr.custosGatewayPix}</td></tr>
+          <tr><td>(-) Fundo de Proteção (5%)</td><td class="text-right text-warn">− R$ ${dr.fundoProtecaoReserva}</td></tr>
+          <tr><td><strong>Resultado Líquido Operacional</strong></td><td class="text-right text-gold"><strong>R$ ${dr.resultadoLiquidoOperacional}</strong></td></tr>
+        </tbody>
+      </table></div>
+    `;
+
+    allUsers = d.allUsers || [];
+    allRooms = d.rooms || [];
+
+    // Refresh current tab
+    const active = document.querySelector('.tab-panel.active');
+    if (active) {
+      const tabId = active.id.replace('tab-', '');
+      renderTab(tabId);
+    }
+  } catch (e) { toast(`Erro ao atualizar: ${e.message}`, 'err'); }
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showTab(tabId) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const panel = document.getElementById(`tab-${tabId}`);
+  if (panel) panel.classList.add('active');
+  const navItem = document.querySelector(`[data-tab="${tabId}"]`);
+  if (navItem) navItem.classList.add('active');
+  const titles = { dashboard: 'Dashboard', live: 'Partidas ao Vivo', users: 'Usuários', rooms: 'Salas', withdrawals: 'Fila de Saques', kyc: 'KYC Queue', ledger: 'Ledger Financeiro', coupons: 'Cupons', broadcast: 'Broadcast', auditlog: 'Audit Log' };
+  setText('topbarTitle', titles[tabId] || tabId);
+  renderTab(tabId);
+}
+
+function renderTab(tabId) {
+  if (!overviewData) return;
+  switch (tabId) {
+    case 'users': renderUsers(); break;
+    case 'rooms': renderRooms(); break;
+    case 'withdrawals': renderWithdrawals(); break;
+    case 'kyc': renderKyc(); break;
+    case 'ledger': renderLedger(); break;
+    case 'coupons': loadCoupons(); break;
+    case 'broadcast': populateBroadcastRooms(); break;
+    case 'auditlog': loadAuditLog(); break;
+    case 'live': loadLiveMatches(); break;
+  }
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+function loadUsers() { refreshData(); }
+
+function filterUsers() {
+  const q = document.getElementById('userSearch').value.toLowerCase();
+  const filtered = q ? allUsers.filter(u =>
+    (u.username || '').toLowerCase().includes(q) ||
+    (u.email || '').toLowerCase().includes(q) ||
+    (u.id || '').toLowerCase().includes(q) ||
+    (u.cpf || '').includes(q)
+  ) : allUsers;
+  renderUsersTable(filtered);
+}
+
+function renderUsers() {
+  document.getElementById('userCount').textContent = `${allUsers.length} usuários`;
+  renderUsersTable(allUsers);
+}
+
+function renderUsersTable(users) {
+  const body = document.getElementById('usersBody');
+  if (!users.length) { body.innerHTML = `<tr><td colspan="8" class="empty-state">Nenhum usuário encontrado.</td></tr>`; return; }
+  body.innerHTML = users.map(u => `
+    <tr>
+      <td>
+        <div style="font-weight:700">${esc(u.username)}</div>
+        <div style="font-size:0.7rem;color:var(--text3)">${u.id}</div>
+      </td>
+      <td>
+        <div>${esc(u.email)}</div>
+        <div style="font-size:0.7rem;color:var(--text3)">${esc(u.cpf)}</div>
+      </td>
+      <td style="font-weight:700;color:var(--accent)">${u.elo}</td>
+      <td class="text-success" style="font-weight:700">R$ ${u.balanceReais}</td>
+      <td><span class="badge-role ${u.role}">${u.role}</span></td>
+      <td><span class="badge-kyc ${u.kycStatus}">${u.kycStatus}</span></td>
+      <td>
+        ${u.isBanned ? `<span style="color:var(--danger);font-size:0.72rem">⛔ BANIDO</span>` : u.isFrozen ? `<span style="color:var(--gold);font-size:0.72rem">🥶 FROZEN</span>` : `<span style="color:var(--accent3);font-size:0.72rem">✅ OK</span>`}
+      </td>
+      <td>
+        <button class="btn btn-ghost btn-xs" onclick="openUserModal('${u.id}')">⚙ Gerenciar</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openUserModal(userId) {
+  const u = allUsers.find(x => x.id === userId);
+  if (!u) return;
+  const modal = document.getElementById('userModal');
+  modal.classList.remove('hidden');
+  document.getElementById('userModalContent').innerHTML = `
+    <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:16px">
+      <div style="font-weight:700;font-size:1rem;margin-bottom:4px">${esc(u.username)}</div>
+      <div style="font-size:0.75rem;color:var(--text2)">
+        ${u.id} · ${esc(u.email)} · CPF: ${esc(u.cpf)}<br>
+        ELO: <b class="text-accent">${u.elo}</b> ·
+        V/D: <b class="text-success">${u.wins}</b>/<b class="text-danger">${u.losses}</b> ·
+        Saldo: <b class="text-gold">R$ ${u.balanceReais}</b> ·
+        KYC: <span class="badge-kyc ${u.kycStatus}">${u.kycStatus}</span>
+      </div>
+    </div>
+    <div class="section-title">MODERAÇÃO</div>
+    <div class="flex-row" style="margin-bottom:16px;flex-wrap:wrap">
+      ${u.isBanned
+        ? `<button class="btn btn-success btn-sm" onclick="userAction('${u.id}','UNBAN')">🔓 Desbanir</button>`
+        : `<button class="btn btn-danger btn-sm" onclick="userAction('${u.id}','BAN')">⛔ Banir</button>`}
+      <button class="btn btn-warn btn-sm" onclick="userAction('${u.id}','FREEZE')">${u.isFrozen ? '🔥 Descongelar' : '🥶 Congelar'}</button>
+      <button class="btn btn-ghost btn-sm" onclick="userAction('${u.id}','RESET_ELO')">📊 Reset ELO</button>
+    </div>
+    <div class="section-title">KYC</div>
+    ${u.kycPhoto ? `<img src="${safeImage(u.kycPhoto)}" class="kyc-photo" style="margin-bottom:10px">` : '<div style="font-size:0.78rem;color:var(--text3);margin-bottom:10px">Sem foto enviada.</div>'}
+    <div class="flex-row" style="margin-bottom:16px">
+      <button class="btn btn-success btn-sm" onclick="userAction('${u.id}','APPROVE_KYC')">✅ Aprovar KYC</button>
+      <button class="btn btn-danger btn-sm" onclick="userAction('${u.id}','REJECT_KYC')">❌ Rejeitar KYC</button>
+    </div>
+    <div class="section-title">CARTEIRA</div>
+    <div class="flex-row" style="margin-bottom:16px">
+      <input id="creditAmt" type="number" min="0.50" max="500" step="0.50" value="5.00" style="width:100px">
+      <button class="btn btn-success btn-sm" onclick="addBalance('${u.id}')">+ Creditar</button>
+      <button class="btn btn-danger btn-sm" onclick="deductBalance('${u.id}')">− Debitar</button>
+    </div>
+    <div class="section-title">ROLE</div>
+    <div class="flex-row">
+      <select id="newRole" style="width:140px">
+        <option value="USER" ${u.role==='USER'?'selected':''}>USER</option>
+        <option value="MODERATOR" ${u.role==='MODERATOR'?'selected':''}>MODERATOR</option>
+        <option value="ADMIN" ${u.role==='ADMIN'?'selected':''}>ADMIN</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="setRole('${u.id}')">Aplicar Role</button>
+    </div>
+  `;
+}
+
+async function userAction(userId, action, extra = {}) {
+  try {
+    await apiFetch('/api/admin/action', { method: 'POST', body: JSON.stringify({ action, userId, ...extra }) });
+    toast(`Ação ${action} aplicada com sucesso.`, 'ok');
+    await refreshData();
+    const u = allUsers.find(x => x.id === userId);
+    if (u) openUserModal(userId);
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function addBalance(userId) {
+  const amt = parseFloat(document.getElementById('creditAmt').value) || 5;
+  await userAction(userId, 'ADD_BALANCE', { amountCents: Math.round(amt * 100), reason: 'Admin credit manual' });
+}
+async function deductBalance(userId) {
+  const amt = parseFloat(document.getElementById('creditAmt').value) || 5;
+  if (!confirm(`Debitar R$ ${amt.toFixed(2)} do usuário?`)) return;
+  await userAction(userId, 'DEDUCT_BALANCE', { amountCents: Math.round(amt * 100), reason: 'Admin debit manual' });
+}
+async function setRole(userId) {
+  const role = document.getElementById('newRole').value;
+  await userAction(userId, 'SET_ROLE', { role });
+}
+
+// ── Rooms ─────────────────────────────────────────────────────────────────────
+function loadRooms() { refreshData(); }
+
+function renderRooms() {
+  const grid = document.getElementById('roomsGrid');
+  document.getElementById('roomCount').textContent = `${allRooms.length} salas`;
+  if (!allRooms.length) { grid.innerHTML = `<div class="empty-state">Nenhuma sala criada.</div>`; return; }
+  grid.innerHTML = allRooms.map(r => `
+    <div class="room-card" style="border-color:${r.active ? 'var(--border)' : 'var(--danger)'}">
+      <div class="flex-row">
+        <div class="room-card-title">${esc(r.name)}</div>
+        <span class="badge-status ${r.active ? 'ativo' : 'inativo'}">${r.active ? 'ATIVA' : 'OFF'}</span>
+      </div>
+      <div class="room-meta">
+        <span>🎮 ${esc(r.game)}</span>
+        <span>📍 ${esc(r.region)}</span>
+        <span>💰 Rake ${r.rakePercent}%</span>
+        <span>👥 ${r.count || 0} online</span>
+        <span>🏅 ${r.tier}</span>
+        ${r.password ? `<span>🔒 Privada</span>` : ''}
+      </div>
+      ${r.description ? `<div style="font-size:0.75rem;color:var(--text2)">${esc(r.description)}</div>` : ''}
+      <div class="room-moderators">
+        🛡️ Moderadores (${r.moderators.length}/5):
+        ${r.moderators.length ? r.moderators.map(m => `<span style="color:var(--accent)">${esc(m.username)}</span>`).join(', ') : '<em style="color:var(--text3)">nenhum</em>'}
+      </div>
+      <div class="room-actions">
+        <button class="btn btn-ghost btn-xs" onclick="openRoomModal('${r.id}')">✏️ Editar</button>
+        <button class="btn btn-ghost btn-xs" onclick="toggleRoom('${r.id}')">${r.active ? '⏸ Desativar' : '▶ Ativar'}</button>
+        <button class="btn btn-primary btn-xs" onclick="openModModal('${r.id}')">+ Mod</button>
+        ${r.moderators.map(m => `<button class="btn btn-danger btn-xs" onclick="removeMod('${r.id}','${m.userId}')">✕ ${esc(m.username)}</button>`).join('')}
+        <button class="btn btn-danger btn-xs" onclick="deleteRoom('${r.id}','${esc(r.name)}')">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openRoomModal(roomId = null) {
+  const modal = document.getElementById('roomModal');
+  modal.classList.remove('hidden');
+  const r = roomId ? allRooms.find(x => x.id === roomId) : null;
+  document.getElementById('roomModalTitle').textContent = r ? 'Editar Sala' : 'Nova Sala';
+  document.getElementById('roomEditId').value    = roomId || '';
+  document.getElementById('roomName').value      = r ? r.name      : '';
+  document.getElementById('roomGame').value      = r ? r.game      : 'KOF 2002';
+  document.getElementById('roomRegion').value    = r ? r.region    : 'Brasil Geral';
+  document.getElementById('roomRake').value      = r ? r.rakePercent : 10;
+  document.getElementById('roomTier').value      = r ? r.tier      : 'LIVRE';
+  document.getElementById('roomMaxPlayers').value = r ? r.maxPlayers : 100;
+  document.getElementById('roomPassword').value  = '';
+  document.getElementById('roomDesc').value      = r ? (r.description || '') : '';
+}
+
+async function saveRoom() {
+  const roomId = document.getElementById('roomEditId').value;
+  const payload = {
+    name: document.getElementById('roomName').value.trim(),
+    game: document.getElementById('roomGame').value,
+    region: document.getElementById('roomRegion').value.trim(),
+    rakePercent: parseInt(document.getElementById('roomRake').value, 10),
+    tier: document.getElementById('roomTier').value,
+    maxPlayers: parseInt(document.getElementById('roomMaxPlayers').value, 10),
+    password: document.getElementById('roomPassword').value.trim() || null,
+    description: document.getElementById('roomDesc').value.trim()
+  };
+  try {
+    if (roomId) {
+      await apiFetch(`/api/admin/rooms/${roomId}`, { method: 'PUT', body: JSON.stringify(payload) });
+      toast('Sala atualizada.', 'ok');
+    } else {
+      await apiFetch('/api/admin/rooms', { method: 'POST', body: JSON.stringify(payload) });
+      toast('Sala criada!', 'ok');
+    }
+    closeModal('roomModal');
+    await refreshData();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function toggleRoom(roomId) {
+  try {
+    await apiFetch(`/api/admin/rooms/${roomId}/toggle`, { method: 'POST', body: '{}' });
+    toast('Status da sala alterado.', 'ok');
+    await refreshData();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function deleteRoom(roomId, name) {
+  if (!confirm(`Deletar sala "${name}"? Isso remove todos os jogadores.`)) return;
+  try {
+    await apiFetch(`/api/admin/rooms/${roomId}`, { method: 'DELETE' });
+    toast('Sala deletada.', 'ok');
+    await refreshData();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+function openModModal(roomId) {
+  document.getElementById('modRoomId').value = roomId;
+  document.getElementById('modUserId').value = '';
+  document.getElementById('modModal').classList.remove('hidden');
+}
+
+async function addModerator() {
+  const roomId = document.getElementById('modRoomId').value;
+  const userId = document.getElementById('modUserId').value.trim();
+  if (!userId) { toast('Insira o ID do usuário.', 'err'); return; }
+  const user = allUsers.find(u => u.id === userId || u.username === userId);
+  try {
+    await apiFetch(`/api/admin/rooms/${roomId}/moderators`, { method: 'POST', body: JSON.stringify({ userId: user ? user.id : userId, username: user ? user.username : userId }) });
+    toast('Moderador adicionado!', 'ok');
+    closeModal('modModal');
+    await refreshData();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function removeMod(roomId, userId) {
+  try {
+    await apiFetch(`/api/admin/rooms/${roomId}/moderators/${userId}`, { method: 'DELETE' });
+    toast('Moderador removido.', 'ok');
+    await refreshData();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+// ── Withdrawals ───────────────────────────────────────────────────────────────
+function renderWithdrawals() {
+  const items = overviewData.pendingWithdrawals || [];
+  const body = document.getElementById('withdrawalsBody');
+  if (!items.length) { body.innerHTML = `<tr><td colspan="8" class="empty-state">Nenhum saque pendente. ✅</td></tr>`; return; }
+  body.innerHTML = items.map(w => `
+    <tr>
+      <td style="font-family:monospace;font-size:0.72rem">${esc(w.id)}</td>
+      <td><div style="font-weight:700">${esc(w.username)}</div><div style="font-size:0.7rem;color:var(--text3)">${w.userId}</div></td>
+      <td style="font-family:monospace">${esc(w.cpf)}</td>
+      <td style="font-family:monospace;font-size:0.78rem">${esc(w.pixKey)}</td>
+      <td style="font-weight:700;color:var(--gold)">R$ ${w.amountReais}</td>
+      <td style="color:${w.fraudScore >= 800 ? 'var(--accent3)' : 'var(--warn)'}">${w.fraudScore}</td>
+      <td style="color:var(--text2);font-size:0.75rem">${w.requestedAt}</td>
+      <td>
+        <button class="btn btn-success btn-xs" onclick="approveWdr('${w.id}')">✅ Aprovar</button>
+        <button class="btn btn-danger btn-xs" onclick="rejectWdr('${w.id}')">❌ Rejeitar</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function approveWdr(id) {
+  try {
+    await apiFetch('/api/admin/withdrawal/approve', { method: 'POST', body: JSON.stringify({ withdrawalId: id }) });
+    toast(`Saque #${id} aprovado e liquidado!`, 'ok');
+    await refreshData();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function rejectWdr(id) {
+  const reason = prompt('Motivo da rejeição (opcional):');
+  try {
+    await apiFetch('/api/admin/withdrawal/reject', { method: 'POST', body: JSON.stringify({ withdrawalId: id, reason }) });
+    toast(`Saque #${id} rejeitado.`, 'ok');
+    await refreshData();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+// ── KYC ───────────────────────────────────────────────────────────────────────
+function renderKyc() {
+  const items = overviewData.pendingKyc || [];
+  const grid  = document.getElementById('kycGrid');
+  if (!items.length) { grid.innerHTML = `<div class="empty-state">Nenhum KYC pendente. ✅</div>`; return; }
+  grid.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">` +
+    items.map(u => `
+      <div class="room-card">
+        <div class="flex-row">
+          <img src="${safeImage(u.kycPhoto)}" class="kyc-photo">
+          <div>
+            <div style="font-weight:700">${esc(u.username)}</div>
+            <div style="font-size:0.72rem;color:var(--text2)">${esc(u.email)}</div>
+            <div style="font-size:0.72rem;color:var(--text3)">${esc(u.cpf)}</div>
+          </div>
+        </div>
+        <div class="flex-row mt8">
+          <button class="btn btn-success btn-sm" onclick="decideKyc(decodeURIComponent('${emailArg(u.email)}'),'APROVADO')">✅ Aprovar</button>
+          <button class="btn btn-danger btn-sm" onclick="decideKyc(decodeURIComponent('${emailArg(u.email)}'),'REJEITADO')">❌ Rejeitar</button>
+        </div>
+      </div>
+    `).join('') + `</div>`;
+}
+
+async function decideKyc(email, decision) {
+  const u = allUsers.find(x => x.email === email);
+  if (!u) return;
+  await userAction(u.id, decision === 'APROVADO' ? 'APPROVE_KYC' : 'REJECT_KYC');
+}
+
+// ── Ledger ────────────────────────────────────────────────────────────────────
+function renderLedger() {
+  const items = overviewData.ledger || [];
+  document.getElementById('reportDate').value = new Date().toISOString().slice(0, 10);
+  const body = document.getElementById('ledgerBody');
+  if (!items.length) { body.innerHTML = `<tr><td colspan="6" class="empty-state">Sem transações.</td></tr>`; return; }
+  body.innerHTML = items.map(e => `
+    <tr>
+      <td style="font-family:monospace;font-size:0.7rem">${e.id}</td>
+      <td><span class="ledger-type ${e.type}">${e.type}</span></td>
+      <td style="font-size:0.75rem;color:var(--text2)">${e.userId}</td>
+      <td style="font-weight:700;color:${parseFloat(e.amountReais) >= 0 ? 'var(--accent3)' : 'var(--danger)'}">
+        ${parseFloat(e.amountReais) >= 0 ? '+' : ''}R$ ${e.amountReais}
+      </td>
+      <td style="color:var(--text2)">R$ ${e.balanceAfterReais}</td>
+      <td style="font-size:0.72rem;color:var(--text3)">${e.timestamp}</td>
+    </tr>
+  `).join('');
+}
+
+async function exportCSV() { const r=await fetch('/api/admin/export-csv',{headers:{Authorization:'Bearer '+adminToken}});if(!r.ok){alert('Exportação não autorizada.');return;}const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download='arena_extrato.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000); }
+function exportDaily() {
+  const date = document.getElementById('reportDate').value;
+  const url = `/api/admin/report/daily?date=${date}`;
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `arena_daily_${date}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// ── Live Matches ──────────────────────────────────────────────────────────────
+async function loadLiveMatches() {
+  try {
+    const r = await fetch('/api/matches/live');
+    const { matches } = await r.json();
+    const body = document.getElementById('liveMatchesBody');
+    if (!matches.length) { body.innerHTML = `<tr><td colspan="7" class="empty-state">Nenhuma partida ao vivo.</td></tr>`; return; }
+    body.innerHTML = matches.map(m => `
+      <tr>
+        <td style="font-family:monospace;font-size:0.72rem">${m.matchId}</td>
+        <td style="font-weight:700">${esc(m.playerA)}</td>
+        <td style="font-weight:700">${esc(m.playerB)}</td>
+        <td><span class="badge-role ${m.mode === 'APOSTADO' ? 'ADMIN' : 'USER'}">${m.mode}</span></td>
+        <td style="color:var(--gold);font-weight:700">R$ ${m.stakeReais}</td>
+        <td style="color:var(--text2);font-size:0.75rem">${m.roomId}</td>
+        <td>${m.spectators}</td>
+      </tr>
+    `).join('');
+  } catch (e) { toast('Erro ao carregar partidas.', 'err'); }
+}
+
+// ── Coupons ───────────────────────────────────────────────────────────────────
+async function loadCoupons() {
+  try {
+    const { coupons } = await apiFetch('/api/admin/coupons');
+    const body = document.getElementById('couponsBody');
+    body.innerHTML = coupons.map(c => `
+      <tr>
+        <td style="font-family:monospace;font-weight:700">${esc(c.code)}</td>
+        <td class="text-gold">R$ ${(c.amountCents / 100).toFixed(2)}</td>
+        <td>${c.used}</td>
+        <td>${c.maxUses}</td>
+        <td><span class="badge-status ${c.active ? 'ativo' : 'inativo'}">${c.active ? 'ATIVO' : 'OFF'}</span></td>
+      </tr>
+    `).join('');
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function createCoupon() {
+  const code    = document.getElementById('couponCode').value.trim().toUpperCase();
+  const value   = parseFloat(document.getElementById('couponValue').value) || 5;
+  const maxUses = parseInt(document.getElementById('couponMaxUses').value, 10) || 100;
+  if (!code) { toast('Código obrigatório.', 'err'); return; }
+  try {
+    await apiFetch('/api/admin/coupon', { method: 'POST', body: JSON.stringify({ code, amountCents: Math.round(value * 100), maxUses }) });
+    toast(`Cupom ${code} criado!`, 'ok');
+    loadCoupons();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+// ── Broadcast ─────────────────────────────────────────────────────────────────
+function populateBroadcastRooms() {
+  const sel = document.getElementById('broadcastRoom');
+  sel.innerHTML = `<option value="">Todos os jogadores online</option>` +
+    allRooms.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
+}
+
+async function sendBroadcast() {
+  const message = document.getElementById('broadcastMsg').value.trim();
+  const roomId  = document.getElementById('broadcastRoom').value;
+  if (!message) { toast('Escreva uma mensagem.', 'err'); return; }
+  try {
+    await apiFetch('/api/admin/broadcast', { method: 'POST', body: JSON.stringify({ message, roomId: roomId || undefined }) });
+    toast('Mensagem enviada!', 'ok');
+    document.getElementById('broadcastMsg').value = '';
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toast(msg, type = 'ok') {
+  const cont = document.getElementById('adminToast');
+  const el = document.createElement('div');
+  el.className = `admin-toast-item ${type}`;
+  el.textContent = msg;
+  cont.appendChild(el);
+  setTimeout(() => el.parentNode && el.parentNode.removeChild(el), 4000);
+}
+
+// Click outside modal to close
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(overlay.id); });
+});
+
+// ESC key to close modals
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => m.classList.add('hidden'));
+});
+
+// Auto-login if token in sessionStorage
+window.addEventListener('load', () => {
+  const saved = sessionStorage.getItem('arenaAdminToken');
+  if (saved) { adminToken = saved; document.getElementById('loginOverlay').style.display = 'none'; document.getElementById('adminUser').textContent = 'Admin'; startAutoRefresh(); refreshData(); }
+  document.getElementById('reportDate').value = new Date().toISOString().slice(0, 10);
+});
+
+// Save token on successful login (enhanced)
+const _origLogin = wsLogin;
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+let _chartMatches = null, _chartUsers = null;
+
+async function loadAdminCharts() {
+  try {
+    const r = await fetch('/api/admin/stats?days=7', { headers: { Authorization: 'Bearer ' + adminToken } });
+    if (!r.ok) return;
+    const d = await r.json();
+
+    const matchDays  = d.matches.map(x => x.day?.slice(5) || '');
+    const matchCounts = d.matches.map(x => x.matches || 0);
+    const userDays   = d.users.map(x => x.day?.slice(5) || '');
+    const userCounts = d.users.map(x => x.count || 0);
+
+    const cfg = (labels, data, color) => ({
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{ data, backgroundColor: color + '99', borderColor: color, borderWidth: 1 }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#8494ab', font: { size: 10 } }, grid: { color: '#242e42' } },
+          y: { ticks: { color: '#8494ab', font: { size: 10 } }, grid: { color: '#242e42' }, beginAtZero: true }
+        }
+      }
+    });
+
+    const ctxM = document.getElementById('chartMatches').getContext('2d');
+    const ctxU = document.getElementById('chartUsers').getContext('2d');
+    if (_chartMatches) _chartMatches.destroy();
+    if (_chartUsers)   _chartUsers.destroy();
+    _chartMatches = new Chart(ctxM, cfg(matchDays, matchCounts, '#00e5ff'));
+    _chartUsers   = new Chart(ctxU, cfg(userDays, userCounts, '#39ff14'));
+  } catch(e) {}
+}
+
+// Hook into refreshData
+const _origRefresh = typeof refreshData === 'function' ? refreshData : null;
+window.refreshData = function(...args) {
+  if (_origRefresh) _origRefresh.apply(this, args);
+  loadAdminCharts();
+};
+
+window.addEventListener('load', () => {
+  setTimeout(loadAdminCharts, 2000);
+});
+
+async function loadAuditLog() {
+  try {
+    const r = await fetch('/api/admin/audit-log?limit=100', { headers: { Authorization: 'Bearer ' + adminToken } });
+    if (!r.ok) return;
+    const d = await r.json();
+    const tbody = document.getElementById('auditLogBody');
+    if (!d.log?.length) { tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#8494ab;">Nenhuma ação registrada ainda.</td></tr>'; return; }
+    tbody.innerHTML = d.log.map(row => {
+      let detail = '';
+      try { const obj = JSON.parse(row.detail || '{}'); detail = Object.entries(obj).filter(([,v])=>v).map(([k,v])=>`${k}:${v}`).join(' '); } catch {}
+      return `<tr style="border-bottom:1px solid #1e2638;">
+        <td style="padding:7px 12px;color:#8494ab;font-size:0.78rem;">${(row.created_at||'').slice(0,16)}</td>
+        <td style="padding:7px 12px;color:#00e5ff;">${row.actor_username || row.actor_id}</td>
+        <td style="padding:7px 12px;color:#ffcc00;font-weight:700;">${row.action}</td>
+        <td style="padding:7px 12px;color:#f0f4fa;">${row.target_id || '—'}</td>
+        <td style="padding:7px 12px;color:#8494ab;font-size:0.78rem;">${detail || '—'}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+</script>
+</body>
+</html>

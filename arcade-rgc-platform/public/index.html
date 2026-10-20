@@ -1,0 +1,1750 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <title>ARENA ARCADE — Fliperama Online e Duelos 1x1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Toast notification system (must load before any JS) -->
+  <script src="/toast.js"></script>
+  <!-- Audio engine (sets window.ArcadeAudio) -->
+  <script src="/audio.js"></script>
+  <!-- Netplay bridge (imports game-engine.js as ES module) -->
+
+  <!-- FBNeo emulator loader + character select -->
+  <script type="module">
+    import { FBNeoLoader } from '/fbneo-loader.js';
+
+    window.FBNeoLoader = FBNeoLoader;
+
+  </script>
+  <style>
+    :root {
+      --bg-dark: #080a0f;
+      --bg-card: #10141e;
+      --bg-card-sub: #161c2b;
+      --bg-hover: #1e2638;
+      --border-color: #242e42;
+      --neon-cyan: #00e5ff;
+      --neon-green: #00ff88;
+      --neon-gold: #ffcc00;
+      --kof-fire: #ff4d00;
+      --kof-crimson: #ff0055;
+      --text-main: #f0f4fa;
+      --text-muted: #8494ab;
+      --font-display: 'Chakra Petch', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg-dark); color: var(--text-main); font-family: var(--font-display); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+    /* Top Nav */
+    nav.top-nav {
+      height: 60px;
+      background: rgba(13, 17, 26, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+    }
+
+    .brand-glow {
+      background: linear-gradient(135deg, var(--kof-fire), var(--kof-crimson));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-links { display: flex; align-items: center; gap: 4px; }
+    .nav-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 0.85rem;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover, .nav-btn.active { color: #fff; background: var(--bg-card-sub); }
+    .nav-btn.active { color: var(--neon-cyan); border-bottom: 2px solid var(--neon-cyan); }
+
+    .nav-actions { display: flex; align-items: center; gap: 8px; }
+
+    .wallet-chip {
+      background: var(--bg-card-sub);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .btn-auth-main {
+      background: linear-gradient(135deg, var(--neon-cyan), #0077b6);
+      color: #000;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    /* Views */
+    .view-container { flex: 1; display: flex; flex-direction: column; }
+    .page-section { display: none; flex: 1; }
+    .page-section.active { display: flex; flex-direction: column; }
+
+    /* Vitrine */
+    .hero-vitrine {
+      padding: 60px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      background: radial-gradient(circle at center 20%, #1a2236 0%, #080a0f 70%);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .hero-title { font-size: 3rem; font-weight: 700; max-width: 900px; line-height: 1.15; margin-bottom: 14px; }
+    .hero-subtitle { font-size: 1.15rem; color: var(--text-muted); max-width: 720px; line-height: 1.5; margin-bottom: 24px; }
+    .btn-cta {
+      background: linear-gradient(135deg, var(--kof-fire), var(--kof-crimson));
+      color: #fff;
+      border: none;
+      padding: 14px 30px;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: var(--font-display);
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 8px 30px rgba(255, 77, 0, 0.4);
+    }
+
+    /* Lobby */
+    .lobby-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 320px 1fr 340px;
+      height: calc(100vh - 60px);
+    }
+    .lobby-left { border-right: 1px solid var(--border-color); background: var(--bg-card); display: flex; flex-direction: column; }
+    .lobby-right { border-left: 1px solid var(--border-color); background: var(--bg-card); display: flex; flex-direction: column; }
+    .lobby-center { background: var(--bg-dark); display: flex; flex-direction: column; }
+
+    .room-row {
+      background: var(--bg-card-sub);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 6px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .room-row.active { border-color: var(--neon-cyan); background: rgba(0, 229, 255, 0.08); }
+
+    .chat-box { flex: 1; overflow-y: auto; padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; }
+    .chat-bottom { height: 54px; background: var(--bg-card); border-top: 1px solid var(--border-color); display: flex; align-items: center; padding: 0 14px; gap: 8px; }
+    .chat-bottom input { flex: 1; height: 36px; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 6px; padding: 0 12px; color: #fff; outline: none; }
+
+    /* ======================================================== */
+    /* PAINEL ADMIN 3.0 — COFRE, BALANÇO & DOSSIÊ COMPLETO */
+    /* ======================================================== */
+    .admin-container {
+      padding: 30px 24px;
+      max-width: 1280px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .admin-subnav {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+      overflow-x: auto;
+    }
+
+    .admin-tab-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .admin-tab-btn.active {
+      background: var(--bg-card-sub);
+      border-color: var(--neon-cyan);
+      color: var(--neon-cyan);
+    }
+
+    .admin-tab-pane { display: none; flex-direction: column; gap: 20px; }
+    .admin-tab-pane.active { display: flex; }
+
+    .vault-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .vault-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .vault-card-title {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 700;
+    }
+
+    .vault-card-val {
+      font-size: 2rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    .admin-table-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    table.admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+
+    table.admin-table th, table.admin-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    table.admin-table th {
+      background: var(--bg-card-sub);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+    }
+
+    .btn-table-action {
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-green { background: var(--neon-green); color: #000; }
+    .btn-red { background: var(--kof-crimson); color: #fff; }
+    .btn-blue { background: var(--neon-cyan); color: #000; }
+
+    /* User Dossier Modal */
+    .dossier-grid {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 20px;
+    }
+
+    .dossier-photo-box {
+      width: 140px;
+      height: 140px;
+      border-radius: 8px;
+      border: 2px solid var(--neon-cyan);
+      background: #0f1420;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .dossier-field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-bottom: 10px;
+    }
+
+    .dossier-field label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .dossier-field b {
+      font-size: 0.95rem;
+      font-family: var(--font-mono);
+    }
+
+    /* Modals */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-card { width: 90%; max-width: 580px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; max-height: 90vh; overflow-y: auto; }
+    .modal-header { padding: 14px 18px; background: var(--bg-card-sub); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+    .modal-body { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+
+    /* Arena Screen */
+    .arena-game-modal { position: fixed; inset: 0; background: #000; display: none; flex-direction: column; z-index: 2000; }
+    .canvas-wrapper { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #090c13; }
+    canvas#arenaCanvas { width: 100%; max-width: 860px; height: 100%; max-height: 500px; background: #000; }
+
+    /* ── MOBILE RESPONSIVE ──────────────────────────────────── */
+    @media (max-width: 900px) {
+      .lobby-layout { grid-template-columns: 1fr; height: auto; min-height: calc(100vh - 60px); }
+      .lobby-left { display: none; border-right: none; }
+      .lobby-right { display: none; border-left: none; }
+      .dossier-grid { grid-template-columns: 1fr; }
+      canvas#arenaCanvas { max-height: 300px; }
+    }
+
+    @media (max-width: 768px) {
+      nav.top-nav { padding: 0 12px; height: 54px; }
+      .nav-links { gap: 2px; }
+      .nav-btn { padding: 6px 8px; font-size: 0.75rem; }
+      .wallet-chip { padding: 5px 8px; font-size: 0.8rem; }
+      .btn-auth-main { padding: 6px 10px; font-size: 0.8rem; }
+      .hero-title { font-size: 2rem; }
+      .hero-subtitle { font-size: 0.95rem; }
+      .vault-grid { grid-template-columns: repeat(2, 1fr); }
+      .vault-card-val { font-size: 1.4rem; }
+      .admin-subnav { gap: 4px; }
+      .admin-tab-btn { padding: 6px 10px; font-size: 0.75rem; }
+    }
+
+    @media (max-width: 480px) {
+      .nav-links { display: none; }
+      .nav-brand { font-size: 1rem; }
+      .vault-grid { grid-template-columns: 1fr; }
+      .vt-hero-inner { padding: 28px 12px 22px; }
+      .vt-char-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* Mobile lobby: show as tab panel */
+    @media (max-width: 900px) {
+      .lobby-mobile-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-card);
+      }
+      .lobby-mobile-tab {
+        flex: 1;
+        padding: 10px;
+        text-align: center;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+      }
+      .lobby-mobile-tab.active { color: var(--neon-cyan); border-bottom-color: var(--neon-cyan); }
+    }
+    @media (min-width: 901px) {
+      .lobby-mobile-tabs { display: none !important; }
+    }
+  </style>
+<style>.arena-game-modal{overflow:auto!important;max-height:100vh!important}.arena-game-modal .canvas-wrapper{width:min(1100px,96vw)!important;height:75vh!important;min-height:480px!important;aspect-ratio:auto!important}.arena-game-modal iframe{display:block}button:disabled{opacity:.45;cursor:not-allowed}</style><link rel="stylesheet" href="/platform.css">
+<script type="module" src="/portal.js"></script>
+</head>
+<body>
+
+  <!-- Top Nav -->
+  <nav class="top-nav">
+    <div class="nav-brand" onclick="switchView('vitrine')">
+      <span style="font-size: 1.3rem;">⚡</span>
+      <span>ARENA <span class="brand-glow">ARCADE</span></span>
+    </div>
+
+    <div class="nav-links">
+      <button class="nav-btn active" id="btnNavVitrine" onclick="switchView('vitrine')">Descobrir</button>
+      <button class="nav-btn" id="btnNavLobby" onclick="switchView('lobby')">Salas de jogo</button>
+      <a class="nav-btn" href="/torneios.html" style="text-decoration:none;">Torneios</a>
+      <a class="nav-btn" href="/reviews.html" style="text-decoration:none;">Revisões</a>
+      <button class="nav-btn" id="btnNavAdmin" onclick="switchView('admin')" style="display:none;">👑 Painel Admin (Cofre & Dossiê)</button>
+    </div>
+
+    <div class="nav-actions">
+      <!-- Carteira -->
+      <div class="wallet-chip" onclick="openWalletModal()">
+        <span>🪙</span>
+        <span style="color:var(--neon-green); font-family:var(--font-mono); font-weight:700;" id="navWalletVal">R$ 20,00</span>
+      </div>
+
+      <!-- ELO badge -->
+      <div id="eloChip" style="display:none; background:#10141e; border:1px solid #ffcc00; padding:5px 10px; border-radius:20px; font-size:0.8rem; color:#ffcc00; font-family:var(--font-mono); font-weight:700; cursor:default;" title="Seu ELO atual">
+        ⚡ <span id="userEloDisplay">1200</span>
+      </div>
+      <!-- Auth -->
+      <button class="btn-auth-main" id="btnAuthTrigger" onclick="openAuthModal()">ENTRAR / CADASTRAR</button>
+    </div>
+  </nav>
+
+  <!-- Views -->
+  <div class="view-container">
+
+    <section class="page-section active" id="viewVitrine">
+      <div class="portal-layout">
+        <aside class="portal-rail" aria-label="Explorar a plataforma">
+          <span class="portal-eyebrow">SEU PONTO DE ENCONTRO</span>
+          <a class="rail-link selected" href="#catalogo"><span>▦</span> Descobrir</a>
+          <button class="rail-link" onclick="switchView('lobby')"><span>◉</span> Salas de jogo</button>
+          <button class="rail-link" onclick="window.ArenaControls?.open()"><span>⌘</span> Meus controles</button>
+          <a class="rail-link" href="/reviews.html"><span>≡</span> Minhas revisões</a>
+          <div class="rail-separator"></div>
+          <span class="portal-eyebrow">COMO COMEÇAR</span>
+          <a class="rail-link" href="#primeira-partida">Sua primeira partida <span>↗</span></a>
+          <a class="rail-link" href="#modos">Conheça os modos <span>↗</span></a>
+          <div class="rail-bottom"><span class="portal-status" data-service-status>Conectando ao servidor</span><p>Beta de desenvolvimento<br>Créditos fictícios nesta versão.</p></div>
+        </aside>
+        <main class="portal-main">
+          <div class="portal-topline"><div><span class="portal-eyebrow">DESCUBRA A ARENA</span><h1>O jogo reúne. A disputa conecta.</h1></div><span class="portal-badge">BETA</span></div>
+          <section class="portal-hero" aria-labelledby="heroTitle">
+            <div class="portal-hero-copy"><span class="portal-eyebrow">ARCADE COMPETITIVO · 1 CONTRA 1</span><h2 id="heroTitle">Seu próximo<br>confronto<br><em>começa aqui.</em></h2><p>Encontre seu rival, escolha seu time e entre na partida. Os clássicos que você conhece, em um novo ponto de encontro.</p><div class="portal-actions"><button class="portal-primary" onclick="switchView('lobby')">Encontrar uma sala <span>↗</span></button><button class="portal-secondary" onclick="window.ArenaControls?.open()">Testar meu controle</button></div><div class="portal-hero-meta"><span>Teclado e joystick</span><span>Direto no navegador</span></div></div>
+            <div class="arena-art" aria-hidden="true"><div class="arena-orbit orbit-one"></div><div class="arena-orbit orbit-two"></div><div class="arena-beam beam-one"></div><div class="arena-beam beam-two"></div><div class="arena-versus"><span>PLAYER 01</span><strong>VS</strong><span>PLAYER 02</span></div><div class="arena-art-label"><span>THE NEXT ROUND IS YOURS</span><b>ARENA / 001</b></div></div>
+          </section>
+          <div class="portal-livebar"><span class="portal-status" data-service-status>Consultando conexão</span><span><b id="vtOnline">—</b> jogadores online</span><span><b id="vtMatchesLive">—</b> partidas em andamento</span><span class="portal-live-note">Dados do servidor</span></div>
+          <section class="portal-section" id="catalogo"><div class="portal-section-head"><div><span class="portal-eyebrow">ESCOLHA SEU PRÓXIMO DESAFIO</span><h2>Na sua arena</h2></div><button class="portal-text-button" onclick="switchView('lobby')">Explorar salas →</button></div>
+            <div class="portal-catalog">
+              <article class="portal-game-feature"><div class="game-cover"><span class="portal-badge">DISPONÍVEL PARA TESTE</span><div class="game-cover-title"><span>THE KING OF FIGHTERS</span><strong>2002<span>★</span></strong><small>CHALLENGE TO ULTIMATE BATTLE</small></div><span class="game-cover-caption">LUTA · TIMES DE 3 · NEO GEO</span></div><div class="portal-game-info"><div><h3>The King of Fighters 2002</h3><p>Forme seu trio. Encontre seu adversário.</p></div><button class="portal-primary" onclick="switchView('lobby')">Jogar agora ↗</button></div></article>
+              <article class="portal-side-card"><div class="portal-side-symbol" aria-hidden="true">⌘</div><span class="portal-eyebrow">PRONTO PARA O PRÓXIMO ROUND</span><h3>Conecte. Configure.<br>Entre no jogo.</h3><p>Teclado, controle ou arcade stick. Teste seus comandos antes de desafiar alguém.</p><button class="portal-secondary" onclick="window.ArenaControls?.open()">Configurar controles →</button><span class="portal-small">A compatibilidade depende do dispositivo e do navegador.</span></article>
+            </div>
+          </section>
+          <section class="portal-section" id="modos"><div class="portal-section-head"><div><span class="portal-eyebrow">DUAS FORMAS DE ENTRAR</span><h2>O seu ritmo de jogo</h2></div></div><div class="portal-modes"><article><span class="portal-mode-index">01 / AMISTOSO</span><h3>Jogue pelo encontro.</h3><p>Treine, experimente um novo time ou desafie um amigo sem reservar créditos. Um dos jogadores hospeda a emulação local.</p><button class="portal-text-button" onclick="switchView('lobby')">Encontrar uma sala gratuita →</button></article><article><span class="portal-mode-index">02 / DESAFIO COM CRÉDITOS DE TESTE</span><h3>Dispute com regras claras.</h3><p>A execução acontece no servidor. O resultado do confronto completo é coletado pela sessão oficial e registrado na plataforma.</p><a class="portal-text-button" href="/reviews.html">Entenda e acompanhe as revisões →</a></article></div></section>
+          <section class="portal-onboarding" id="primeira-partida"><div><span class="portal-eyebrow">SUA PRIMEIRA PARTIDA</span><h2>Menos espera.<br>Mais jogo.</h2><button class="portal-primary" onclick="openAuthModal('register')">Criar minha conta ↗</button></div><ol><li><b>01</b><div><h3>Prepare seus comandos</h3><p>Setas para mover, Z/X/A/S para os quatro golpes e Enter para Start. Ou configure seu joystick.</p></div></li><li><b>02</b><div><h3>Encontre seu adversário</h3><p>Entre na mesma sala que seu amigo e envie um desafio. Os dois precisam aceitar as regras.</p></div></li><li><b>03</b><div><h3>Espere a conexão e jogue</h3><p>Acompanhe as etapas na tela. Na execução oficial, as fichas já vêm preparadas: pressione Start nos dois lados.</p></div></li></ol></section>
+          <footer class="portal-footer"><span><b>ARENA ARCADE</b> · Encontre seu próximo rival.</span><span>Beta de desenvolvimento · Sem pagamentos reais nesta versão</span></footer>
+        </main>
+      </div>
+    </section>
+
+
+    <!-- VIEW 2: LOBBY RGC -->
+
+    <!-- VIEW 2: LOBBY RGC -->
+    <section class="page-section" id="viewLobby">
+      <div class="lobby-layout">
+        <!-- Left: Rooms -->
+        <div class="lobby-left">
+          <div style="padding:14px; background:linear-gradient(180deg, #182030, #10141e); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:10px;">
+            <div style="width:40px; height:40px; border-radius:6px; background:#222d42; border:2px solid var(--neon-cyan); display:flex; align-items:center; justify-content:center; font-size:1.3rem;">🥋</div>
+            <div>
+              <div style="font-weight:700;" id="userNameTitle">Lutador_Guest</div>
+              <div style="font-size:0.7rem; font-family:var(--font-mono); color:var(--neon-gold);" id="accountVerification">VISITANTE</div>
+            </div>
+          </div>
+
+          <div style="padding:10px 14px 4px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:0.75rem; color:var(--text-muted); font-weight:700;">SALAS REGIONAIS</span>
+            <button class="btn-auth-main" style="padding:2px 6px; font-size:0.65rem; border-color:var(--neon-green); color:var(--neon-green);" onclick="openCreateRoomModal()">➕ CRIAR SALA</button>
+          </div>
+          <!-- Seletor de Região / Estado -->
+          <div style="padding:4px 14px 8px;">
+            <select id="regionFilter" onchange="filterRoomsByRegion()" style="width:100%; height:32px; background:var(--bg-dark); border:1px solid var(--border-color); color:#fff; border-radius:4px; font-size:0.75rem; padding:0 6px;">
+              <option value="ALL">🌎 Todas as Regiões (Brasil)</option>
+              <option value="Sudeste">📍 Sudeste (SP, RJ, MG, ES)</option>
+              <option value="Nordeste">📍 Nordeste (CE, BA, PE, RN)</option>
+              <option value="Sul">📍 Sul (PR, SC, RS)</option>
+              <option value="VIP">👑 VIP & High Stakes</option>
+            </select>
+          </div>
+          <div id="roomListContainer" style="flex:1; overflow-y:auto;"></div>
+        </div>
+
+        <!-- Center: Chat RGC IRC -->
+        <div class="lobby-center">
+          <div style="height:48px; background:var(--bg-card); border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; padding:0 18px;">
+            <div>
+              <b id="activeRoomName">🔥 The King of Fighters 2002</b>
+              <span style="font-size:0.75rem; color:var(--neon-gold); margin-left:8px;">[RAKE DA CASA: 10%]</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; font-size:0.8rem; font-family:var(--font-mono); color:var(--text-muted);">
+              <span>Ping: <b style="color:var(--neon-green);">4ms</b></span>
+              <span><span id="activeRoomOnline">0</span> online</span>
+            </div>
+          </div>
+
+          <!-- RGC Quick Action Toolbar -->
+          <div style="background:#0f1522; border-bottom:1px solid var(--border-color); padding:6px 14px; display:flex; gap:8px; align-items:center; font-size:0.75rem;">
+            <span style="color:var(--text-muted); font-weight:700;">COMANDOS RGC:</span>
+            <button class="btn-auth-main" style="padding:4px 8px; font-size:0.7rem;" onclick="sendQuickChat('/ping')">⚡ /ping</button>
+            <button class="btn-auth-main" style="padding:4px 8px; font-size:0.7rem;" onclick="sendQuickChat('/regras')">📜 /regras</button>
+            <button class="btn-auth-main" style="padding:4px 8px; font-size:0.7rem;" onclick="sendQuickChat('/clans')">🛡️ /clans</button>
+            <button class="btn-auth-main" style="padding:4px 8px; font-size:0.7rem; border-color:var(--neon-gold); color:var(--neon-gold);" onclick="openQuickChallengeModal()">⚔️ CRIAR DESAFIO GLOBAL</button>
+          </div>
+
+          <div class="chat-box" id="chatBox">
+            <div style="background:rgba(0,229,255,0.08); border-left:3px solid var(--neon-cyan); padding:8px 12px; font-size:0.85rem;">
+              👋 Bem-vindo à <b>Arena Arcade RGC</b>! Conecte seu controle arcade ou jogue no teclado/celular. Digite <b>/ajuda</b> para comandos rápidos.
+            </div>
+          </div>
+
+          <div class="chat-bottom">
+            <input type="text" id="chatInput" placeholder="Envie uma mensagem na sala... (/ajuda, /ping, /regras)" onkeydown="if(event.key==='Enter') sendChat()">
+            <button class="btn-auth-main" onclick="sendChat()">ENVIAR</button>
+          </div>
+        </div>
+
+        <!-- Right: Roster & Stake Picker -->
+        <div class="lobby-right">
+          <div style="padding:12px 14px; border-bottom:1px solid var(--border-color); display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; font-weight:700; color:var(--text-muted);">
+              <span>Lutadores na Sala</span>
+              <span id="rosterCountBadge" style="background:var(--neon-cyan); color:#000; padding:1px 6px; border-radius:10px; font-weight:800;">0</span>
+            </div>
+            <!-- Stake selector -->
+            <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem;">
+              <span style="color:var(--text-muted);">Modo do desafio:</span>
+              <select id="stakeSelector" style="background:var(--bg-dark); border:1px solid var(--border-color); color:var(--neon-gold); font-weight:700; border-radius:4px; padding:2px 6px;">
+                <option value="0">Grátis — execução local</option>
+                <option value="200">R$ 2,00 (Micro)</option>
+                <option value="500" selected>R$ 5,00 (Padrão)</option>
+                <option value="1000">R$ 10,00 (Fliper)</option>
+                <option value="2000">R$ 20,00 (High Stake)</option>
+                <option value="5000">R$ 50,00 (Mestre)</option>
+              </select>
+            </div>
+          </div>
+          <div id="rosterList" style="flex:1; overflow-y:auto; padding:8px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: PAINEL ADMINISTRATIVO 3.0 (COMPLETO) -->
+    <section class="page-section" id="viewAdmin">
+      <div class="admin-container">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:0.8rem; color:var(--kof-fire); font-family:var(--font-mono); font-weight:700;">ADMINISTRAÇÃO MASTER</div>
+            <h2 style="font-size:1.8rem; font-weight:700;">Backoffice & Controle Total da Plataforma</h2>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <a href="#" onclick="exportAuthenticatedCSV(event)" download="arena_arcade_extrato_contabil.csv" class="btn-auth-main" style="background:#00c853; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">📥 BAIXAR EXTRATO CSV</a>
+            <button class="btn-auth-main" onclick="fetchAdminOverview()">🔄 ATUALIZAR COFRE</button>
+          </div>
+        </div>
+
+        <!-- Admin Subnav Tabs -->
+        <div class="admin-subnav">
+          <button class="admin-tab-btn active" id="admTabVault" onclick="switchAdminTab('vault')">🏦 Cofre & Balanço</button>
+          <button class="admin-tab-btn" id="admTabUsers" onclick="switchAdminTab('users')">👥 Dossiê de Usuários</button>
+          <button class="admin-tab-btn" id="admTabWithdraw" onclick="switchAdminTab('withdraw')">💸 Fila de Saques PIX</button>
+          <button class="admin-tab-btn" id="admTabKyc" onclick="switchAdminTab('kyc')">📸 Validação Facial (KYC)</button>
+          <button class="admin-tab-btn" id="admTabReplays" onclick="switchAdminTab('replays')">📼 Replays Forenses (Anti-Cheat)</button>
+          <button class="admin-tab-btn" id="admTabClans" onclick="switchAdminTab('clans')">🛡️ Ranking de Clãs (RGC)</button>
+        </div>
+
+        <!-- TAB 1: COFRE & BALANÇO -->
+        <div class="admin-tab-pane active" id="adminPaneVault">
+          <div class="vault-grid">
+            <div class="vault-card" style="border-color:var(--neon-cyan);">
+              <span class="vault-card-title">Cofre Total da Empresa (Capital)</span>
+              <span class="vault-card-val" style="color:var(--neon-cyan);" id="vaultCapital">R$ 50.000,00</span>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Capital de reserva + lucros acumulados</span>
+            </div>
+
+            <div class="vault-card" style="border-color:var(--neon-green);">
+              <span class="vault-card-title">Lucro Líquido Acumulado (Rake)</span>
+              <span class="vault-card-val" style="color:var(--neon-green);" id="vaultRake">R$ 0,00</span>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Taxa retida sobre cada partida (10% a 15%)</span>
+            </div>
+
+            <div class="vault-card" style="border-color:var(--neon-gold);">
+              <span class="vault-card-title">Saldo em Fluxo (Nas Carteiras)</span>
+              <span class="vault-card-val" style="color:var(--neon-gold);" id="vaultFlow">R$ 40,00</span>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Créditos de demonstração disponíveis para desafios no servidor</span>
+            </div>
+
+            <div class="vault-card" style="border-color:var(--kof-crimson);">
+              <span class="vault-card-title">Saldo Preso em Custódia (Escrow)</span>
+              <span class="vault-card-val" style="color:var(--kof-crimson);" id="vaultEscrow">R$ 0,00</span>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Dinheiro travado em duelos acontecendo agora</span>
+            </div>
+          </div>
+
+          <div class="admin-table-box" style="padding:20px;">
+            <h3 style="font-size:1.1rem; margin-bottom:12px;">📊 Balanço de Entradas vs Saídas:</h3>
+            <div style="display:flex; gap:30px; flex-wrap:wrap; font-family:var(--font-mono);">
+              <div>Total de Depósitos PIX Recebidos: <b style="color:var(--neon-green);" id="vaultDeposits">R$ —</b></div>
+              <div>Total de Saques PIX Pagos: <b style="color:var(--neon-cyan);" id="vaultWithdrawals">R$ —</b></div>
+              <div>Saques Pendentes de Liberação: <b style="color:var(--kof-fire);" id="vaultPendingWdr">R$ 45,00</b></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: DOSSIÊ DE USUÁRIOS -->
+        <div class="admin-tab-pane" id="adminPaneUsers">
+          <div class="admin-table-box">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Usuário</th>
+                  <th>Nome Completo</th>
+                  <th>CPF & Endereço</th>
+                  <th>IP / Hardware</th>
+                  <th>Score Serasa</th>
+                  <th>Risco AML</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <!-- Rendered via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 3: SAQUES PIX -->
+        <div class="admin-tab-pane" id="adminPaneWithdraw">
+          <div class="admin-table-box">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Jogador</th>
+                  <th>Chave PIX (CPF)</th>
+                  <th>Valor</th>
+                  <th>Score Serasa</th>
+                  <th>Aprovação</th>
+                </tr>
+              </thead>
+              <tbody id="withdrawalsTableBody">
+                <!-- Rendered via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 4: KYC FACIAL -->
+        <div class="admin-tab-pane" id="adminPaneKyc">
+          <div class="admin-table-box">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Selfie Facial</th>
+                  <th>Jogador</th>
+                  <th>CPF</th>
+                  <th>Endereço Cadastrado</th>
+                  <th>Aprovar / Rejeitar</th>
+                </tr>
+              </thead>
+              <tbody id="kycTableBody">
+                <!-- Rendered via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 5: REPLAYS FORENSES -->
+        <div class="admin-tab-pane" id="adminPaneReplays">
+          <div class="admin-table-box">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Match ID</th>
+                  <th>Jogo</th>
+                  <th>Player 1 vs Player 2</th>
+                  <th>Aposta</th>
+                  <th>Duração</th>
+                  <th>Ações de Perícia</th>
+                </tr>
+              </thead>
+              <tbody id="replaysTableBody">
+                <!-- Rendered via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 6: RANKING DE CLÃS -->
+        <div class="admin-tab-pane" id="adminPaneClans">
+          <div class="admin-table-box">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>TAG</th>
+                  <th>Nome da Guilda</th>
+                  <th>Líder</th>
+                  <th>Vitórias / Derrotas</th>
+                  <th>Pontos de Temporada</th>
+                  <th>Tesouraria do Clã</th>
+                </tr>
+              </thead>
+              <tbody id="clansTableBody">
+                <!-- Rendered via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- MODAL: DOSSIÊ DO USUÁRIO DETALHADO -->
+  <div class="modal-overlay" id="dossierModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>🔍 DOSSIÊ COMPLETO DE SEGURANÇA DO JOGADOR</span>
+        <span style="cursor:pointer;" onclick="closeModal('dossierModal')">&times;</span>
+      </div>
+      <div class="modal-body" id="dossierModalContent">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: AUTH -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span id="authTitle">AUTENTICAÇÃO</span>
+        <span style="cursor:pointer;" onclick="closeModal('authModal')">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; gap:8px;">
+          <button class="admin-tab-btn active" id="tabLoginBtn" onclick="switchAuthTab('login')">Entrar</button>
+          <button class="admin-tab-btn" id="tabRegBtn" onclick="switchAuthTab('register')">Cadastrar</button>
+        </div>
+
+        <div id="loginBlock" style="display:flex; flex-direction:column; gap:10px;">
+          <input type="email" id="loginEmail" placeholder="seu@email.com" style="height:38px; background:var(--bg-dark); border:1px solid var(--border-color); padding:0 12px; color:#fff; border-radius:4px;">
+          <input type="password" id="loginPassword" placeholder="Sua senha" style="height:38px; background:var(--bg-dark); border:1px solid var(--border-color); padding:0 12px; color:#fff; border-radius:4px;">
+          <button class="btn-cta" onclick="submitLogin()">ENTRAR</button>
+        </div>
+
+        <div id="registerBlock" style="display:none; flex-direction:column; gap:10px;">
+          <input type="text" id="regNick" placeholder="Nick de Lutador (Ex: Iori99)" style="height:38px; background:var(--bg-dark); border:1px solid var(--border-color); padding:0 12px; color:#fff; border-radius:4px;">
+          <input type="email" id="regEmail" placeholder="seu@email.com" style="height:38px; background:var(--bg-dark); border:1px solid var(--border-color); padding:0 12px; color:#fff; border-radius:4px;">
+          <input type="password" id="regPass" placeholder="Senha" style="height:38px; background:var(--bg-dark); border:1px solid var(--border-color); padding:0 12px; color:#fff; border-radius:4px;">
+          <button class="btn-cta" onclick="submitRegister()">CRIAR CONTA</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CARTEIRA -->
+  <div class="modal-overlay" id="walletModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>🪙 CARTEIRA DE DEMONSTRAÇÃO</span>
+        <span style="cursor:pointer;" onclick="closeModal('walletModal')">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div style="background:var(--bg-dark); border:1px solid var(--border-color); padding:16px; border-radius:8px; text-align:center;">
+          <div style="font-size:0.75rem; color:var(--text-muted);">SALDO DISPONÍVEL — CRÉDITOS DE TESTE</div>
+          <div style="font-size:2rem; font-family:var(--font-mono); font-weight:700; color:var(--neon-green);" id="walletModalAmount">R$ 20,00</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-auth-main" onclick="depositPix(1000)">+ R$ 10</button>
+          <button class="btn-auth-main" onclick="depositPix(2000)">+ R$ 20</button>
+          <button class="btn-auth-main" onclick="depositPix(5000)">+ R$ 50</button>
+        </div>
+        <div style="border-top:1px solid var(--border-color); padding-top:10px; display:flex; flex-direction:column; gap:6px;">
+          <label style="font-size:0.75rem; color:var(--text-muted);">🎟️ Cupom Promocional (Ex: KOFBRASIL, ARENAVIP, BOTECO10):</label>
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="couponCodeInput" placeholder="DIGITE O CUPOM" style="flex:1; height:38px; background:var(--bg-dark); border:1px solid var(--border-color); padding:0 10px; color:#fff; border-radius:4px; font-weight:700; text-transform:uppercase;">
+            <button class="btn-auth-main" style="background:var(--neon-gold); color:#000; font-weight:700;" onclick="redeemPromoCoupon()">RESGATAR</button>
+          </div>
+          <div id="couponStatusMsg" style="font-size:0.75rem; font-weight:600;"></div>
+        </div>
+        <div style="border-top:1px solid var(--border-color); padding-top:10px; display:flex; flex-direction:column; gap:6px;">
+          <label style="font-size:0.75rem; color:var(--text-muted);">Saque PIX:</label>
+          <input type="number" id="withdrawAmount" placeholder="Valor em R$ (ex: 50.00)" min="10" step="0.01" style="height:38px; background:var(--bg-dark); border:1px solid var(--border-color); padding:0 10px; color:#fff; border-radius:4px;">
+          <input type="text" id="withdrawKey" placeholder="Sua Chave PIX (CPF)" style="height:38px; background:var(--bg-dark); border:1px solid var(--border-color); padding:0 10px; color:#fff; border-radius:4px;">
+          <button class="btn-cta" onclick="requestWithdraw()">SOLICITAR SAQUE</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CRIAR SALA REGIONAL PERSONALIZADA -->
+  <div class="modal-overlay" id="createRoomModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>🎮 CRIAR NOVA SALA REGIONAL ARCADE</span>
+        <span style="cursor:pointer;" onclick="closeModal('createRoomModal')">&times;</span>
+      </div>
+      <div class="modal-body">
+        <label style="font-size:0.75rem; color:var(--text-muted);">Nome da Sala:</label>
+        <input type="text" id="newRoomName" placeholder="Ex: 🔥 KOF 2002 - Clã Orochi Salvador" style="height:38px; background:var(--bg-dark); border:1px solid var(--border-color); padding:0 12px; color:#fff; border-radius:4px;">
+        
+        <label style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">Jogo Arcade:</label>
+        <select id="newRoomGame" style="height:38px; background:var(--bg-dark); border:1px solid var(--border-color); padding:0 12px; color:#fff; border-radius:4px;">
+          <option value="KOF 2002">The King of Fighters 2002 (Original)</option>
+          <option value="KOF 98">The King of Fighters 98 (The Slugfest)</option>
+          <option value="SF3 3rd Strike">Street Fighter III: 3rd Strike</option>
+          <option value="Garou">Garou: Mark of the Wolves</option>
+        </select>
+
+        <label style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">Região do Servidor (Ping):</label>
+        <select id="newRoomRegion" style="height:38px; background:var(--bg-dark); border:1px solid var(--border-color); padding:0 12px; color:#fff; border-radius:4px;">
+          <option value="Sudeste">Sudeste (SP/RJ/MG - 0ms)</option>
+          <option value="Nordeste">Nordeste (CE/BA/PE - 4ms)</option>
+          <option value="Sul">Sul (PR/SC/RS - 6ms)</option>
+          <option value="Brasil Geral">Brasil Geral (Nacional)</option>
+          <option value="VIP Brasil">VIP High Stakes</option>
+        </select>
+
+        <label style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">Taxa de Rake da Casa (%):</label>
+        <input type="number" id="newRoomRake" value="10" min="5" max="15" style="height:38px; background:var(--bg-dark); border:1px solid var(--border-color); padding:0 12px; color:#fff; border-radius:4px;">
+
+        <button class="btn-cta" style="margin-top:12px;" onclick="submitCreateRoom()">🚀 PUBLICAR SALA NO LOBBY</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INCOMING CHALLENGE MODAL -->
+  <div class="modal-overlay" id="incomingChallengeModal" style="z-index:2500;">
+    <div class="modal-card" style="max-width:420px; border-color:var(--kof-fire);">
+      <div class="modal-header" style="background:linear-gradient(135deg,#1a0a00,#1a0010); border-color:var(--kof-fire);">
+        <span style="color:var(--kof-fire); font-weight:800;">⚔️ DESAFIO RECEBIDO!</span>
+        <span id="icmTimer" style="font-family:var(--font-mono); color:var(--neon-gold); font-size:1rem; font-weight:800;">30s</span>
+      </div>
+      <div class="modal-body" style="gap:14px;">
+        <div style="display:flex; align-items:center; gap:14px; background:var(--bg-card-sub); border-radius:8px; padding:14px;">
+          <div style="font-size:2.5rem;">⚡</div>
+          <div>
+            <div id="icmChallengerName" style="font-size:1.2rem; font-weight:800; color:#fff;"></div>
+            <div id="icmChallengerElo" style="font-size:0.8rem; color:var(--neon-gold); font-family:var(--font-mono); margin-top:2px;"></div>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div style="background:var(--bg-dark); border-radius:6px; padding:10px; text-align:center;">
+            <div style="font-size:0.65rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Modo</div>
+            <div id="icmMode" style="font-weight:800; color:var(--neon-cyan); margin-top:4px;"></div>
+          </div>
+          <div style="background:var(--bg-dark); border-radius:6px; padding:10px; text-align:center;">
+            <div style="font-size:0.65rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Aposta</div>
+            <div id="icmStake" style="font-weight:800; color:var(--neon-green); font-family:var(--font-mono); margin-top:4px;"></div>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:4px;">
+          <button id="icmAcceptBtn" onclick="acceptIncomingChallenge()" style="flex:1; background:linear-gradient(135deg,#ff4d00,#ff0055); color:#fff; border:none; padding:14px; border-radius:8px; font-family:var(--font-display); font-weight:800; font-size:1rem; cursor:pointer;">✅ ACEITAR DUELO</button>
+          <button onclick="declineIncomingChallenge()" style="flex:0.5; background:var(--bg-card-sub); color:var(--text-muted); border:1px solid var(--border-color); padding:14px; border-radius:8px; font-family:var(--font-display); font-weight:700; cursor:pointer;">❌ Recusar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REMATCH MODAL -->
+  <div class="modal-overlay" id="rematchModal" style="z-index:2500;">
+    <div class="modal-card" style="max-width:380px; border-color:var(--neon-gold);">
+      <div class="modal-header" style="background:linear-gradient(135deg,#1a1a00,#101a00);">
+        <span style="color:var(--neon-gold); font-weight:800;">🔁 REVANCHE!</span>
+        <span style="cursor:pointer;" onclick="closeModal('rematchModal')">&times;</span>
+      </div>
+      <div class="modal-body" style="text-align:center; gap:14px;">
+        <div style="font-size:1rem; color:var(--text-main);"><span id="rematchRequesterName" style="font-weight:800; color:var(--neon-gold);"></span> quer revanche!</div>
+        <div style="display:flex; gap:10px; justify-content:center;">
+          <button onclick="acceptRematch()" style="background:linear-gradient(135deg,#ffcc00,#ff8800); color:#000; border:none; padding:12px 28px; border-radius:8px; font-family:var(--font-display); font-weight:800; cursor:pointer;">🔁 ACEITAR</button>
+          <button onclick="closeModal('rematchModal')" style="background:var(--bg-card-sub); color:var(--text-muted); border:1px solid var(--border-color); padding:12px 20px; border-radius:8px; font-family:var(--font-display); font-weight:700; cursor:pointer;">Não</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARENA CANVAS -->
+  <div class="arena-game-modal" id="arenaModal">
+    <div style="height:50px; background:#111; display:flex; align-items:center; justify-content:space-between; padding:0 20px;">
+      <b id="p1Tag">Player 1 (Iori)</b>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:48px; height:34px; background:#000; border:2px solid var(--neon-gold); color:var(--neon-gold); font-family:var(--font-mono); font-size:1.3rem; font-weight:700; display:flex; align-items:center; justify-content:center; border-radius:4px;" id="arenaTimer" title="O cronômetro da luta aparece dentro do KOF">KOF</div>
+        <button onclick="if(app.activeMatch)wsSend({type:'CANCEL_MATCH',matchId:app.activeMatch.matchId});" style="background:transparent;border:1px solid #444;color:#888;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.8rem;">✕ Sair</button>
+      </div>
+      <b id="p2Tag">Player 2 (Kyo)</b>
+    </div>
+    <div class="canvas-wrapper" id="arenaCanvasWrapper" style="position:relative;">
+      <canvas id="arenaCanvas" width="800" height="450"></canvas>
+      <button id="btnFullscreen" onclick="toggleFullscreen()" title="Tela cheia (F11)" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);border:1px solid #333;color:#aaa;padding:5px 9px;cursor:pointer;font-size:0.75rem;border-radius:4px;z-index:5;">⛶</button>
+    </div>
+    <!-- Rematch banner (shown after match ends) -->
+    <div id="rematchBanner" style="display:none; position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:#10141e; border:2px solid #ff4d00; border-radius:10px; padding:14px 24px; flex-direction:column; align-items:center; gap:10px; z-index:10;">
+      <span style="font-size:0.9rem; color:#f0f4fa;">Revanche contra <b class="rematch-opponent"></b>?</span>
+      <div style="display:flex; gap:10px;">
+        <button onclick="wsSend({type:'REMATCH_REQUEST', opponentId: document.getElementById('rematchBanner').dataset.opponentId}); document.getElementById('rematchBanner').style.display='none';" style="background:linear-gradient(135deg,#ff4d00,#ff0055);color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-weight:800;font-family:'Chakra Petch',sans-serif;">🔁 REVANCHE</button>
+        <button onclick="document.getElementById('rematchBanner').style.display='none';" style="background:#242e42;color:#8494ab;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;">Não</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const app = {
+      ws: null,
+      user: null,
+      wallet: { balanceReais: '20.00' },
+      currentRoomId: 'kof2002-sp',
+      rooms: [],
+      users: [],
+      adminData: null,
+      activeMatch: null,
+      sessionToken: localStorage.getItem('arenaToken') || null,
+      myId: null,
+      opponentId: null,
+      netplayEngine: null
+    };
+    // Expose for game engine callbacks
+    window.__arenaApp = app;
+
+    function switchView(v) {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+
+      if (v === 'vitrine') {
+        document.getElementById('btnNavVitrine').classList.add('active');
+        document.getElementById('viewVitrine').classList.add('active');
+      } else if (v === 'lobby') {
+        document.getElementById('btnNavLobby').classList.add('active');
+        document.getElementById('viewLobby').classList.add('active');
+      } else if (v === 'admin') {
+        document.getElementById('btnNavAdmin').classList.add('active');
+        document.getElementById('viewAdmin').classList.add('active');
+        fetchAdminOverview();
+      }
+    }
+
+    function switchAdminTab(t) {
+      document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.admin-tab-pane').forEach(p => p.classList.remove('active'));
+
+      if (t === 'vault') {
+        document.getElementById('admTabVault').classList.add('active');
+        document.getElementById('adminPaneVault').classList.add('active');
+      } else if (t === 'users') {
+        document.getElementById('admTabUsers').classList.add('active');
+        document.getElementById('adminPaneUsers').classList.add('active');
+      } else if (t === 'withdraw') {
+        document.getElementById('admTabWithdraw').classList.add('active');
+        document.getElementById('adminPaneWithdraw').classList.add('active');
+      } else if (t === 'kyc') {
+        document.getElementById('admTabKyc').classList.add('active');
+        document.getElementById('adminPaneKyc').classList.add('active');
+      } else if (t === 'replays') {
+        document.getElementById('admTabReplays').classList.add('active');
+        document.getElementById('adminPaneReplays').classList.add('active');
+        fetchReplays();
+      } else if (t === 'clans') {
+        document.getElementById('admTabClans').classList.add('active');
+        document.getElementById('adminPaneClans').classList.add('active');
+        fetchClans();
+      }
+    }
+
+    function fetchReplays() {
+      fetch('/api/replays')
+        .then(r => r.json())
+        .then(list => {
+          const body = document.getElementById('replaysTableBody');
+          body.innerHTML = '';
+          if (list.length === 0) {
+            body.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:16px;">Nenhum replay registrado nesta sessão. As partidas apostadas geram logs automáticos aqui.</td></tr>';
+            return;
+          }
+          list.forEach(rep => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><b>${rep.matchId}</b></td>
+              <td>${rep.gameTitle}</td>
+              <td>${rep.p1.id} vs ${rep.p2.id}</td>
+              <td style="color:var(--neon-green); font-weight:700;">R$ ${rep.stakeReais}</td>
+              <td>${rep.durationSeconds}s (${rep.totalFrames} frames)</td>
+              <td><button class="btn-table-action btn-blue" onclick="alert('Iniciando reprodução determinística frame a frame do Match ID: ' + '${rep.matchId}')">▶️ PERICIAR REPLAY</button></td>
+            `;
+            body.appendChild(tr);
+          });
+        });
+    }
+
+    function fetchClans() {
+      fetch('/api/clans')
+        .then(r => r.json())
+        .then(list => {
+          const body = document.getElementById('clansTableBody');
+          body.innerHTML = '';
+          list.forEach(c => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><b style="color:var(--neon-gold); font-size:1.1rem;">[${c.tag}]</b></td>
+              <td><b>${c.name}</b><br><small style="color:var(--text-muted);">${c.description}</small></td>
+              <td>${c.leaderId}</td>
+              <td><b style="color:var(--neon-green);">${c.wins}</b>V / <b style="color:var(--kof-crimson);">${c.losses}</b>D</td>
+              <td><b style="color:var(--neon-cyan);">${c.points} pts</b> (Nível ${c.level})</td>
+              <td style="color:var(--neon-green); font-family:var(--font-mono); font-weight:700;">R$ ${c.treasuryReais}</td>
+            `;
+            body.appendChild(tr);
+          });
+        });
+    }
+
+    function initWS() {
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      app.ws = new WebSocket(`${proto}//${location.host}/ws`);
+
+      app.ws.onopen = () => {
+        // Re-auth if we have a stored token
+        if (app.sessionToken) {
+          app.ws.send(JSON.stringify({ type: 'REAUTH', token: app.sessionToken }));
+        }
+      };
+
+      app.ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        handleWS(msg);
+      };
+
+      app.ws.onclose = e => {
+        app.fbneo?.peerDisconnected();
+        if([4000,4001].includes(e.code)){app.sessionToken=null;localStorage.removeItem('arenaToken');window.toast.warn('Sessão encerrada','Entre novamente nesta janela para continuar.');return;}
+        setTimeout(initWS,2000);
+      };
+    }
+
+    function wsSend(obj) {
+      if (!app.ws || app.ws.readyState !== WebSocket.OPEN) return;
+      if (app.sessionToken) obj.token = app.sessionToken;
+      app.ws.send(JSON.stringify(obj));
+    }
+
+    function handleWS(msg) {
+      switch (msg.type) {
+        case 'INIT_SESSION':
+          app.simulation=!!msg.simulation;
+          if(msg.simulation&&!document.getElementById('testModeBanner')){const notice=document.createElement('div');notice.id='testModeBanner';notice.textContent='AMBIENTE DE TESTE — créditos sem valor monetário; PIX real indisponível';notice.style.cssText='background:#403408;color:#ffdc66;text-align:center;padding:6px;font:12px system-ui';document.body.prepend(notice);}
+
+          if(app.sessionToken){app.rooms=msg.rooms;renderRooms();break;}
+          app.user = msg.user;
+          app.wallet = msg.wallet;
+          app.rooms = msg.rooms;
+          if (msg.user) app.myId = msg.user.id;
+          renderHeader();
+          renderRooms();
+          const targetRoom = app.rooms.some(r => r.id === app.currentRoomId)
+            ? app.currentRoomId
+            : (app.rooms[0] && app.rooms[0].id);
+          if (targetRoom) {
+            app.currentRoomId = targetRoom;
+            wsSend({ type: 'JOIN_ROOM', roomId: targetRoom });
+          }
+          break;
+
+        case 'AUTH_SUCCESS':
+          app.user = msg.user;
+          app.sessionToken = msg.sessionToken || msg.token;
+          if (app.sessionToken) localStorage.setItem('arenaToken', app.sessionToken);
+          app.myId = msg.user && msg.user.id;
+          if (msg.wallet) { app.wallet = msg.wallet; }
+          renderHeader();
+          // Show ELO chip
+          if (msg.user && msg.user.elo) {
+            const eloChip = document.getElementById('eloChip');
+            const eloDisp = document.getElementById('userEloDisplay');
+            if (eloChip) eloChip.style.display = '';
+            if (eloDisp) eloDisp.textContent = msg.user.elo;
+          }
+          // Show/hide admin nav
+          document.getElementById('btnNavAdmin').style.display =
+            (msg.user.role === 'ADMIN') ? '' : 'none';
+          closeModal('authModal');
+          if(!msg.user.currentMatchId){
+            const room=app.rooms.find(r=>r.id===app.currentRoomId)||app.rooms[0];
+            if(room)wsSend({type:'JOIN_ROOM',roomId:room.id});
+          }
+          if (msg.message && typeof window.toast !== 'undefined') window.toast.success('Login', msg.message);
+          // Request push notification permission
+          if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+          }
+          break;
+
+        case 'ROOM_JOINED':
+          app.currentRoomId = msg.roomId;
+          app.users = msg.users;
+          renderRooms();
+          renderRoster();
+          break;
+
+        case 'ROOM_USERS':
+          app.users = msg.users;
+          renderRoster();
+          break;
+
+        case 'CHAT_MESSAGE':
+          appendChat(msg);
+          break;
+
+        case 'CHALLENGE_RECEIVED': {
+          // Store pending challenge data on app
+          app.pendingChallenge = msg;
+
+          // Push notification when tab is in background
+          if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+            new Notification('⚔️ DESAFIO RECEBIDO — Arena Arcade', {
+              body: `${msg.from.username} [ELO ${msg.from.elo}] te desafiou! Créditos: R$ ${msg.stakeReais}`,
+              icon: '/icons/icon-192.png'
+            });
+          }
+          if (typeof window.ArcadeAudio !== 'undefined') window.ArcadeAudio.play('CHALLENGE_ALERT');
+
+          // Show inline modal (no confirm() — works in background tabs)
+          document.getElementById('icmChallengerName').textContent = msg.from.username;
+          document.getElementById('icmChallengerElo').textContent = `ELO ${msg.from.elo} • ${msg.from.role || 'USER'} • ${msg.from.device || 'PC'}`;
+          document.getElementById('icmMode').textContent = msg.mode;
+          document.getElementById('icmStake').textContent = msg.mode === 'APOSTADO' ? `R$ ${msg.stakeReais}` : 'AMISTOSO';
+          document.getElementById('incomingChallengeModal').style.display = 'flex';
+
+          // Timer countdown
+          let icmSecs = 30;
+          const icmTimerEl = document.getElementById('icmTimer');
+          app._icmInterval = setInterval(() => {
+            icmSecs--;
+            if (icmTimerEl) icmTimerEl.textContent = icmSecs + 's';
+            if (icmTimerEl) icmTimerEl.style.color = icmSecs <= 10 ? 'var(--kof-crimson)' : 'var(--neon-gold)';
+            if (icmSecs <= 0) {
+              clearInterval(app._icmInterval);
+              declineIncomingChallenge();
+            }
+          }, 1000);
+          break;
+        }
+
+        case 'MATCH_STARTED':
+        case 'MATCH_RESUMED': {
+          clearInterval(app._icmInterval); closeModal('incomingChallengeModal');
+          app.pendingChallenge=null; app.activeMatch=msg; app.currentMatchId=msg.matchId;
+          app.opponentId=msg.mySlot===1?msg.playerB.id:msg.playerA.id;
+          document.getElementById('arenaModal').style.display='flex';
+          document.getElementById('p1Tag').textContent=msg.playerA.username+' (P1)';
+          document.getElementById('p2Tag').textContent=msg.playerB.username+' (P2)';
+          if(msg.type==='MATCH_RESUMED'&&app.fbneo?.matchId===msg.matchId) {
+            app.fbneo.resume(app.ws,msg); if(msg.phase==='RUNNING')app.fbneo.setRunning(); break;
+          }
+          app.charSelect?.close();app.netplayEngine?.stop();app.fbneo?.stop();
+          app.fbneo=new window.FBNeoLoader('arenaCanvasWrapper');
+          app.fbneo.launch(null,{ws:app.ws,matchId:msg.matchId,localSlot:msg.mySlot,players:msg}).then(()=>{
+            if(msg.type==='MATCH_RESUMED'&&msg.mySlot===1&&msg.transport!=='server-stream')app.fbneo.failure('O navegador foi recarregado e perdeu o estado do emulador. Inicie uma nova partida.');
+            else if(msg.phase==='RUNNING')app.fbneo.setRunning();
+            if(msg.transport==='server-stream'&&msg.hostedReady)app.fbneo.onHostedReady();
+          }).catch(e=>{window.toast.error('Jogo',e.message);wsSend({type:'GAME_FAILED',matchId:msg.matchId});});
+          break;
+        }
+        case 'MATCH_SIGNAL':
+          if(app.fbneo?.matchId===msg.matchId)app.fbneo.receiveSignal(msg.signal);
+          break;
+        case 'HOSTED_PROGRESS':
+          if(app.fbneo?.matchId===msg.matchId)app.fbneo.loading(msg.stage, {assets:'Conferindo a integridade dos arquivos privados do jogo.',runtime:'Iniciando o processo do emulador no servidor.',boot:'Carregando o jogo no emulador oficial.',credits:'Preparando as fichas do gabinete.'}[msg.stage]);break;
+        case 'HOSTED_READY':
+          if(app.fbneo?.matchId===msg.matchId)app.fbneo.onHostedReady();break;
+        case 'HOSTED_METRICS':
+          if(app.fbneo?.matchId===msg.matchId)app.fbneo.onHostedMetrics(msg.metrics);break;
+        case 'INPUT_ACK':
+          if(app.fbneo?.matchId===msg.matchId)app.fbneo.onInputAck(msg);break;
+        case 'REMOTE_PLAYER_INPUT':
+          if(app.fbneo?.matchId===msg.matchId)app.fbneo.onRemoteInput(msg.button,msg.value,msg.slot,msg.epoch,msg.seq);
+          break;
+        case 'GAME_RUNNING': app.fbneo?.setRunning(); break;
+        case 'PEER_DISCONNECTED': app.fbneo?.peerDisconnected(); break;
+        case 'PEER_RECONNECTED':
+          if(app.fbneo?.hosted){app.fbneo.setRunning();break;}
+          if(msg.userId!==app.myId&&app.activeMatch?.mySlot===1)app.fbneo?.resume(app.ws).then(()=>app.fbneo.setRunning());
+          else if(msg.userId!==app.myId)app.fbneo?.setRunning();
+          break;
+        case 'RESULT_PENDING': app.fbneo?.resultPending(msg.message);break;
+        case 'MATCH_REVIEW_OPENED':
+          app.fbneo?.stop();app.fbneo=null;app.activeMatch=null;app.currentMatchId=null;
+          document.getElementById('arenaModal').style.display='none';
+          window.toast.warn('Partida em análise',msg.message+' Veja a página Revisões.');break;
+        case 'MATCH_REVIEW_CLOSED':
+          window.toast.info('Revisão encerrada','Consulte o histórico em Revisões.');break;
+        case 'MATCH_CANCELLED':
+          app.fbneo?.stop();app.fbneo=null;app.activeMatch=null;app.currentMatchId=null;
+          document.getElementById('arenaModal').style.display='none';
+          window.toast.info('Partida cancelada',msg.reason||'Reservas devolvidas.');break;
+        case 'ROOMS_UPDATED':
+          app.rooms=msg.rooms;renderRooms();break;
+
+        case 'OPPONENT_CHAR_CONFIRMED': {
+          if (app.charSelect && app.charSelect.el) {
+            app.charSelect.opponentSelected(msg.charId, app.charSelect.el);
+          }
+          break;
+        }
+
+        case 'CHAR_SELECT_DONE': {
+          // Both chars confirmed server-side — nothing extra needed, charSelect callback handles it
+          break;
+        }
+
+        case 'MATCH_ENDED': {
+          window.showMatchReceipt?.(msg);
+          app.currentMatchId=null;app.activeMatch=null;
+          document.getElementById('arenaModal').style.display = 'none';
+          if (app.netplayEngine) { app.netplayEngine.stop(); app.netplayEngine = null; }
+          if (app.fbneo) { app.fbneo.stop(); app.fbneo = null; }
+          const won = msg.winnerId === app.myId;
+          if (won) {
+            if (typeof window.toast !== 'undefined') window.toast.success('VITÓRIA!', `Prêmio: R$ ${msg.prizeReais} creditado.`, 6000);
+            vibrateWin?.();
+          } else {
+            if (typeof window.toast !== 'undefined') window.toast.error('DERROTA', `Vencedor: ${msg.winnerUsername}`, 6000);
+            vibrateLoss?.();
+          }
+          if (window.ArcadeAudio) window.ArcadeAudio.play('VICTORY');
+          break;
+        }
+
+        case 'REMATCH_REQUESTED': {
+          app._pendingRematch = msg;
+          document.getElementById('rematchRequesterName').textContent = msg.fromUsername;
+          document.getElementById('rematchModal').style.display = 'flex';
+          break;
+        }
+
+        case 'CHALLENGE_EXPIRED':
+          clearInterval(app._icmInterval);
+          closeModal('incomingChallengeModal');
+          app.pendingChallenge = null;
+          appendChat({ timestamp: new Date().toLocaleTimeString('pt-BR'), device: 'SISTEMA', username: 'ArenaBot', text: '⏰ ' + msg.message });
+          if (typeof window.toast !== 'undefined') window.toast.warn('Desafio Expirou', msg.message);
+          break;
+
+        case 'CHALLENGE_SENT':
+          if (typeof window.toast !== 'undefined') window.toast.info('Desafio Enviado', `Aguardando ${msg.targetUsername || 'oponente'}... (30s)`);
+          break;
+
+        case 'CHALLENGE_DECLINED':
+          appendChat({ timestamp: new Date().toLocaleTimeString('pt-BR'), device: 'SISTEMA', username: 'ArenaBot', text: '❌ Seu desafio foi recusado.' });
+          if (typeof window.toast !== 'undefined') window.toast.error('Recusado', `${msg.byUsername || 'Oponente'} recusou o duelo.`);
+          break;
+
+        case 'MATCH_DISPUTE':
+          app.currentMatchId=null;app.activeMatch=null;app.fbneo?.stop();app.fbneo=null;
+          appendChat({ timestamp: new Date().toLocaleTimeString('pt-BR'), device: 'SISTEMA', username: 'ArenaBot', text: '⚠️ Resultado contestado — aguardando revisão admin.' });
+          document.getElementById('arenaModal').style.display = 'none';
+          if (app.netplayEngine) { app.netplayEngine.stop(); app.netplayEngine = null; }
+          break;
+
+        case 'FORCE_RESYNC':
+          // Handled internally by NetplayEngine WS listener — nothing extra needed
+          break;
+
+        case 'PONG':
+          // Handled by NetplayEngine
+          break;
+
+        case 'WALLET_UPDATE':
+          app.wallet.balanceReais = msg.balanceReais;
+          renderHeader();
+          if (msg.newElo && app.user) {
+            app.user.elo = msg.newElo;
+            const eloEl = document.getElementById('userEloDisplay');
+            if (eloEl) eloEl.textContent = msg.newElo;
+          }
+          if (msg.message && typeof window.toast !== 'undefined') window.toast.info('Carteira', msg.message);
+          else if (msg.message) alert(msg.message);
+          break;
+
+        case 'SYSTEM_MESSAGE':
+          appendChat({ timestamp: new Date().toLocaleTimeString('pt-BR'), device: 'SISTEMA', username: '🤖 ArenaBot', role: 'BOT', vipLevel: 'DIAMANTE', text: msg.text });
+          break;
+
+        case 'ERROR_NOTICE':
+          renderRoster();
+          if (typeof window.toast !== 'undefined') window.toast.error('Erro', msg.message);
+          else alert(msg.message);
+          break;
+
+        case 'KYC_STATUS_UPDATED':
+          if (app.user) app.user.kycStatus = msg.kycStatus;renderHeader();
+          if (typeof window.toast !== 'undefined') window.toast.info('KYC', msg.message);
+          break;
+
+        case 'SPECTATE_STARTED':
+          appendChat({ timestamp: new Date().toLocaleTimeString('pt-BR'), device: 'SISTEMA', username: '👁 Espectador', text: `Assistindo: ${msg.playerA} vs ${msg.playerB}` });
+          break;
+
+        case 'AUTH_ERROR':
+          if(msg.code===401){app.sessionToken=null;localStorage.removeItem('arenaToken');}
+          openAuthModal();
+          if (typeof window.toast !== 'undefined') window.toast.error('Erro de Login', msg.message);
+          break;
+
+        case 'REMATCH_AVAILABLE': {
+          const rematchBanner = document.getElementById('rematchBanner');
+          if (rematchBanner) {
+            rematchBanner.style.display = 'flex';
+            rematchBanner.dataset.opponentId = msg.opponentId;
+            rematchBanner.dataset.matchId = msg.matchId;
+            const el = rematchBanner.querySelector('.rematch-opponent');
+            if (el) el.textContent = msg.opponentUsername;
+          }
+          if (typeof window.toast !== 'undefined') window.toast.info('REVANCHE?', `${msg.opponentUsername} disponível.`, 8000);
+          break;
+        }
+      }
+    }
+
+    function renderHeader() {
+      const verification=document.getElementById('accountVerification');
+      if(verification)verification.textContent=app.user?.kycStatus==='APROVADO'?'KYC APROVADO':app.user?.email?'CONTA CADASTRADA':'VISITANTE';
+      document.getElementById('navWalletVal').innerText = 'R$ ' + app.wallet.balanceReais;
+      document.getElementById('walletModalAmount').innerText = 'R$ ' + app.wallet.balanceReais;
+      if (app.user) {
+        document.getElementById('userNameTitle').innerText = app.user.username;
+        document.getElementById('btnAuthTrigger').innerText = app.user.email ? `👤 ${app.user.username}` : 'ENTRAR';
+      }
+    }
+
+    function filterRoomsByRegion() {
+      renderRooms();
+    }
+
+    function openCreateRoomModal() {
+      openModal('createRoomModal');
+    }
+
+    function submitCreateRoom() {
+      const name = document.getElementById('newRoomName').value.trim();
+      const game = document.getElementById('newRoomGame').value;
+      const region = document.getElementById('newRoomRegion').value;
+      const rakePercent = document.getElementById('newRoomRake').value;
+
+      fetch('/api/rooms/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, game, region, rakePercent })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          app.rooms.push(data.room);
+          closeModal('createRoomModal');
+          document.getElementById('newRoomName').value = '';
+          renderRooms();
+          if (typeof window.toast !== 'undefined') window.toast.success('Sala criada', data.room.name); else alert(`🎉 Sala "${data.room.name}" criada!`);
+        }
+      });
+    }
+
+    function renderRooms() {
+      const c = document.getElementById('roomListContainer');
+      const filterElem = document.getElementById('regionFilter');
+      const selectedFilter = filterElem ? filterElem.value : 'ALL';
+
+      c.innerHTML = '';
+      app.rooms.forEach(r => {
+        if (selectedFilter !== 'ALL') {
+          if (selectedFilter === 'VIP' && r.tier !== 'VIP') return;
+          if (selectedFilter !== 'VIP' && (!r.region || !r.region.includes(selectedFilter))) return;
+        }
+
+        const d = document.createElement('div');
+        d.className = 'room-row ' + (r.id === app.currentRoomId ? 'active' : '');
+        d.innerHTML = `
+          <div>
+            <div style="font-weight:700; font-size:0.85rem;">${escapeHTML(r.name)}</div>
+            <div style="font-size:0.7rem; color:var(--neon-gold); font-family:var(--font-mono);">${escapeHTML(r.region || 'Brasil')} • Rake: ${r.rakePercent}%</div>
+          </div>
+          <b style="color:var(--neon-cyan); font-family:var(--font-mono);">${r.count || 0}</b>
+        `;
+        d.onclick = () => {
+          if (r.id !== app.currentRoomId) {
+            app.ws.send(JSON.stringify({ type: 'JOIN_ROOM', roomId: r.id }));
+            document.getElementById('activeRoomName').innerText = r.name;
+          }
+        };
+        c.appendChild(d);
+      });
+    }
+
+    function renderRoster() {
+      const container=document.getElementById('rosterList');container.replaceChildren();
+      document.getElementById('rosterCountBadge').textContent=app.users.length;
+      document.getElementById('activeRoomOnline').textContent=app.users.length;
+      for(const user of app.users){
+        if(user.id===app.myId)continue;
+        const row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #263044';
+        const info=document.createElement('div'),name=document.createElement('b'),detail=document.createElement('div'),button=document.createElement('button');
+        name.textContent=user.username;detail.textContent=(user.device||'PC')+' • '+(user.status==='LIVRE'?'Disponível':user.status==='JOGANDO'?'Jogando':'Em desafio');detail.style.cssText='font-size:12px;color:#92a4bf';
+        info.append(name,detail);button.className='btn-cta';button.textContent=user.status==='LIVRE'?'DESAFIAR':'OCUPADO';button.disabled=user.status!=='LIVRE'||!app.user?.email;
+        button.onclick=()=>{button.disabled=true;challengePlayer(user.id);};row.append(info,button);container.append(row);
+      }
+    }
+
+    function appendChat(msg) {
+      const box = document.getElementById('chatBox');
+      const d = document.createElement('div');
+      d.style.cssText = 'display:flex; gap:6px; font-size:0.85rem;';
+
+      const tsSpan = document.createElement('span');
+      tsSpan.style.cssText = 'color:var(--text-muted); font-size:0.75rem; flex-shrink:0;';
+      tsSpan.textContent = msg.timestamp;
+
+      const nameSpan = document.createElement('b');
+      nameSpan.style.cssText = 'color:var(--neon-cyan); flex-shrink:0;';
+      nameSpan.textContent = `[${msg.device || 'PC'}] ${msg.username}:`;
+
+      const textSpan = document.createElement('span');
+      textSpan.textContent = msg.text; // textContent prevents XSS
+
+      d.appendChild(tsSpan);
+      d.appendChild(nameSpan);
+      d.appendChild(textSpan);
+      box.appendChild(d);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function sendChat() {
+      const inp = document.getElementById('chatInput');
+      const text = inp.value.trim();
+      if (!text) return;
+      wsSend({ type: 'SEND_CHAT', text });
+      inp.value = '';
+    }
+
+    function sendQuickChat(cmd) {
+      if (cmd === '/ping') {
+        appendChat({ timestamp: new Date().toLocaleTimeString('pt-BR'), device: 'SISTEMA', username: 'ArenaBot', text: '🏓 Pong! Latência de rede local: 4ms | Servidor: São Paulo (GRU)' });
+      } else if (cmd === '/regras') {
+        appendChat({ timestamp: new Date().toLocaleTimeString('pt-BR'), device: 'SISTEMA', username: 'ArenaBot', text: '📜 REGRAS: Disputas FT2 (Melhor de 3), sem pause, K.O. final credita prêmio instantâneo com 10% de taxa da casa retida.' });
+      } else if (cmd === '/clans') {
+        fetch('/api/clans')
+          .then(r => r.json())
+          .then(clans => {
+            const summary = clans.map(c => `[${c.tag}] ${c.name} (${c.points} pts)`).join(' • ');
+            appendChat({ timestamp: new Date().toLocaleTimeString('pt-BR'), device: 'SISTEMA', username: 'ArenaBot', text: `🛡️ TOP CLÃS: ${summary}` });
+          });
+      } else {
+        app.ws.send(JSON.stringify({ type: 'SEND_CHAT', text: cmd }));
+      }
+    }
+
+    function challengePlayer(id) {
+      if(!app.user?.email){openAuthModal();return;}
+      const stakeSelect = document.getElementById('stakeSelector');
+      const stakeCents = stakeSelect ? parseInt(stakeSelect.value, 10) : 500;
+      wsSend({ type: 'SEND_CHALLENGE', targetUserId: id, mode: stakeCents === 0 ? 'AMISTOSO' : 'APOSTADO', stakeCents });
+    }
+
+    function openQuickChallengeModal() {
+      // Broadcast a global challenge to anyone in the room at the selected stake
+      const stakeSelect = document.getElementById('stakeSelector');
+      const stakeCents = stakeSelect ? parseInt(stakeSelect.value, 10) : 500;
+      const stakeReais = (stakeCents / 100).toFixed(2);
+      const confirmed = confirm(`⚔️ DESAFIO GLOBAL\n\nEnviar desafio aberto para TODOS na sala?\nAposta: R$ ${stakeReais}\n\nO primeiro a aceitar entra na partida.`);
+      if (confirmed) {
+        wsSend({ type: 'SEND_CHAT', text: `⚔️ DESAFIO GLOBAL — R$ ${stakeReais} — Quem aceita? /aceitar` });
+      }
+    }
+
+    // ==========================================
+    // ADMIN OVERVIEW & USER DOSSIER
+    // ==========================================
+
+    function escapeHTML(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+    function safeImage(value){return typeof value==='string'&&value.length<=400000&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value)?value:'';}
+    function emailArg(value){return encodeURIComponent(String(value)).replaceAll("'",'%27');}
+
+    async function exportAuthenticatedCSV(event){event.preventDefault();try{const r=await fetch('/api/admin/export-csv',{headers:adminHeaders()});if(!r.ok)throw Error('Exportação não autorizada.');const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download='arena_extrato.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){window.toast.error('Exportação',e.message);}}
+    function adminHeaders() {
+      return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (app.sessionToken || '') };
+    }
+
+    function fetchAdminOverview() {
+      fetch('/api/admin/overview', { headers: adminHeaders() })
+        .then(r => { if (!r.ok) { if (typeof window.toast !== 'undefined') window.toast.error('Acesso negado', 'Faça login como admin.'); else alert('Acesso negado.'); return Promise.reject(); } return r.json(); })
+        .then(d => {
+          app.adminData = d;
+          // Vault stats
+          document.getElementById('vaultCapital').innerText = 'R$ ' + d.vault.totalCompanyCapitalReais;
+          document.getElementById('vaultRake').innerText = 'R$ ' + d.vault.platformRakeProfitReais;
+          document.getElementById('vaultFlow').innerText = 'R$ ' + d.vault.activeInPlayReais;
+          document.getElementById('vaultEscrow').innerText = 'R$ ' + d.vault.lockedEscrowReais;
+          document.getElementById('vaultDeposits').innerText = 'R$ ' + d.vault.totalDepositsReais;
+          document.getElementById('vaultWithdrawals').innerText = 'R$ ' + d.vault.totalWithdrawalsReais;
+          document.getElementById('vaultPendingWdr').innerText = 'R$ ' + d.vault.pendingWithdrawalsReais;
+
+          // Render All Users Table
+          const uBody = document.getElementById('usersTableBody');
+          uBody.innerHTML = '';
+          d.allUsers.forEach(u => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><b>${escapeHTML(u.username)}</b><br><small style="color:var(--neon-cyan);">${u.id}</small></td>
+              <td>${escapeHTML(u.fullName)}</td>
+              <td><b>${escapeHTML(u.cpf)}</b><br><small style="color:var(--text-muted);">${escapeHTML(u.address.cidade || 'SP')} - ${escapeHTML(u.address.uf || 'SP')}</small></td>
+              <td><b>${escapeHTML(u.ip)}</b><br><small style="color:var(--text-muted);">${escapeHTML(u.macFingerprint)}</small></td>
+              <td><b style="color:var(--neon-green);">${u.fraudScore}</b></td>
+              <td><span style="color:${u.amlRisk.includes('CRÍTICO') ? 'var(--kof-crimson)' : 'var(--neon-green)'}; font-weight:700;">${escapeHTML(u.amlRisk)}</span></td>
+              <td>
+                <button class="btn-table-action btn-blue" onclick="openUserDossier('${u.id}')">VER DOSSIÊ</button>
+              </td>
+            `;
+            uBody.appendChild(tr);
+          });
+
+          // Render Withdrawals Table
+          const wBody = document.getElementById('withdrawalsTableBody');
+          wBody.innerHTML = '';
+          d.pendingWithdrawals.forEach(w => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><b>${w.id}</b></td>
+              <td>${escapeHTML(w.username)}</td>
+              <td><b>${escapeHTML(w.pixKey)}</b></td>
+              <td style="color:var(--neon-green); font-weight:700;">R$ ${w.amountReais}</td>
+              <td><b style="color:var(--neon-green);">${w.fraudScore}</b></td>
+              <td><button class="btn-table-action btn-green" onclick="approveWithdrawal('${w.id}')">APROVAR SOLICITAÇÃO</button></td>
+            `;
+            wBody.appendChild(tr);
+          });
+
+          // Render KYC Table
+          const kBody = document.getElementById('kycTableBody');
+          kBody.innerHTML = '';
+          d.pendingKyc.forEach(k => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><img src="${safeImage(k.kycPhoto)}" style="width:44px; height:44px; border-radius:50%; border:2px solid var(--neon-cyan);"></td>
+              <td><b>${escapeHTML(k.username)}</b></td>
+              <td>${escapeHTML(k.cpf)}</td>
+              <td>${escapeHTML(k.address.logradouro)}, ${escapeHTML(k.address.numero)} - ${escapeHTML(k.address.uf)}</td>
+              <td>
+                <button class="btn-table-action btn-green" onclick="decideKyc(decodeURIComponent('${emailArg(k.email)}'), 'APROVADO')">APROVAR</button>
+                <button class="btn-table-action btn-red" onclick="decideKyc(decodeURIComponent('${emailArg(k.email)}'), 'REJEITADO')">REJEITAR</button>
+              </td>
+            `;
+            kBody.appendChild(tr);
+          });
+        });
+    }
+
+    function openUserDossier(userId) {
+      const u = app.adminData.allUsers.find(item => item.id === userId);
+      if (!u) return;
+
+      const content = document.getElementById('dossierModalContent');
+      content.innerHTML = `
+        <div class="dossier-grid">
+          <div class="dossier-photo-box">
+            ${u.kycPhoto ? `<img src="${safeImage(u.kycPhoto)}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:2rem;">👤</span>'}
+          </div>
+          <div>
+            <div class="dossier-field"><label>Nick & Nome Completo:</label><b>${escapeHTML(u.username)} (${escapeHTML(u.fullName)})</b></div>
+            <div class="dossier-field"><label>CPF & Data de Nascimento:</label><b>${escapeHTML(u.cpf)} • ${escapeHTML(u.birthDate || 'N/A')}</b></div>
+            <div class="dossier-field"><label>Endereço Residencial:</label><b>${escapeHTML(u.address.logradouro)}, ${escapeHTML(u.address.numero)} - ${escapeHTML(u.address.bairro)}, ${escapeHTML(u.address.cidade)} - ${escapeHTML(u.address.uf)} (CEP: ${escapeHTML(u.address.cep)})</b></div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg-dark); border:1px solid var(--border-color); padding:14px; border-radius:8px; margin-top:10px;">
+          <div style="font-size:0.8rem; font-weight:700; color:var(--neon-cyan); margin-bottom:8px;">AUDITORIA DE SEGURANÇA & REDE:</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem; font-family:var(--font-mono);">
+            <div>IP de Origem: <b>${escapeHTML(u.ip)}</b></div>
+            <div>Hardware/Fingerprint: <b>${escapeHTML(u.macFingerprint)}</b></div>
+            <div>Localização ISP: <b>${escapeHTML(u.location)}</b></div>
+            <div>Score Serasa Anti-Fraude: <b style="color:var(--neon-green);">${u.fraudScore}</b></div>
+            <div>Risco de Lavagem (AML): <b style="color:${u.amlRisk.includes('CRÍTICO') ? 'var(--kof-crimson)' : 'var(--neon-green)'};">${escapeHTML(u.amlRisk)}</b></div>
+            <div>Status de Saldo: <b>${u.isFrozen ? '❄️ CONGELADO' : '✅ ATIVO'}</b></div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:10px;">
+          <button class="btn-table-action btn-red" style="flex:1; padding:10px;" onclick="adminAction('${u.id}', 'BAN')">🚫 BANIR CONTA</button>
+          <button class="btn-table-action btn-blue" style="flex:1; padding:10px;" onclick="adminAction('${u.id}', 'FREEZE')">❄️ CONGELAR / DESCONGELAR SALDO</button>
+          <button class="btn-table-action btn-green" style="flex:1; padding:10px;" onclick="adminAction('${u.id}', 'ADD_BALANCE')">➕ ADICIONAR R$ 50</button>
+        </div>
+      `;
+      openModal('dossierModal');
+    }
+
+    async function adminAction(userId, action) {
+      try{const r=await fetch('/api/admin/action',{method:'POST',headers:adminHeaders(),body:JSON.stringify({action,userId,amountCents:5000})});const d=await r.json();if(!r.ok)throw Error(d.error||'Ação recusada.');window.toast.success('Admin','Ação executada.');closeModal('dossierModal');fetchAdminOverview();}catch(e){window.toast.error('Admin',e.message);}
+    }
+    async function approveWithdrawal(withdrawalId) {
+      try{const r=await fetch('/api/admin/withdrawal/approve',{method:'POST',headers:adminHeaders(),body:JSON.stringify({withdrawalId})});const d=await r.json();if(!r.ok)throw Error(d.error||'Saque não aprovado.');window.toast.success('Saque','Decisão registrada.');fetchAdminOverview();}catch(e){window.toast.error('Saque',e.message);}
+    }
+
+    function decideKyc(email, decision) {
+      app.ws.send(JSON.stringify({ type: 'ADMIN_DECIDE_KYC', userEmail: email, decision }));
+      setTimeout(fetchAdminOverview, 400);
+    }
+
+    // Modal Control
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // Challenge accept/decline (modal-based, no confirm())
+    function acceptIncomingChallenge() {
+      const ch = app.pendingChallenge;
+      if (!ch) return;
+      clearInterval(app._icmInterval);
+      closeModal('incomingChallengeModal');
+      wsSend({ type: 'ACCEPT_CHALLENGE', fromUserId: ch.from.id, challengeId: ch.challengeId, mode: ch.mode, stakeCents: ch.stakeCents });
+      app.pendingChallenge = null;
+    }
+
+    function declineIncomingChallenge() {
+      const ch = app.pendingChallenge;
+      clearInterval(app._icmInterval);
+      closeModal('incomingChallengeModal');
+      if (ch) wsSend({ type: 'DECLINE_CHALLENGE', fromUserId: ch.from.id, challengeId: ch.challengeId });
+      app.pendingChallenge = null;
+    }
+
+    function acceptRematch() {
+      const rm = app._pendingRematch;
+      closeModal('rematchModal');
+      if (rm) wsSend({ type: 'REMATCH_ACCEPT', requesterId: rm.fromId });
+      app._pendingRematch = null;
+    }
+    function openWalletModal() { openModal('walletModal'); }
+    function openAuthModal(tab = 'login') {
+      switchAuthTab(tab);
+      openModal('authModal');
+    }
+
+    function switchAuthTab(t) {
+      document.getElementById('tabLoginBtn').className = 'admin-tab-btn ' + (t === 'login' ? 'active' : '');
+      document.getElementById('tabRegBtn').className = 'admin-tab-btn ' + (t === 'register' ? 'active' : '');
+      document.getElementById('loginBlock').style.display = t === 'login' ? 'flex' : 'none';
+      document.getElementById('registerBlock').style.display = t === 'register' ? 'flex' : 'none';
+    }
+
+    function submitLogin() {
+      wsSend({
+        type: 'LOGIN_ACCOUNT',
+        email: document.getElementById('loginEmail').value,
+        password: document.getElementById('loginPassword').value
+      });
+    }
+
+    function submitRegister() {
+      wsSend({
+        type: 'REGISTER_ACCOUNT',
+        username: document.getElementById('regNick').value,
+        email: document.getElementById('regEmail').value,
+        password: document.getElementById('regPass').value
+      });
+    }
+
+    function redeemPromoCoupon() {
+      const code = document.getElementById('couponCodeInput').value.trim();
+      const statusDiv = document.getElementById('couponStatusMsg');
+      if (!code) return;
+      if (!app.user) {
+        statusDiv.style.color = 'var(--kof-crimson)';
+        statusDiv.innerText = 'Faça login para resgatar cupons.';
+        return;
+      }
+      fetch('/api/coupon/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, userId: app.user.id })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          statusDiv.style.color = 'var(--kof-crimson)';
+          statusDiv.innerText = '❌ ' + data.error;
+        } else {
+          statusDiv.style.color = 'var(--neon-green)';
+          statusDiv.innerText = data.message;
+          document.getElementById('walletModalAmount').innerText = 'R$ ' + data.newBalanceReais;
+          document.getElementById('navWalletVal').innerText = 'R$ ' + data.newBalanceReais;
+          document.getElementById('couponCodeInput').value = '';
+        }
+      })
+      .catch(err => {
+        statusDiv.style.color = 'var(--kof-crimson)';
+        statusDiv.innerText = 'Erro de conexão ao resgatar cupom.';
+      });
+    }
+
+    function depositPix(c) {
+      wsSend({ type: 'DEPOSIT_PIX', amountCents: c });
+    }
+
+    function requestWithdraw() {
+      const k = document.getElementById('withdrawKey').value.trim();
+      const amtInput = document.getElementById('withdrawAmount');
+      const amountCents = amtInput ? Math.round(parseFloat(amtInput.value || '0') * 100) : 1000;
+      if (!k) { if (typeof window.toast !== 'undefined') window.toast.warn('Saque', 'Informe sua chave PIX.'); else alert('Informe sua chave PIX.'); return; }
+      if (amountCents <= 0) { if (typeof window.toast !== 'undefined') window.toast.warn('Saque', 'Informe o valor.'); else alert('Informe o valor.'); return; }
+      wsSend({ type: 'WITHDRAW_PIX', amountCents, pixKey: k });
+    }
+
+    // ── Fullscreen API ─────────────────────────────────────────────
+    function toggleFullscreen() {
+      const el=document.getElementById('arenaModal');
+      const action=document.fullscreenElement?document.exitFullscreen():el.requestFullscreen?.();
+      action?.catch(()=>window.toast?.warn('Tela cheia','O navegador não permitiu a tela cheia.'));
+    }
+
+    // ── Gamepad API (handled by FBNeoLoader) ────────────────────────────────────────────────
+    // ── PWA Install Prompt ─────────────────────────────────────────
+    let _pwaPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      _pwaPrompt = e;
+      const bar = document.createElement('div');
+      bar.id = 'pwaBanner';
+      bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#0a0c16;border-top:2px solid #00e5ff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;z-index:9999;font-family:Chakra Petch,sans-serif;font-size:0.85rem;';
+      bar.innerHTML = `<span>⚡ Instalar Arena Arcade como app</span><div style="display:flex;gap:8px;"><button onclick="_pwaPrompt.prompt();document.getElementById('pwaBanner').remove();" style="background:#00e5ff;color:#000;border:none;padding:6px 14px;cursor:pointer;font-weight:700;font-family:inherit;">INSTALAR</button><button onclick="document.getElementById('pwaBanner').remove();" style="background:transparent;border:1px solid #333;color:#888;padding:6px 12px;cursor:pointer;font-family:inherit;">Não</button></div>`;
+      document.body.appendChild(bar);
+    });
+
+    // ── Vibration on match events ──────────────────────────────────
+    function vibrateWin()  { navigator.vibrate?.([100, 50, 200]); }
+    function vibrateLoss() { navigator.vibrate?.([300]); }
+
+    // ── Perfil link no ELO chip ────────────────────────────────────
+    document.getElementById('eloChip').addEventListener('click', () => {
+      if (app.user?.id) window.open(`/perfil.html?id=${app.user.id}`, '_blank');
+    });
+
+    // Start
+    initWS();
+  </script>
+</body>
+</html>
