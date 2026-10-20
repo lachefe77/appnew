@@ -1,10 +1,13 @@
 /**
  * Monta comando do Host Bot real (RetroArch/FBNeo) ou stub de lab.
- * Fase 1: spawn + args; vídeo/WebRTC = Fase 2.
+ * Framebuffer: ver buildFfmpegFrameCapture em native-framebuffer.js.
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { retroArchKeyboardLines } from "./native-input-map.js";
+import { buildFfmpegFrameCapture } from "./native-framebuffer.js";
+
+export { buildFfmpegFrameCapture };
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 

@@ -15,6 +15,10 @@
 import { createInterface } from "node:readline";
 import { mapArenaInput } from "../server/native-input-map.js";
 import { createNativeMediaBridge } from "../server/native-webrtc.js";
+import {
+  parseArenaFrameLine,
+  startFfmpegFramebuffer,
+} from "../server/native-framebuffer.js";
 
 const mode = String(process.env.HOST_BOT_MODE || "stub").toLowerCase();
 const autoPeers =
@@ -37,6 +41,7 @@ const state = {
   iceServers: [],
   media: null,
   mediaBackend: null,
+  ffmpegFb: null,
 };
 
 function emit(obj) {
@@ -85,6 +90,25 @@ async function ensureMedia(iceServers) {
     getFrameNum: () => state.frame,
   });
   state.mediaBackend = state.media.backend;
+
+  // Framebuffer real/lab via ffmpeg (gdigrab / lavfi testsrc / ficheiro).
+  if (!state.ffmpegFb && state.media.frameSource) {
+    const fb = startFfmpegFramebuffer(state.media.frameSource);
+    if (fb.ok) {
+      state.ffmpegFb = fb;
+      emit({
+        event: "progress",
+        stage: "framebuffer",
+        detail: { via: "ffmpeg", input: fb.capture?.args?.slice(0, 8) },
+      });
+    } else if (fb.error) {
+      emit({
+        event: "progress",
+        stage: "framebuffer-skip",
+        detail: { error: fb.error },
+      });
+    }
+  }
   return state.media;
 }
 
@@ -121,6 +145,9 @@ async function handle(msg) {
           matchId: state.matchId,
           mode,
           media: state.mediaBackend,
+          framebuffer: state.ffmpegFb?.ok
+            ? "ffmpeg"
+            : "inject-or-synthetic",
           video: { width: 320, height: 240, fps: 30 },
         },
       });
@@ -219,6 +246,18 @@ async function handle(msg) {
       });
       return;
     }
+    case "injectFrame": {
+      const media = await ensureMedia(state.iceServers);
+      if (!msg.frame) throw Error("frame obrigatório.");
+      const pushed = media.pushExternal(msg.frame);
+      emit({
+        event: "frame",
+        externalCount: media.frameSource?.externalCount,
+        frame: pushed?.frame,
+        at: Date.now(),
+      });
+      return;
+    }
     case "captureEvidence": {
       const media = await ensureMedia(state.iceServers);
       const filePath = String(msg.path || "");
@@ -228,12 +267,19 @@ async function handle(msg) {
         event: "evidence",
         path: filePath,
         frame: state.frame,
+        externalCount: media.frameSource?.externalCount || 0,
         at: Date.now(),
       });
       return;
     }
     case "stop":
       state.started = false;
+      try {
+        state.ffmpegFb?.stop();
+      } catch {
+        /* ignore */
+      }
+      state.ffmpegFb = null;
       try {
         state.media?.stop();
       } catch {
@@ -259,6 +305,29 @@ rl.on("line", async (line) => {
       emit({
         event: "failure",
         message: "Lua sample inválido: " + error.message,
+      });
+    }
+    return;
+  }
+  if (line.startsWith("ARENA_FRAME ")) {
+    try {
+      const media = await ensureMedia(state.iceServers);
+      const norm = parseArenaFrameLine(line);
+      media.pushExternal({
+        width: norm.width,
+        height: norm.height,
+        format: "i420",
+        data: norm.data,
+      });
+      emit({
+        event: "frame",
+        externalCount: media.frameSource?.externalCount,
+        at: Date.now(),
+      });
+    } catch (error) {
+      emit({
+        event: "failure",
+        message: "Frame inválido: " + error.message,
       });
     }
     return;

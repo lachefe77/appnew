@@ -30,8 +30,11 @@ import {
   paintSyntheticI420,
   i420ByteLength,
   NATIVE_FRAME,
+  rgb24ToI420,
+  normalizeExternalFrame,
 } from "../server/native-frame-source.js";
 import { createNativeMediaBridge } from "../server/native-webrtc.js";
+import { buildFfmpegFrameCapture } from "../server/native-framebuffer.js";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -305,5 +308,82 @@ test("Fase 1: samples sintéticos → observeSample → vitória P1", async () =
     await session.stop().catch(() => {});
     if (prevMedia == null) delete process.env.HOST_BOT_MEDIA;
     else process.env.HOST_BOT_MEDIA = prevMedia;
+  }
+});
+
+test("framebuffer: RGB24→I420 + pushExternal prioriza external", () => {
+  const rgb = Buffer.alloc(16 * 16 * 3, 200);
+  const i420 = rgb24ToI420(rgb, 16, 16, 32, 32);
+  assert.equal(i420.length, i420ByteLength(32, 32));
+  const norm = normalizeExternalFrame({
+    width: 16,
+    height: 16,
+    format: "rgb24",
+    data: rgb.toString("base64"),
+  });
+  assert.equal(norm.width, 320);
+  assert.equal(norm.height, 240);
+
+  let lastSource = null;
+  const src = createFrameSource({
+    mode: "auto",
+    fps: 30,
+    onFrame: (f) => {
+      lastSource = f.source;
+    },
+  });
+  src.start();
+  src.resume();
+  src.pushExternal({
+    width: 320,
+    height: 240,
+    format: "i420",
+    data: Buffer.alloc(i420ByteLength(), 90),
+  });
+  assert.equal(src.externalCount, 1);
+  assert.equal(lastSource, "external");
+  src.stop();
+});
+
+test("framebuffer: ffmpeg lavfi cmdline + injectFrame no worker", async () => {
+  const cap = buildFfmpegFrameCapture({
+    HOST_BOT_FFMPEG: "ffmpeg",
+    HOST_BOT_FFMPEG_INPUT_KIND: "lavfi",
+    HOST_BOT_FFMPEG_INPUT: "testsrc=size=320x240:rate=30",
+  });
+  assert.ok(cap);
+  assert.ok(cap.args.includes("lavfi"));
+  assert.ok(cap.args.includes("yuv420p"));
+
+  const prevMedia = process.env.HOST_BOT_MEDIA;
+  process.env.HOST_BOT_MEDIA = "lab";
+  process.env.HOST_BOT_AUTO_PEERS = "1";
+  const frames = [];
+  const session = new NativeHostSession({
+    matchId: "test_inject_frame",
+    onFrame: (ev) => frames.push(ev),
+    onFailure: (m) => assert.fail(m),
+  });
+  try {
+    await session.start();
+    const buf = Buffer.alloc(i420ByteLength(), 40);
+    paintSyntheticI420(buf, 9);
+    await session.injectFrame({
+      width: 320,
+      height: 240,
+      format: "i420",
+      data: buf.toString("base64"),
+    });
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline && (session.lastExternalCount || 0) < 1) {
+      await new Promise((r) => setTimeout(r, 30));
+    }
+    assert.ok(session.lastExternalCount >= 1, String(session.lastExternalCount));
+    assert.ok(frames.length >= 1);
+  } finally {
+    await session.stop().catch(() => {});
+    if (prevMedia == null) delete process.env.HOST_BOT_MEDIA;
+    else process.env.HOST_BOT_MEDIA = prevMedia;
+    delete process.env.HOST_BOT_AUTO_PEERS;
   }
 });

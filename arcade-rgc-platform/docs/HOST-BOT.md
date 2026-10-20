@@ -46,6 +46,7 @@ Produção leve: `HOSTED_ENGINE=native`.
 | **0** | Plano + factory + stub IPC + testes | `npm test` verde; engine selecionável |
 | **1** | Bot Windows: spawn + input + sample de estado | 1 X1 lab sem Playwright ✅ |
 | **2** | Encode leve + WebRTC para 2 peers (320p30) | 2 viewers com track sem Chrome ✅ |
+| **2b** | Framebuffer FBNeo/ffmpeg → WebRTC | injectFrame + pipe ffmpeg (gdigrab/lavfi) ✅ |
 | **3** | Capacidade medida na VPS 4 GB | Relatório N partidas estáveis ≥ 10 min |
 | **4** | `HOSTED_MAX_SESSIONS` calibrado + fila | Meta teste 5–8; desenho 20 |
 | **5** | VPS 10 GB / 5 vCPU | Validar 20 X1 com folga |
@@ -62,56 +63,67 @@ Produção leve: `HOSTED_ENGINE=native`.
 
 Savestate nativo ≠ layout EmulatorJS — por isso Lua/JSON, não RASTATE.
 
-## Fase 2 (atual) — encode 320p30 + WebRTC
+## Fase 2 — encode 320p30 + WebRTC
 
 | Peça | Papel |
 |---|---|
-| `native-frame-source.js` | Frames I420 320×240 @ 30fps (sintético no lab) |
+| `native-frame-source.js` | I420 320×240 @ 30fps (synthetic **ou** external) |
 | `native-webrtc.js` | 2× `RTCPeerConnection` via `@roamhq/wrtc` |
-| Worker `cmd:"signal"` | Mesmos kinds do Chrome: `viewer-ready` / `offer` / `answer` / `ice` |
-| `event:"signal"` / `event:"peer"` | Fan-out para `platform.js` → clientes |
+| Worker `cmd:"signal"` | `viewer-ready` / `offer` / `answer` / `ice` |
 
-**Critério:** 2 viewers recebem track de vídeo sem Playwright.  
-**Ainda sintético:** barras coloridas (framebuffer FBNeo/ffmpeg = próxima etapa).  
-**Fallback:** `HOST_BOT_MEDIA=lab` — FSM de sinalização sem RTP (CI).
+## Fase 2b (atual) — framebuffer → WebRTC
+
+| Peça | Papel |
+|---|---|
+| `native-framebuffer.js` | ffmpeg raw I420 + parse `ARENA_FRAME` |
+| `injectFrame` | Lab/testes: RGB24/I420 base64 → encode |
+| `HOST_BOT_FFMPEG_*` | Captura janela RetroArch (gdigrab) ou lavfi |
+
+Prioridade do frame source: **external fresco** (> synthetic). Sem framebuffer, continua barras.
 
 ### Protocolo JSONL
 
 ```text
-→ { "cmd":"start"|"input"|"signal"|"pause"|"resume"|"stop"|"injectSample"|"captureEvidence", ... }
-← { "event":"sample", "sample": { "frame", "health", "timer", "wins" } }
-← { "event":"signal", "slot":1|2, "signal": { "kind":"offer"|"ice", ... } }
-← { "event":"peer", "slot":1|2, "state":"connecting"|"connected"|... }
+→ { "cmd":"start"|"input"|"signal"|"injectFrame"|"injectSample"|"captureEvidence"|... }
+→ ARENA_FRAME {"width":320,"height":240,"format":"i420","data":"<base64>"}
+← { "event":"frame", "externalCount": N }
+← { "event":"signal"|"peer"|"sample"|... }
 ```
 
 ### Teste no PC Windows (PowerShell)
 
-Já estás em `C:\Users\Pc Gamer\Documents\appnew\arcade-rgc-platform` — **não** faças `cd Documents\...` de novo.
+Repo git = `Documents\appnew`. App = `arcade-rgc-platform` dentro dele.
 
 ```powershell
+cd "C:\Users\Pc Gamer\Documents\appnew"
 git pull
+cd arcade-rgc-platform
 npm ci
 $env:HOSTED_ENGINE="native"
 npm run smoke:host-bot -- 1 webrtc
-npm test -- tests/host-bot.test.js
+npm run smoke:host-bot -- 1 framebuffer
 ```
 
-Esperado: `phase:"ok"`, `hostPhase:2`, `mode:"webrtc"`, `tracks: {1:true,2:true}`.
+Esperado framebuffer: `mode:"framebuffer"`, `externalCount:30`, `tracks:{1:true,2:true}`.
 
-Se `@roamhq/wrtc` falhar no Windows (Build Tools):
+Com RetroArch + ffmpeg no PATH (vídeo da janela do core):
 
 ```powershell
-npm run smoke:host-bot -- 2 peers
-# ou
-$env:HOST_BOT_MEDIA="lab"
-npm run smoke:host-bot -- 1
+# Terminal 1: abre RetroArch com KOF (FBNeo)
+# Terminal 2:
+$env:HOSTED_ENGINE="native"
+$env:HOST_BOT_FFMPEG="ffmpeg"
+$env:HOST_BOT_FFMPEG_INPUT_KIND="gdigrab"
+$env:HOST_BOT_FFMPEG_INPUT="title=RetroArch"
+npm run smoke:host-bot -- 1 webrtc
 ```
 
-Com RetroArch (opcional; vídeo ainda sintético até plugar framebuffer):
+Lab sem RetroArch (ffmpeg gera testsrc):
 
 ```powershell
-$env:HOST_BOT_BIN="C:\caminho\retroarch.exe"
-$env:HOST_BOT_KIND="retroarch"
+$env:HOST_BOT_FFMPEG_INPUT_KIND="lavfi"
+$env:HOST_BOT_FFMPEG_INPUT="testsrc=size=320x240:rate=30"
+npm run smoke:host-bot -- 1 webrtc
 ```
 
 ## Números honestos

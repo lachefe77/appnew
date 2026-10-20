@@ -61,8 +61,12 @@ export async function createNativeMediaBridge(opts = {}) {
   const videoTrack = videoSource.createTrack();
   const stream = new MediaStream([videoTrack]);
 
+  const frameMode = String(
+    opts.frameMode || process.env.HOST_BOT_FRAME_MODE || "auto",
+  ).toLowerCase();
   const frames = createFrameSource({
     fps: targetFramerate,
+    mode: frameMode === "external" ? "external" : frameMode === "synthetic" ? "synthetic" : "auto",
     onFrame: (f) => {
       videoSource.onFrame({
         width: f.width,
@@ -240,6 +244,9 @@ export async function createNativeMediaBridge(opts = {}) {
         width: NATIVE_FRAME.width,
         height: NATIVE_FRAME.height,
         backend,
+        frameMode: frames.sourceMode,
+        externalFrames: frames.externalCount,
+        lastExternalAt: frames.lastExternalAt,
       },
     };
   }
@@ -252,6 +259,7 @@ export async function createNativeMediaBridge(opts = {}) {
     pause: () => frames.pause(),
     resume: () => frames.resume(),
     frameSource: frames,
+    pushExternal: (raw) => frames.pushExternal(raw),
     stop: () => {
       closed = true;
       clearInterval(adaptTimer);
@@ -277,7 +285,11 @@ function createLabMediaBridge({
   targetFramerate,
 }) {
   const peers = new Map();
-  const frames = createFrameSource({ fps: targetFramerate, onFrame: () => {} });
+  const frames = createFrameSource({
+    fps: targetFramerate,
+    mode: "auto",
+    onFrame: () => {},
+  });
   frames.start();
   let closed = false;
 
@@ -349,6 +361,9 @@ function createLabMediaBridge({
         width: NATIVE_FRAME.width,
         height: NATIVE_FRAME.height,
         backend: "lab",
+        frameMode: frames.sourceMode,
+        externalFrames: frames.externalCount,
+        lastExternalAt: frames.lastExternalAt,
       },
     };
   }
@@ -361,6 +376,7 @@ function createLabMediaBridge({
     pause: () => frames.pause(),
     resume: () => frames.resume(),
     frameSource: frames,
+    pushExternal: (raw) => frames.pushExternal(raw),
     stop: () => {
       closed = true;
       frames.stop();

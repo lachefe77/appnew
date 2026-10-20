@@ -18,6 +18,7 @@ export class NativeHostSession {
   constructor({
     onSignal,
     onSample,
+    onFrame,
     onFailure,
     onMetrics,
     onResult,
@@ -30,6 +31,7 @@ export class NativeHostSession {
     Object.assign(this, {
       onSignal,
       onSample,
+      onFrame,
       onFailure,
       onMetrics,
       onResult,
@@ -48,6 +50,7 @@ export class NativeHostSession {
     this.child = null;
     this.lastSample = null;
     this.lastMappedInput = null;
+    this.lastExternalCount = 0;
     this.engine = "native";
     this.launch = null;
   }
@@ -99,6 +102,10 @@ export class NativeHostSession {
         break;
       case "signal":
         this.onSignal?.(ev.slot, ev.signal);
+        break;
+      case "frame":
+        this.lastExternalCount = ev.externalCount ?? this.lastExternalCount;
+        this.onFrame?.(ev);
         break;
       case "observation":
         this.onObservation?.(ev.observation || ev);
@@ -313,6 +320,19 @@ export class NativeHostSession {
   /** Lab/testes: injeta sample sintético (observeSample sem FBNeo). */
   async injectSample(sample) {
     return this.send("injectSample", { sample });
+  }
+
+  /**
+   * Injeta framebuffer externo (RGB24/I420) no encode WebRTC.
+   * @param {{ width?: number, height?: number, format?: string, data: string|Buffer }} frame
+   *   data: base64 string ou Buffer (Buffer vira base64 no IPC).
+   */
+  async injectFrame(frame) {
+    const payload = { ...frame };
+    if (Buffer.isBuffer(payload.data)) {
+      payload.data = payload.data.toString("base64");
+    }
+    return this.send("injectFrame", { frame: payload });
   }
 
   fail(message) {

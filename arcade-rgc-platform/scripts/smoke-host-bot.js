@@ -1,16 +1,20 @@
 /**
- * Smoke do Host Bot nativo (sem Chrome) — Fase 2: samples + WebRTC lab.
- * Uso (PowerShell):
+ * Smoke Host Bot nativo (sem Chrome).
+ * Uso (PowerShell), na pasta arcade-rgc-platform:
  *   $env:HOSTED_ENGINE="native"
- *   npm run smoke:host-bot -- 2
+ *   npm run smoke:host-bot -- 1 webrtc
+ *   npm run smoke:host-bot -- 1 framebuffer
+ *   npm run smoke:host-bot -- 4 peers
  *
- * Args: [sessions=2] [mode=auto|webrtc|peers]
- *   peers  — só RSS com AUTO_PEERS (sem negociação)
- *   webrtc — 1 sessão com loopback @roamhq/wrtc (offer/answer)
- *   auto   — webrtc se wrtc disponível, senão peers
+ * Args: [sessions=2] [mode=auto|webrtc|peers|framebuffer]
  */
 import { NativeHostSession } from "../server/native-host-session.js";
 import { loadWrtc } from "../server/native-webrtc.js";
+import {
+  NATIVE_FRAME,
+  paintSyntheticI420,
+  i420ByteLength,
+} from "../server/native-frame-source.js";
 
 const n = Math.max(1, Math.min(20, Number(process.argv[2]) || 2));
 const modeArg = String(process.argv[3] || "auto").toLowerCase();
@@ -19,7 +23,11 @@ const sessions = [];
 
 const wrtc = await loadWrtc();
 const mode =
-  modeArg === "auto" ? (wrtc ? "webrtc" : "peers") : modeArg;
+  modeArg === "auto"
+    ? wrtc
+      ? "webrtc"
+      : "peers"
+    : modeArg;
 
 console.log(
   JSON.stringify({
@@ -29,7 +37,7 @@ console.log(
     sessions: n,
     mode,
     wrtc: !!wrtc,
-    hint: "Fase 2 = encode 320p30 + sinalização WebRTC. FBNeo framebuffer = depois.",
+    hint: "webrtc|framebuffer = vídeo; peers = RSS leve; FBNeo gdigrab = env HOST_BOT_FFMPEG_*.",
   }),
 );
 
@@ -68,7 +76,123 @@ async function attachViewer(session, slot, wrtcMod) {
     pc._arenaChain = chain.catch(() => {});
   };
 
-  return { pc, onSignal, get remoteTrack() { return remoteTrack; } };
+  return {
+    pc,
+    onSignal,
+    get remoteTrack() {
+      return remoteTrack;
+    },
+  };
+}
+
+async function runWebRtcSession({ matchId, injectFrames = 0 }) {
+  if (!wrtc) throw new Error("@roamhq/wrtc indisponível");
+  delete process.env.HOST_BOT_AUTO_PEERS;
+  const signals = [];
+  const peerStates = [];
+  let frameEvents = 0;
+  const session = new NativeHostSession({
+    matchId,
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    onPeer: (slot, state) => peerStates.push({ slot, state }),
+    onSignal: (slot, signal) => signals.push({ slot, signal }),
+    onFrame: () => {
+      frameEvents++;
+    },
+    onFailure: (message) => {
+      throw new Error(`${matchId}: ${message}`);
+    },
+  });
+  const started = await session.start();
+  const v1 = await attachViewer(session, 1, wrtc);
+  const v2 = await attachViewer(session, 2, wrtc);
+  session.onSignal = (slot, signal) => {
+    signals.push({ slot, signal });
+    v1.onSignal(slot, signal);
+    v2.onSignal(slot, signal);
+  };
+
+  await session.signal(1, { kind: "viewer-ready" });
+  await session.signal(2, { kind: "viewer-ready" });
+
+  const deadline = Date.now() + 8000;
+  while (Date.now() < deadline) {
+    const slots = new Set(
+      peerStates.filter((p) => p.state === "connected").map((p) => p.slot),
+    );
+    if (slots.has(1) && slots.has(2) && v1.remoteTrack && v2.remoteTrack) break;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+
+  await session.resume();
+  await new Promise((r) => setTimeout(r, 200));
+
+  for (let k = 0; k < injectFrames; k++) {
+    const buf = Buffer.alloc(i420ByteLength());
+    paintSyntheticI420(buf, 1000 + k, {
+      width: NATIVE_FRAME.width,
+      height: NATIVE_FRAME.height,
+    });
+    // Marca “external”: canto branco forte
+    buf.fill(255, 0, 16);
+    await session.injectFrame({
+      width: NATIVE_FRAME.width,
+      height: NATIVE_FRAME.height,
+      format: "i420",
+      data: buf.toString("base64"),
+    });
+    await new Promise((r) => setTimeout(r, 20));
+  }
+
+  for (let k = 0; k < 5; k++) {
+    await session.input(1, 0, 1);
+    await session.input(1, 0, 0);
+  }
+
+  if (injectFrames > 0) {
+    const waitFb = Date.now() + 5000;
+    while (
+      Date.now() < waitFb &&
+      (session.lastExternalCount || 0) < injectFrames
+    ) {
+      await new Promise((r) => setTimeout(r, 30));
+    }
+    if ((session.lastExternalCount || 0) < injectFrames)
+      throw new Error(
+        `Framebuffer: externalCount=${session.lastExternalCount} < ${injectFrames}`,
+      );
+  }
+
+  const connectedSlots = [
+    ...new Set(
+      peerStates.filter((p) => p.state === "connected").map((p) => p.slot),
+    ),
+  ].sort();
+  if (connectedSlots.length < 2)
+    throw new Error("WebRTC: peers não conectaram a tempo");
+  if (!v1.remoteTrack || !v2.remoteTrack)
+    throw new Error("WebRTC: track de vídeo não chegou nos viewers");
+
+  return {
+    session,
+    i: 0,
+    peerCount: connectedSlots.length,
+    sampleCount: session.lastSample?.frame || 0,
+    lastSample: session.lastSample,
+    manifest: started.manifest,
+    webrtc: {
+      connectedSlots,
+      offers: signals.filter((s) => s.signal?.kind === "offer").length,
+      tracks: { 1: v1.remoteTrack, 2: v2.remoteTrack },
+      pc1: v1.pc.connectionState,
+      pc2: v2.pc.connectionState,
+    },
+    framebuffer: {
+      injected: injectFrames,
+      externalCount: session.lastExternalCount || 0,
+      frameEvents,
+    },
+  };
 }
 
 try {
@@ -77,76 +201,12 @@ try {
     process.env.HOST_BOT_MEDIA = process.env.HOST_BOT_MEDIA || "lab";
   }
 
-  if (mode === "webrtc") {
-    if (!wrtc) throw new Error("@roamhq/wrtc indisponível para smoke webrtc");
-    delete process.env.HOST_BOT_AUTO_PEERS;
-    const signals = [];
-    const peerStates = [];
-    const session = new NativeHostSession({
-      matchId: "smoke_webrtc_0",
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-      onPeer: (slot, state) => peerStates.push({ slot, state }),
-      onSignal: (slot, signal) => signals.push({ slot, signal }),
-      onFailure: (message) => {
-        throw new Error(`webrtc: ${message}`);
-      },
+  if (mode === "webrtc" || mode === "framebuffer") {
+    const row = await runWebRtcSession({
+      matchId: mode === "framebuffer" ? "smoke_fb_0" : "smoke_webrtc_0",
+      injectFrames: mode === "framebuffer" ? 30 : 0,
     });
-    const started = await session.start();
-    const v1 = await attachViewer(session, 1, wrtc);
-    const v2 = await attachViewer(session, 2, wrtc);
-    // fan-out onSignal para ambos viewers
-    session.onSignal = (slot, signal) => {
-      signals.push({ slot, signal });
-      v1.onSignal(slot, signal);
-      v2.onSignal(slot, signal);
-    };
-
-    await session.signal(1, { kind: "viewer-ready" });
-    await session.signal(2, { kind: "viewer-ready" });
-
-    const deadline = Date.now() + 8000;
-    while (Date.now() < deadline) {
-      const connected = peerStates.filter((p) => p.state === "connected");
-      const slots = new Set(connected.map((p) => p.slot));
-      if (slots.has(1) && slots.has(2) && v1.remoteTrack && v2.remoteTrack) break;
-      await new Promise((r) => setTimeout(r, 50));
-    }
-
-    await session.resume();
-    await new Promise((r) => setTimeout(r, 400));
-    for (let k = 0; k < 5; k++) {
-      await session.input(1, 0, 1);
-      await session.input(1, 0, 0);
-    }
-
-    const connectedSlots = [
-      ...new Set(
-        peerStates.filter((p) => p.state === "connected").map((p) => p.slot),
-      ),
-    ].sort();
-    const offers = signals.filter((s) => s.signal?.kind === "offer").length;
-    sessions.push({
-      session,
-      i: 0,
-      peerCount: connectedSlots.length,
-      sampleCount: session.lastSample?.frame || 0,
-      lastSample: session.lastSample,
-      manifest: session.manifest,
-      webrtc: {
-        connectedSlots,
-        offers,
-        tracks: { 1: v1.remoteTrack, 2: v2.remoteTrack },
-        pc1: v1.pc.connectionState,
-        pc2: v2.pc.connectionState,
-      },
-    });
-
-    if (connectedSlots.length < 2)
-      throw new Error("WebRTC: peers não conectaram a tempo");
-    if (!v1.remoteTrack || !v2.remoteTrack)
-      throw new Error("WebRTC: track de vídeo não chegou nos viewers");
-    void started;
-    // Não chamar pc.close() — wrtc pode segfault no teardown do smoke.
+    sessions.push(row);
   } else {
     for (let i = 0; i < n; i++) {
       let peerCount = 0;
@@ -208,6 +268,7 @@ try {
           samples: s.sampleCount,
           lastFrame: s.lastSample?.frame ?? null,
           webrtc: s.webrtc || null,
+          framebuffer: s.framebuffer || null,
           manifest: s.manifest,
         })),
       },
@@ -215,7 +276,6 @@ try {
       2,
     ),
   );
-  // @roamhq/wrtc pode segfault em close/GC — encerra após o relatório.
   for (const { session } of sessions) {
     try {
       session.child?.kill("SIGKILL");
