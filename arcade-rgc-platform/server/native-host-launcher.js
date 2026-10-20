@@ -85,11 +85,12 @@ export function buildNativeHostLaunch(env = process.env) {
       env.HOST_BOT_ROM || path.join(workdir, "kof2002.zip"),
     );
     const core = resolveRetroArchCore(bin, env);
-    const append =
-      env.HOST_BOT_APPENDCONFIG ||
-      path.join(root, "scripts/host-bot-lua/retroarch-lab.cfg");
+    // Sempre regenera cfg no workdir (gdi + anti-quit). Override: HOST_BOT_APPENDCONFIG.
+    const append = env.HOST_BOT_APPENDCONFIG
+      ? path.resolve(env.HOST_BOT_APPENDCONFIG)
+      : writeRuntimeAppendConfig(workdir, env);
     const verbose =
-      String(env.HOST_BOT_VERBOSE || "").trim() === "1" ||
+      String(env.HOST_BOT_VERBOSE || "1").trim() === "1" ||
       String(env.HOST_BOT_VERBOSE || "").toLowerCase() === "true";
     const args = [
       "-L",
@@ -126,17 +127,42 @@ export function buildNativeHostLaunch(env = process.env) {
 }
 
 /** Conteúdo mínimo de appendconfig para lab (teclado P1+P2). */
-export function defaultRetroArchLabConfig() {
+export function defaultRetroArchLabConfig(env = process.env) {
+  const driver = String(env.HOST_BOT_VIDEO_DRIVER || "gdi").trim();
   return [
     "# Gerado para lab Host Bot — teclado P1/P2 (native-input-map)",
+    driver ? `video_driver = "${driver}"` : "# video_driver (default)",
     'video_fullscreen = "false"',
     'video_windowed_fullscreen = "false"',
+    'video_threaded = "false"',
     'audio_enable = "false"',
     'fps_show = "false"',
+    'config_save_on_exit = "false"',
+    'quit_on_close_content = "false"',
+    'pause_nonactive = "false"',
     'input_exit_emulator = "nul"',
+    'input_close_content = "nul"',
+    'input_menu_toggle = "nul"',
+    'input_toggle_fullscreen = "nul"',
     'input_autodetect_enable = "false"',
     ...retroArchKeyboardLines(1),
     ...retroArchKeyboardLines(2),
     "",
   ].join("\n");
+}
+
+/**
+ * Grava appendconfig no workdir (paths estáveis no Windows).
+ * Preferido a apontar para scripts/ no repo (evita cfg antigo em cache).
+ */
+export function writeRuntimeAppendConfig(workdir, env = process.env) {
+  const dir = workdir || path.join(root, "data/hosted/kof2002");
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch {
+    /* ignore */
+  }
+  const dest = path.join(dir, "arena-host-runtime.cfg");
+  fs.writeFileSync(dest, defaultRetroArchLabConfig(env), "utf8");
+  return dest;
 }

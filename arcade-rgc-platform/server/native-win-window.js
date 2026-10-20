@@ -129,13 +129,13 @@ public class ArenaFocus {
   [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
 }
 "@
-$HWND_TOPMOST = [IntPtr](-1)
+# HWND_TOP (não TOPMOST — TOPMOST já foi associado a fechos estranhos em alguns PCs)
+$HWND_TOP = [IntPtr]::Zero
 $SWP = 0x0001 -bor 0x0002 -bor 0x0040
 if ([ArenaFocus]::IsIconic($h)) { [ArenaFocus]::ShowWindow($h, 9) | Out-Null }
 [ArenaFocus]::ShowWindow($h, 5) | Out-Null
+[ArenaFocus]::SetWindowPos($h, $HWND_TOP, 0, 0, 0, 0, $SWP) | Out-Null
 [ArenaFocus]::BringWindowToTop($h) | Out-Null
-# TOPMOST: crop desktop não filma o browser por cima do RetroArch
-[ArenaFocus]::SetWindowPos($h, $HWND_TOPMOST, 0, 0, 0, 0, $SWP) | Out-Null
 [ArenaFocus]::SetForegroundWindow($h) | Out-Null
 "ok"
 `;

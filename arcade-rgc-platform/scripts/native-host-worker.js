@@ -31,7 +31,6 @@ import {
   waitForWindowByPid,
   focusWindow,
   getWindowClientRect,
-  hwndGrabInput,
 } from "../server/native-win-window.js";
 
 const mode = String(process.env.HOST_BOT_MODE || "stub").toLowerCase();
@@ -187,51 +186,68 @@ async function startFramebufferWithFallback(frameSource) {
   delete process.env.HOST_BOT_FFMPEG_SIZE;
   process.env.HOST_BOT_FFMPEG_INPUT_KIND = "gdigrab";
 
-  // 1) desktop+crop da HWND: no Windows o DWM mostra o GL; title= BitBlt costuma
-  //    falhar → 0 frames → barras synthetic cinzentas (o que viste no print).
-  if (gameAlive() && state.gameHwnd) {
+  // NUNCA title=/hwnd= — BitBlt no GL/D3D mata o RetroArch neste PC.
+  // Só desktop+crop DWM da HWND, com retries enquanto o PID viver.
+  const attempts = Number(process.env.HOST_BOT_CAPTURE_RETRIES) || 3;
+  for (let i = 0; i < attempts; i++) {
+    if (!gameAlive() || !state.gameHwnd) {
+      return {
+        ok: false,
+        error: "retroarch-morto-antes-captura",
+        stderr: (state.game?.stderr || "").slice(-600),
+      };
+    }
     await focusWindow(state.gameHwnd);
-    await new Promise((r) => setTimeout(r, 400));
-    const rect = await getWindowClientRect(state.gameHwnd);
-    if (rect && rect.width >= 64 && rect.height >= 64 && rect.width < 3840) {
-      process.env.HOST_BOT_FFMPEG_INPUT = "desktop";
-      process.env.HOST_BOT_FFMPEG_OFFSET_X = String(rect.x);
-      process.env.HOST_BOT_FFMPEG_OFFSET_Y = String(rect.y);
-      process.env.HOST_BOT_FFMPEG_SIZE = `${rect.width}x${rect.height}`;
-      emit({
-        event: "progress",
-        stage: "framebuffer-try",
-        detail: { to: "desktop-crop-while-alive", ...rect },
+    await new Promise((r) => setTimeout(r, 500));
+    // Re-resolve HWND (splash → janela real)
+    try {
+      const again = await waitForWindowByPid(state.game.pid, {
+        timeoutMs: 1500,
+        intervalMs: 200,
       });
-      const { fb, got } = await tryFfmpeg(frameSource, "desktop-crop");
-      if (got) return fb;
-    } else {
+      if (again?.hwnd) {
+        state.gameHwnd = again.hwnd;
+        state.gameTitle = again.title || state.gameTitle;
+      }
+    } catch {
+      /* ignore */
+    }
+    const rect = await getWindowClientRect(state.gameHwnd);
+    if (!rect || rect.width < 64 || rect.height < 64 || rect.width >= 3840) {
       emit({
         event: "progress",
         stage: "framebuffer-skip",
-        detail: { error: "rect-invalid", rect: rect || null },
+        detail: { error: "rect-invalid", attempt: i + 1, rect: rect || null },
       });
+      await new Promise((r) => setTimeout(r, 800));
+      continue;
     }
-  }
-
-  // 2) title= (exacto + RetroArch) se o crop falhou
-  const titles = [];
-  if (state.gameTitle) titles.push(state.gameTitle);
-  titles.push("RetroArch", "FinalBurn", "FBNeo");
-  const uniq = [
-    ...new Set(titles.map((t) => String(t).trim()).filter(Boolean)),
-  ];
-  for (const t of uniq) {
-    if (!gameAlive()) break;
-    delete process.env.HOST_BOT_FFMPEG_OFFSET_X;
-    delete process.env.HOST_BOT_FFMPEG_OFFSET_Y;
-    delete process.env.HOST_BOT_FFMPEG_SIZE;
-    process.env.HOST_BOT_FFMPEG_INPUT = "title=" + t;
-    const { fb, got } = await tryFfmpeg(frameSource, "title=" + t);
+    process.env.HOST_BOT_FFMPEG_INPUT = "desktop";
+    process.env.HOST_BOT_FFMPEG_OFFSET_X = String(rect.x);
+    process.env.HOST_BOT_FFMPEG_OFFSET_Y = String(rect.y);
+    process.env.HOST_BOT_FFMPEG_SIZE = `${rect.width}x${rect.height}`;
+    emit({
+      event: "progress",
+      stage: "framebuffer-try",
+      detail: { to: "desktop-crop", attempt: i + 1, ...rect },
+    });
+    const { fb, got } = await tryFfmpeg(frameSource, "desktop-crop-" + (i + 1));
+    if (!gameAlive()) {
+      return {
+        ok: false,
+        error: "retroarch-fechou-durante-ffmpeg",
+        stderr: (state.game?.stderr || "").slice(-800),
+      };
+    }
     if (got) return fb;
+    await new Promise((r) => setTimeout(r, 600));
   }
 
-  return { ok: false, error: "sem-frames-retroarch" };
+  return {
+    ok: false,
+    error: "sem-frames-desktop-crop",
+    stderr: (state.game?.stderr || "").slice(-600),
+  };
 }
 
 async function ensureMedia(iceServers) {
@@ -256,8 +272,7 @@ async function ensureMedia(iceServers) {
   state.mediaBackend = state.media.backend;
 
   if (!state.ffmpegFb && state.media.frameSource) {
-    const fb = await startFramebufferWithFallback(state.media.frameSource);
-    if (fb.ok) state.ffmpegFb = fb;
+    state.ffmpegFb = await startFramebufferWithFallback(state.media.frameSource);
   }
   return state.media;
 }
@@ -338,43 +353,52 @@ async function handle(msg) {
           delete process.env.HOST_BOT_FFMPEG_OFFSET_X;
           delete process.env.HOST_BOT_FFMPEG_OFFSET_Y;
           delete process.env.HOST_BOT_FFMPEG_SIZE;
-          const grabMode = String(
-            process.env.HOST_BOT_FFMPEG_GRAB || "title",
-          ).toLowerCase();
           process.env.HOST_BOT_FFMPEG_INPUT_KIND = "gdigrab";
+          // Nunca title=/hwnd= (BitBlt crash). Crop prepara-se em ensureMedia.
+          process.env.HOST_BOT_FFMPEG_GRAB = "desktop-crop";
           if (!win?.hwnd) {
             emit({
               event: "failure",
               message:
-                "Janela do RetroArch não apareceu. pid=" + state.game.pid,
+                "Janela do RetroArch não apareceu. pid=" +
+                state.game.pid +
+                " stderr=" +
+                (state.game.stderr || "").slice(-400),
             });
             return;
           }
           state.gameHwnd = win.hwnd;
           state.gameTitle = win.title || "RetroArch";
           await focusWindow(win.hwnd);
-          // Estabiliza: se fechar nos próximos 2s, falha antes do ffmpeg.
-          await new Promise((r) => setTimeout(r, 2000));
+          // Estabiliza: se fechar nos próximos 3.5s, falha antes do ffmpeg.
+          await new Promise((r) => setTimeout(r, 3500));
           if (!gameAlive()) {
             emit({
               event: "failure",
-              message: "RetroArch fechou logo após abrir a janela.",
+              message:
+                "RetroArch fechou logo após abrir a janela. stderr=" +
+                (state.game.stderr || "").slice(-500),
             });
             return;
           }
-          if (grabMode === "hwnd") {
-            const grab = hwndGrabInput(win.hwnd);
-            process.env.HOST_BOT_FFMPEG_INPUT = grab || "title=RetroArch";
-          } else {
-            process.env.HOST_BOT_FFMPEG_INPUT = "title=" + state.gameTitle;
+          // Re-lê HWND após boot (GDI/splash).
+          const win2 = await waitForWindowByPid(state.game.pid, {
+            timeoutMs: 2000,
+            intervalMs: 250,
+          });
+          if (win2?.hwnd) {
+            state.gameHwnd = win2.hwnd;
+            state.gameTitle = win2.title || state.gameTitle;
+            await focusWindow(state.gameHwnd);
           }
+          process.env.HOST_BOT_FFMPEG_INPUT = "desktop";
           emit({
             event: "progress",
             stage: "game-window",
             detail: {
-              hwnd: win.hwnd,
+              hwnd: state.gameHwnd,
               title: state.gameTitle,
-              grab: process.env.HOST_BOT_FFMPEG_INPUT,
+              grab: "desktop-crop",
               alive: true,
             },
           });
@@ -412,13 +436,18 @@ async function handle(msg) {
       // Partida real: NÃO seguir com barras synthetic (falso “vídeo”).
       const ext = state.media?.frameSource?.externalCount || 0;
       if (state.game?.ok && ext < 1) {
+        const why = state.ffmpegFb?.error || "sem-frames";
         emit({
           event: "failure",
           message:
-            "Sem frames do RetroArch (ffmpeg). Viste barras cinzentas = lab synthetic, não o KOF. title=" +
+            "Sem frames do RetroArch (" +
+            why +
+            "). alive=" +
+            gameAlive() +
+            " title=" +
             (state.gameTitle || "") +
-            " alive=" +
-            gameAlive(),
+            " stderr=" +
+            (state.game?.stderr || "").slice(-400),
         });
         return;
       }

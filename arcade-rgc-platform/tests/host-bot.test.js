@@ -134,6 +134,9 @@ test("launcher: RetroArch monta -L fbneo + rom", () => {
   assert.equal(launch.command, "C:\\games\\retroarch.exe");
   assert.ok(launch.args.includes("-L"));
   assert.ok(launch.args.includes("fbneo_libretro"));
+  assert.ok(launch.args.includes("--appendconfig"));
+  const cfg = launch.args[launch.args.indexOf("--appendconfig") + 1];
+  assert.ok(String(cfg).includes("arena-host-runtime.cfg"));
 });
 
 test("normalizeSample + observeSample liquidam sem RASTATE", () => {
