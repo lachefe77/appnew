@@ -151,28 +151,37 @@ npm run smoke:hosted-queue
 
 ## Fase 4b — jogo real (RetroArch + vídeo + input)
 
-1. Instala RetroArch + core FBNeo; `ffmpeg` no PATH.  
-2. ROM/BIOS: `npm run setup:hosted -- --rom "C:\caminho\kof2002.zip" --bios "C:\caminho\neogeo.zip"`  
-3. No `.env`:
+1. Instala RetroArch (https://www.retroarch.com) + core **FBNeo**; `ffmpeg` no PATH.  
+2. Copia ROM/BIOS **que já tenhas** (o repo não fornece nem descarrega jogos):
 
-```env
+```powershell
+# Troca pelos caminhos reais no teu disco — "C:\seu\..." era só exemplo.
+npm run setup:hosted -- --rom "D:\roms\kof2002.zip" --bios "D:\roms\neogeo.zip"
+```
+
+3. Grava `.env` **sem BOM** (PowerShell). Ajusta `HOST_BOT_BIN` para o `retroarch.exe` real:
+
+```powershell
+$ra = (Get-Command retroarch -ErrorAction SilentlyContinue)?.Source
+if (-not $ra) { $ra = "C:\Program Files\RetroArch\retroarch.exe" }
+@"
 HOSTED_ENGINE=native
 HOSTED_MAX_SESSIONS=6
-HOST_BOT_BIN=C:\caminho\retroarch.exe
+HOST_BOT_BIN=$ra
 HOST_BOT_KIND=retroarch
 HOST_BOT_WORKDIR=data/hosted/kof2002
 HOST_BOT_FFMPEG=ffmpeg
 HOST_BOT_FFMPEG_INPUT_KIND=gdigrab
 HOST_BOT_FFMPEG_INPUT=title=RetroArch
 HOST_BOT_INPUT=auto
+"@ | Set-Content -Path .env -Encoding utf8NoBOM
 ```
 
 4. Testa:
 
 ```powershell
 npm run check:host-bot
-$env:HOSTED_ENGINE="native"
-# Carrega .env no start do server; smoke do worker:
+# Esperado: phase "ready-game" (bin/rom/bios/ffmpeg ok)
 npm run smoke:host-bot -- 1 webrtc
 npm run test:local
 ```
