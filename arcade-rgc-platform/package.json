@@ -16,7 +16,8 @@
     "setup:emulator": "node scripts/setup-emulatorjs.js",
     "setup:hosted": "node scripts/setup-hosted-game.js",
     "test:local": "node scripts/start-local-test.js",
-    "smoke:host-bot": "node scripts/smoke-host-bot.js"
+    "smoke:host-bot": "node scripts/smoke-host-bot.js",
+    "bench:host-bot": "node scripts/bench-host-bot-capacity.js"
   },
   "engines": {
     "node": ">=22"

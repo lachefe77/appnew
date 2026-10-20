@@ -32,8 +32,8 @@ import {
   resolveHostedEngine,
 } from "./host-bot-factory.js";
 import {
-  capacityForKnownVps,
   estimateHostedCapacity,
+  hostedCapOpsPayload,
 } from "./host-bot-capacity.js";
 import {
   makeRules,
@@ -1417,23 +1417,15 @@ export function startPlatform({
         }
         if (p === "/api/ops/hosted-cap" && req.method === "GET") {
           const engine = resolveHostedEngine();
-          return json(res, 200, {
-            hostedEngine: engine,
-            hostedMaxSessions: hostedCap(),
-            hostedActiveSessions: hostedActiveCount(),
-            isolation:
-              engine === "native"
-                ? "host-bot-process-per-session"
-                : "playwright-browser-per-session",
-            capacityEstimate: {
-              testVps4g2c: capacityForKnownVps("test4g2c", engine),
-              prodVps10g5c: capacityForKnownVps("prod10g5c", engine),
-            },
-            note:
-              engine === "native"
-                ? "Host Bot nativo (sem Chrome). Calibrar HOSTED_MAX_SESSIONS com carga real."
-                : "Engine chrome/Playwright — densidade baixa; use HOSTED_ENGINE=native.",
-          });
+          return json(
+            res,
+            200,
+            hostedCapOpsPayload({
+              engine,
+              hostedMaxSessions: hostedCap(),
+              hostedActiveSessions: hostedActiveCount(),
+            }),
+          );
         }
         if (p === "/api/ops/capacity" && req.method === "GET") {
           const url = new URL(req.url, "http://local");

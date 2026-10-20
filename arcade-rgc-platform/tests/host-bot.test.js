@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import {
   estimateHostedCapacity,
   capacityForKnownVps,
+  calibrateFromMeasurement,
+  writeCapacityReport,
+  readLatestCapacityReport,
+  hostedCapOpsPayload,
 } from "../server/host-bot-capacity.js";
 import {
   resolveHostedEngine,
@@ -343,6 +347,50 @@ test("framebuffer: RGB24→I420 + pushExternal prioriza external", () => {
   assert.equal(src.externalCount, 1);
   assert.equal(lastSource, "external");
   src.stop();
+});
+
+test("Fase 3: calibrateFromMeasurement recomenda HOSTED_MAX_SESSIONS", () => {
+  const cal = calibrateFromMeasurement({
+    sessions: 6,
+    durationSec: 30,
+    mode: "peers",
+    ramMb: 4096,
+    vcpu: 2,
+    baselineRssMb: 40,
+    failures: 0,
+    samples: [
+      { at: 1, rssMb: 40, sessions: 0 },
+      { at: 2, rssMb: 120, sessions: 6 },
+      { at: 3, rssMb: 125, sessions: 6 },
+      { at: 4, rssMb: 122, sessions: 6 },
+    ],
+  });
+  assert.equal(cal.stable, true);
+  assert.ok(cal.rss.mbPerSession >= 30);
+  assert.ok(cal.recommendedHostedMaxSessions >= 1);
+  assert.match(cal.suggestedEnv, /^HOSTED_MAX_SESSIONS=\d+$/);
+
+  const written = writeCapacityReport({
+    at: new Date().toISOString(),
+    hostPhase: 3,
+    phase: "ok",
+    sessions: 6,
+    durationSec: 30,
+    mode: "peers",
+    calibration: cal,
+  });
+  assert.ok(written.latest.includes("latest.json"));
+  const latest = readLatestCapacityReport();
+  assert.equal(latest.calibration.recommendedHostedMaxSessions, cal.recommendedHostedMaxSessions);
+
+  const ops = hostedCapOpsPayload({
+    engine: "native",
+    hostedMaxSessions: 1,
+    hostedActiveSessions: 0,
+  });
+  assert.ok(ops.capacityEstimate.testVps4g2c.recommended >= 4);
+  assert.ok(ops.capacityMeasured);
+  assert.equal(ops.capacityMeasured.calibration.recommendedHostedMaxSessions, cal.recommendedHostedMaxSessions);
 });
 
 test("framebuffer: ffmpeg lavfi cmdline + injectFrame no worker", async () => {

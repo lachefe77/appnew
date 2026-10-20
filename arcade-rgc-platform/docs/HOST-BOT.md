@@ -47,7 +47,7 @@ Produção leve: `HOSTED_ENGINE=native`.
 | **1** | Bot Windows: spawn + input + sample de estado | 1 X1 lab sem Playwright ✅ |
 | **2** | Encode leve + WebRTC para 2 peers (320p30) | 2 viewers com track sem Chrome ✅ |
 | **2b** | Framebuffer FBNeo/ffmpeg → WebRTC | injectFrame + pipe ffmpeg (gdigrab/lavfi) ✅ |
-| **3** | Capacidade medida na VPS 4 GB | Relatório N partidas estáveis ≥ 10 min |
+| **3** | Capacidade medida na VPS 4 GB | Bench N sessões + relatório; ≥600s na VPS |
 | **4** | `HOSTED_MAX_SESSIONS` calibrado + fila | Meta teste 5–8; desenho 20 |
 | **5** | VPS 10 GB / 5 vCPU | Validar 20 X1 com folga |
 
@@ -125,6 +125,31 @@ $env:HOST_BOT_FFMPEG_INPUT_KIND="lavfi"
 $env:HOST_BOT_FFMPEG_INPUT="testsrc=size=320x240:rate=30"
 npm run smoke:host-bot -- 1 webrtc
 ```
+
+## Fase 3 (atual) — capacidade medida
+
+Critério: N Host Bots estáveis; na **VPS** manter **≥ 600 s (10 min)**.
+
+```powershell
+cd "C:\Users\Pc Gamer\Documents\appnew"
+git pull
+cd arcade-rgc-platform
+npm ci
+$env:HOSTED_ENGINE="native"
+
+# Lab no PC (30s):
+npm run bench:host-bot -- --sessions 4 --duration 30 --mode peers
+
+# VPS 4GB (10 min) — prova Fase 3:
+npm run bench:host-bot -- --sessions 6 --duration 600 --mode peers --ramMb 4096 --vcpu 2
+```
+
+O relatório vai para `data/capacity/latest.json` e aparece em `GET /api/ops/hosted-cap` (`capacityMeasured`).  
+Usa `calibration.suggestedEnv` (ex. `HOSTED_MAX_SESSIONS=6`) como ponto de partida.
+
+Modos:
+- `peers` — densidade de processos (leve, AUTO_PEERS + media lab)
+- `webrtc` — mais próximo do real (2 viewers + encode por X1)
 
 ## Números honestos
 
