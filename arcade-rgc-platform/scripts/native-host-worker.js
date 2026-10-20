@@ -132,7 +132,7 @@ function stopCapture(reason) {
   } catch {
     /* ignore */
   }
-  // Mata ffmpeg órfão (senão continua a filmar o desktop).
+  // Mata ffmpeg órfão (senão continua a filmar o desktop + “som fantasma”).
   try {
     const pid = fb?.child?.pid;
     if (pid) process.kill(pid, "SIGKILL");
@@ -141,6 +141,11 @@ function stopCapture(reason) {
   }
   try {
     state.media?.frameSource?.pause?.();
+  } catch {
+    /* ignore */
+  }
+  try {
+    state.media?.frameSource?.close?.();
   } catch {
     /* ignore */
   }
@@ -173,7 +178,9 @@ function armGameWatchdog() {
 }
 
 async function tryFfmpeg(frameSource, label) {
-  const fb = startFfmpegFramebuffer(frameSource, { ...process.env });
+  const fb = startFfmpegFramebuffer(frameSource, { ...process.env }, {
+    shouldAccept: () => gameAlive(),
+  });
   if (!fb.ok) {
     emit({
       event: "progress",
@@ -434,6 +441,37 @@ async function handle(msg) {
             hwnd: state.gameHwnd || null,
           });
           state.pendingCredits = false;
+          // Fichas 1+1 ANTES do ffmpeg — SetForegroundWindow + gdigrab = RA fecha.
+          if (state.input && !state.creditsSeeded) {
+            emit({ event: "progress", stage: "credits" });
+            try {
+              await injectCabinetCredits(state.input);
+              state.creditsSeeded = true;
+              if (!gameAlive()) {
+                emit({
+                  event: "failure",
+                  message: "RetroArch fechou ao inserir fichas (antes do vídeo).",
+                });
+                return;
+              }
+              emit({
+                event: "progress",
+                stage: "cabinet-credits",
+                detail: {
+                  pulses: "1+1",
+                  keys: "Y/H",
+                  when: "before-ffmpeg",
+                  backend: state.input?.backend,
+                },
+              });
+            } catch (err) {
+              emit({
+                event: "progress",
+                stage: "cabinet-credits-fail",
+                detail: { error: String(err?.message || err) },
+              });
+            }
+          }
           armGameWatchdog();
         } else {
           emit({
@@ -445,8 +483,7 @@ async function handle(msg) {
       }
 
       emit({ event: "progress", stage: "media" });
-      // Só inicia captura se o core ainda estiver vivo.
-      if (state.game?.ok && state.game.child?.exitCode != null) {
+      if (state.game?.ok && !gameAlive()) {
         emit({
           event: "failure",
           message: "RetroArch fechou antes da captura de vídeo.",
@@ -455,15 +492,17 @@ async function handle(msg) {
       }
       await ensureMedia(state.iceServers);
       if (state.game?.ok && !gameAlive()) {
+        stopCapture("dead-after-ffmpeg-start");
         emit({
           event: "failure",
           message: "RetroArch fechou ao iniciar o ffmpeg.",
         });
         return;
       }
-      // Partida real: NÃO seguir com barras synthetic (falso “vídeo”).
+      // Partida real: NÃO seguir com barras synthetic nem desktop órfão.
       const ext = state.media?.frameSource?.externalCount || 0;
       if (state.game?.ok && ext < 1) {
+        stopCapture("no-frames");
         const why = state.ffmpegFb?.error || "sem-frames";
         emit({
           event: "failure",
@@ -479,7 +518,6 @@ async function handle(msg) {
         });
         return;
       }
-      emit({ event: "progress", stage: "credits" });
       if (autoPeers) armPeers();
       state.readySent = true;
       emit({
@@ -497,6 +535,7 @@ async function handle(msg) {
                 backend: state.input?.backend,
                 alive: gameAlive(),
                 title: state.gameTitle || null,
+                credits: state.creditsSeeded ? "1+1" : null,
               }
             : null,
           framebuffer: ext > 0 ? "ffmpeg" : "inject-or-synthetic",
@@ -506,45 +545,6 @@ async function handle(msg) {
         },
       });
       emitSample();
-      // Duelo aceite → exactamente 1 ficha P1 (Y) + 1 ficha P2 (H). Sem F-keys.
-      if (state.input && state.game?.ok && !state.creditsSeeded) {
-        state.pendingCredits = true;
-        const seed = async () => {
-          await new Promise((r) => setTimeout(r, 2500));
-          if (!gameAlive()) return;
-          await injectCabinetCredits(state.input);
-          state.creditsSeeded = true;
-        };
-        seed()
-          .then(() => {
-            state.pendingCredits = false;
-            if (!gameAlive()) {
-              emit({
-                event: "failure",
-                message: "RetroArch fechou ao inserir fichas.",
-              });
-              return;
-            }
-            emit({
-              event: "progress",
-              stage: "cabinet-credits",
-              detail: {
-                pulses: "1+1",
-                keys: "Y/H",
-                backend: state.input?.backend,
-                alive: true,
-              },
-            });
-          })
-          .catch((err) => {
-            state.pendingCredits = false;
-            emit({
-              event: "progress",
-              stage: "cabinet-credits-fail",
-              detail: { error: String(err?.message || err) },
-            });
-          });
-      }
       return;
     }
     case "input": {

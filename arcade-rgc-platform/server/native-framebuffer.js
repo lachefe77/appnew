@@ -141,8 +141,13 @@ export function attachRawI420Pump(readable, { width, height, onI420, onError }) 
 
 /**
  * Spawna ffmpeg (se configurado) e bombeia I420 para frameSource.pushExternal.
+ * @param {{ shouldAccept?: () => boolean }} [opts] — se false, descarta frames (ex.: RA morto).
  */
-export function startFfmpegFramebuffer(frameSource, env = process.env) {
+export function startFfmpegFramebuffer(
+  frameSource,
+  env = process.env,
+  opts = {},
+) {
   let capture;
   try {
     capture = buildFfmpegFrameCapture(env);
@@ -163,10 +168,15 @@ export function startFfmpegFramebuffer(frameSource, env = process.env) {
     if (stderr.length > 4000) stderr = stderr.slice(-2000);
   });
 
+  const shouldAccept =
+    typeof opts.shouldAccept === "function" ? opts.shouldAccept : () => true;
+
   const pump = attachRawI420Pump(child.stdout, {
     width: capture.width,
     height: capture.height,
     onI420: (data) => {
+      // Nunca empurrar desktop se o RetroArch já morreu.
+      if (!shouldAccept()) return;
       frameSource.pushExternal({
         width: capture.width,
         height: capture.height,
@@ -185,7 +195,7 @@ export function startFfmpegFramebuffer(frameSource, env = process.env) {
     stop() {
       pump.stop();
       try {
-        child.kill("SIGTERM");
+        child.kill("SIGKILL");
       } catch {
         /* ignore */
       }

@@ -87,7 +87,7 @@ export function createInputInjector(opts = {}) {
 
 /**
  * Exactamente 1 ficha P1 (Y) + 1 ficha P2 (H) no RetroArch.
- * Foco breve só neste momento — sem F1/F12.
+ * Chamar ANTES do ffmpeg (foco + keybd ok). Com gdigrab activo isto fecha o RA.
  */
 export async function seedDuelCredits(hwnd, { holdMs = 200, gapMs = 250 } = {}) {
   const h = Number(hwnd) || 0;
