@@ -61,6 +61,8 @@ async function connect() {
   });
   const c = {
     ws,
+    messages,
+    types: () => messages.map((m) => m.type),
     send: (d) => ws.send(JSON.stringify(d)),
     async wait(type, pred = () => true, ms = 10000) {
       const start = Date.now();
@@ -157,9 +159,36 @@ try {
     }),
   );
 
+  // Critério Fase 4: liberar a sessão ativa promove a fila (HOSTED_DEQUEUED).
+  // Não exigir MATCH_CANCELLED: após HOSTED_READY o cancel pode competir com
+  // ROOM_USERS/WALLET ou ir para REVIEW (evidence async). Nos dois caminhos
+  // clearMatch → promoteHostedQueue; o sinal da fila é só o DEQUEUED.
+  await delay(200);
   a.send({ type: "CANCEL_MATCH", matchId: m1.matchId });
-  await a.wait("MATCH_CANCELLED");
-  const deq = await c.wait("HOSTED_DEQUEUED");
+  b.send({ type: "CANCEL_MATCH", matchId: m1.matchId });
+
+  let deq;
+  try {
+    deq = await Promise.race([
+      c.wait("HOSTED_DEQUEUED", (x) => x.matchId === m2.matchId, 25000),
+      d.wait("HOSTED_DEQUEUED", (x) => x.matchId === m2.matchId, 25000),
+    ]);
+  } catch (error) {
+    throw new Error(
+      error.message +
+        " | aTypes=" +
+        JSON.stringify(a.types().slice(-12)) +
+        " | cTypes=" +
+        JSON.stringify(c.types().slice(-12)),
+    );
+  }
+
+  const aTypes = a.types();
+  const via = aTypes.includes("MATCH_REVIEW_OPENED")
+    ? "review-promoted"
+    : aTypes.includes("MATCH_CANCELLED")
+      ? "cancelled-promoted"
+      : "dequeued";
 
   const cap = await request("/api/ops/hosted-cap");
   console.log(
@@ -167,6 +196,7 @@ try {
       {
         phase: "ok",
         hostPhase: 4,
+        via,
         dequeuedMatchId: deq.matchId || m2.matchId,
         hostedMaxSessionsEnv: 1,
         hostedMaxSessionsApi: cap.body?.hostedMaxSessions,
