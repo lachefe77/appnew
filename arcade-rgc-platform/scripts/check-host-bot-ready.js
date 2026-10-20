@@ -5,15 +5,23 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
 import { resolveHostedEngine } from "../server/host-bot-factory.js";
 import { resolveHostedMaxSessions } from "../server/hosted-queue.js";
-import { buildNativeHostLaunch } from "../server/native-host-launcher.js";
+import {
+  buildNativeHostLaunch,
+  resolveHostBotBin,
+} from "../server/native-host-launcher.js";
 import { buildFfmpegFrameCapture } from "../server/native-framebuffer.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+dotenv.config({ path: path.join(root, ".env") });
+
 const engine = resolveHostedEngine();
 const cap = resolveHostedMaxSessions();
 const launch = buildNativeHostLaunch();
+const binPath = resolveHostBotBin();
+const binExists = !!(binPath && fs.existsSync(binPath));
 const ffmpeg = (() => {
   try {
     return buildFfmpegFrameCapture();
@@ -22,12 +30,24 @@ const ffmpeg = (() => {
   }
 })();
 
-const romDir =
+const romDir = path.resolve(
+  root,
   process.env.HOST_BOT_WORKDIR ||
-  process.env.HOSTED_GAME_DIR ||
-  path.join(root, "data/hosted/kof2002");
-const romZip = process.env.HOST_BOT_ROM || path.join(romDir, "kof2002.zip");
+    process.env.HOSTED_GAME_DIR ||
+    "data/hosted/kof2002",
+);
+const romZip = process.env.HOST_BOT_ROM
+  ? path.resolve(root, process.env.HOST_BOT_ROM)
+  : path.join(romDir, "kof2002.zip");
 const biosZip = path.join(romDir, "neogeo.zip");
+
+function binDetail() {
+  if (!binPath)
+    return "HOST_BOT_BIN vazio → stub lab (OK para fila; falta para jogo real)";
+  if (!binExists)
+    return `HOST_BOT_BIN aponta para ficheiro inexistente: ${binPath}`;
+  return `launch mode=${launch.mode} bin=${launch.command}`;
+}
 
 const checks = [
   {
@@ -47,11 +67,8 @@ const checks = [
   },
   {
     id: "bin",
-    ok: launch.mode !== "stub",
-    detail:
-      launch.mode === "stub"
-        ? "HOST_BOT_BIN vazio → stub lab (OK para fila; falta para jogo real)"
-        : `launch mode=${launch.mode} bin=${launch.command}`,
+    ok: launch.mode !== "stub" && binExists,
+    detail: binDetail(),
   },
   {
     id: "rom",
