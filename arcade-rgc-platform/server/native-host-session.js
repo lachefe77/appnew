@@ -119,6 +119,17 @@ export class NativeHostSession {
       case "failure":
         this.fail(ev.message || "Falha do Host Bot.");
         break;
+      case "progress":
+        if (
+          ev.stage === "game-exit" ||
+          ev.stage === "game-window" ||
+          ev.stage === "framebuffer-empty" ||
+          ev.stage === "framebuffer-fallback" ||
+          ev.stage === "cabinet-credits"
+        ) {
+          console.error("[HOST_BOT]", ev.stage, JSON.stringify(ev.detail || {}));
+        }
+        break;
       case "hello":
       case "stopped":
         break;

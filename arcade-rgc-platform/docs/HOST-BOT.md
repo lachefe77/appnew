@@ -63,9 +63,9 @@ Produção leve: `HOSTED_ENGINE=native`.
 5. Clique no vídeo → setas / Z X A S mexem no personagem.
 6. Round jogável; sem crash do host no terminal.
 
-Captura: `video_driver=sdl2` + `gdigrab hwnd=…` (GL puro = ecrã preto).  
-Input: binds RetroArch (`z`/`up`, não `KeyZ`/`ArrowUp`) + `PostMessage` no HWND (browser mantém o foco).  
-Créditos: worker pulsa select/coin no core ao boot (cliente hosted bloqueia button 2).
+Captura: `HOST_BOT_FFMPEG_GRAB=desktop` (crop DWM). **Não uses `hwnd=`** — em muitos PCs o gdigrab na janela GL/D3D **fecha o RetroArch**. Mantém a janela do jogo visível.  
+Input: binds RetroArch (`z`/`up`) + `PostMessage` no HWND.  
+Créditos: injectados depois da captura estável (FICHA desativada no hosted).
 
 ## Fase 1 — sample sem Chrome
 

@@ -58,6 +58,10 @@ const state = {
   ffmpegFb: null,
   game: null,
   input: null,
+  gameHwnd: null,
+  pendingCredits: false,
+  readySent: false,
+  creditsTopup: false,
 };
 
 function emit(obj) {
@@ -128,10 +132,10 @@ async function startFramebufferWithFallback(frameSource) {
   let fb = tryStart(process.env.HOST_BOT_FFMPEG_INPUT || "default");
   if (!fb.ok) return fb;
 
-  // Se hwnd/gdigrab não entregar frames (preto/falha), tenta desktop+crop.
-  const got = await waitForExternalFrames(frameSource, 2200);
+  const got = await waitForExternalFrames(frameSource, 2500);
   if (got) return fb;
 
+  // Re-tenta desktop+crop com foco na janela (não usa hwnd= — crasha o core).
   const hwnd = state.gameHwnd;
   if (hwnd && process.platform === "win32") {
     try {
@@ -140,6 +144,7 @@ async function startFramebufferWithFallback(frameSource) {
       /* ignore */
     }
     await focusWindow(hwnd);
+    await new Promise((r) => setTimeout(r, 300));
     const rect = await getWindowClientRect(hwnd);
     if (rect) {
       process.env.HOST_BOT_FFMPEG_INPUT_KIND = "gdigrab";
@@ -153,15 +158,16 @@ async function startFramebufferWithFallback(frameSource) {
         detail: { to: "desktop-crop", ...rect },
       });
       fb = tryStart("desktop-crop");
-      if (fb.ok) await waitForExternalFrames(frameSource, 2000);
+      if (fb.ok) await waitForExternalFrames(frameSource, 2500);
     }
-  } else {
+  }
+  if (!got && !(frameSource.externalCount > 0)) {
     emit({
       event: "progress",
       stage: "framebuffer-empty",
       detail: {
         stderr: (fb.stderr || "").slice(-400),
-        hint: "gdigrab sem frames — verifica janela RetroArch visível",
+        hint: "Deixa a janela RetroArch VISÍVEL (sem browsers por cima).",
       },
     });
   }
@@ -224,26 +230,37 @@ async function handle(msg) {
             if (line) emit({ event: "progress", stage: "game-log", detail: line.slice(0, 200) });
           },
           onExit: (code) => {
-            if (state.started && code !== 0 && code != null) {
-              const err = (state.game?.stderr || "").trim().slice(-800);
+            const err = (state.game?.stderr || "").trim().slice(-800);
+            emit({
+              event: "progress",
+              stage: "game-exit",
+              detail: { code, stderr: err.slice(0, 400) },
+            });
+            // Antes do ready: falha dura. Depois: avisa (não mata sessão por exit 0).
+            if (state.started && !state.readySent && code !== 0 && code != null) {
               emit({
                 event: "failure",
                 message:
-                  "Core do jogo encerrou (código " +
+                  "Core do jogo encerrou no boot (código " +
                   code +
                   ")." +
-                  (err ? " stderr=" + err : "") +
-                  " cmd=" +
-                  gameLaunch.command +
-                  " " +
-                  (gameLaunch.args || []).join(" "),
+                  (err ? " stderr=" + err : ""),
+              });
+            } else if (state.started && state.readySent && code !== 0 && code != null) {
+              emit({
+                event: "failure",
+                message:
+                  "Core do jogo fechou durante a partida (código " +
+                  code +
+                  "). Evite HOST_BOT_FFMPEG_GRAB=hwnd — use desktop." +
+                  (err ? " stderr=" + err : ""),
               });
             }
           },
         });
         if (state.game.ok) {
-          // Espera a janela real do RetroArch (título FinalBurn Neo…) antes do gdigrab.
-          const waitMs = Number(process.env.HOST_BOT_GAME_BOOT_MS) || 8000;
+          // Espera a janela; captura SEMPRE desktop+crop (hwnd= costuma crashar o GL).
+          const waitMs = Number(process.env.HOST_BOT_GAME_BOOT_MS) || 10000;
           const win = await waitForWindowByPid(state.game.pid, {
             timeoutMs: waitMs,
           });
@@ -255,28 +272,24 @@ async function handle(msg) {
                 "Core do jogo encerrou no boot (código " +
                 state.game.child.exitCode +
                 ")." +
-                (err ? " stderr=" + err : "") +
-                " cmd=" +
-                gameLaunch.command +
-                " " +
-                (gameLaunch.args || []).join(" "),
+                (err ? " stderr=" + err : ""),
             });
             return;
           }
+          const grabMode = String(
+            process.env.HOST_BOT_FFMPEG_GRAB || "desktop",
+          ).toLowerCase();
+          process.env.HOST_BOT_FFMPEG_INPUT_KIND =
+            process.env.HOST_BOT_FFMPEG_INPUT_KIND || "gdigrab";
+          let grabDetail = { mode: grabMode };
           if (win?.hwnd) {
             state.gameHwnd = win.hwnd;
             await focusWindow(win.hwnd);
-            // hwnd (sdl2) primeiro; se 0 frames, ensureMedia faz fallback desktop-crop.
-            const grabMode = String(
-              process.env.HOST_BOT_FFMPEG_GRAB || "hwnd",
-            ).toLowerCase();
-            process.env.HOST_BOT_FFMPEG_INPUT_KIND =
-              process.env.HOST_BOT_FFMPEG_INPUT_KIND || "gdigrab";
-            let grabDetail = { mode: grabMode };
             if (grabMode === "hwnd") {
               const grab = hwndGrabInput(win.hwnd);
               if (grab) process.env.HOST_BOT_FFMPEG_INPUT = grab;
               grabDetail.grab = grab;
+              grabDetail.warn = "hwnd pode fechar o RetroArch em GL/D3D";
             } else {
               const rect = await getWindowClientRect(win.hwnd);
               if (rect) {
@@ -286,10 +299,8 @@ async function handle(msg) {
                 process.env.HOST_BOT_FFMPEG_SIZE = `${rect.width}x${rect.height}`;
                 grabDetail = { ...grabDetail, ...rect };
               } else {
-                // Fallback: título (precisa video_driver sdl2/gdi no appendconfig).
-                process.env.HOST_BOT_FFMPEG_INPUT =
-                  process.env.HOST_BOT_FFMPEG_INPUT || "title=RetroArch";
-                grabDetail.fallback = process.env.HOST_BOT_FFMPEG_INPUT;
+                process.env.HOST_BOT_FFMPEG_INPUT = "title=RetroArch";
+                grabDetail.fallback = "title=RetroArch";
               }
             }
             emit({
@@ -298,22 +309,22 @@ async function handle(msg) {
               detail: { hwnd: win.hwnd, title: win.title, ...grabDetail },
             });
           } else {
+            process.env.HOST_BOT_FFMPEG_INPUT =
+              process.env.HOST_BOT_FFMPEG_INPUT || "title=RetroArch";
             emit({
               event: "progress",
               stage: "game-window-miss",
               detail: {
                 pid: state.game.pid,
-                fallback: process.env.HOST_BOT_FFMPEG_INPUT || "title=RetroArch",
+                fallback: process.env.HOST_BOT_FFMPEG_INPUT,
               },
             });
           }
           state.input = createInputInjector({
             hwnd: state.gameHwnd || null,
           });
-          // Hosted bloqueia FICHA no cliente — o server injeta créditos no core.
-          await injectCabinetCredits(state.input, { pulses: 3 });
-          emit({ event: "progress", stage: "cabinet-credits" });
-          await new Promise((r) => setTimeout(r, 500));
+          // Créditos DEPOIS do media (evita spam de teclas a fechar menus no boot).
+          state.pendingCredits = true;
         } else {
           emit({
             event: "progress",
@@ -325,10 +336,20 @@ async function handle(msg) {
 
       emit({ event: "progress", stage: "media" });
       await ensureMedia(state.iceServers);
+      // Só agora: fichas no gabinete (core já estável + captura a correr).
+      if (state.pendingCredits && state.input) {
+        if (state.game?.child?.exitCode == null) {
+          await focusWindow(state.gameHwnd);
+          await injectCabinetCredits(state.input, { pulses: 3 });
+          emit({ event: "progress", stage: "cabinet-credits" });
+        }
+        state.pendingCredits = false;
+      }
       emit({ event: "progress", stage: "credits" });
       // Fase 1 smoke / platform sem viewers: AUTO_PEERS marca mídia pronta.
       // Fase 2 real: peers vêm do WebRTC (viewer-ready → connected).
       if (autoPeers) armPeers();
+      state.readySent = true;
       emit({
         event: "ready",
         manifest: {
@@ -339,12 +360,17 @@ async function handle(msg) {
           mode,
           media: state.mediaBackend,
           game: state.game?.ok
-            ? { pid: state.game.pid, backend: state.input?.backend }
+            ? {
+                pid: state.game.pid,
+                backend: state.input?.backend,
+                alive: state.game.child?.exitCode == null,
+              }
             : null,
           framebuffer: state.ffmpegFb?.ok
             ? "ffmpeg"
             : "inject-or-synthetic",
           video: { width: 320, height: 240, fps: 30 },
+          grab: process.env.HOST_BOT_FFMPEG_INPUT || null,
         },
       });
       emitSample();
