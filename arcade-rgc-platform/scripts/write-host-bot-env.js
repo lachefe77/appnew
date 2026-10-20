@@ -81,6 +81,7 @@ const lines = [
   "HOSTED_ENGINE=native",
   "HOSTED_MAX_SESSIONS=6",
   "ENABLE_SIMULATED_FUNDS=1",
+  "DEMO_CREDIT_CENTS=200000",
   `HOST_BOT_BIN=${bin}`,
   "HOST_BOT_KIND=retroarch",
   "HOST_BOT_WORKDIR=data/hosted/kof2002",

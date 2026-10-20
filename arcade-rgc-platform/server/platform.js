@@ -2135,10 +2135,10 @@ export function startPlatform({
                   if (simulation)
                     finance.credit(
                       id,
-                      2000,
+                      Number(process.env.DEMO_CREDIT_CENTS) || 200_000, // R$ 2.000 fake
                       "TEST_CREDIT",
                       "welcome:" + id,
-                      "Créditos de teste, sem valor monetário",
+                      "Créditos de teste R$2000, sem valor monetário",
                     );
                   clearAuthFailures(lockKey);
                 } else {

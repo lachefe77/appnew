@@ -23,6 +23,7 @@
     "smoke:retroarch-alive": "node scripts/smoke-retroarch-alive.js",
     "smoke:retroarch-capture": "node scripts/smoke-retroarch-capture.js",
     "env:host-bot": "node scripts/write-host-bot-env.js",
+    "credit:demo": "node scripts/credit-demo-wallets.js",
     "check:host-bot": "node scripts/check-host-bot-ready.js"
   },
   "engines": {
