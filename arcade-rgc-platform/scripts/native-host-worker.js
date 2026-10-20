@@ -92,10 +92,92 @@ function maybeScriptedProgress() {
   }
 }
 
+async function waitForExternalFrames(frameSource, ms = 2000) {
+  const start = Date.now();
+  const before = frameSource.externalCount || 0;
+  while (Date.now() - start < ms) {
+    if ((frameSource.externalCount || 0) > before) return true;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  return (frameSource.externalCount || 0) > before;
+}
+
+async function startFramebufferWithFallback(frameSource) {
+  const tryStart = (label) => {
+    const fb = startFfmpegFramebuffer(frameSource, { ...process.env });
+    if (fb.ok) {
+      emit({
+        event: "progress",
+        stage: "framebuffer",
+        detail: {
+          via: "ffmpeg",
+          label,
+          input: fb.capture?.args?.slice(0, 10),
+        },
+      });
+    } else {
+      emit({
+        event: "progress",
+        stage: "framebuffer-skip",
+        detail: { error: fb.error || fb.reason || "skip", label },
+      });
+    }
+    return fb;
+  };
+
+  let fb = tryStart(process.env.HOST_BOT_FFMPEG_INPUT || "default");
+  if (!fb.ok) return fb;
+
+  // Se hwnd/gdigrab não entregar frames (preto/falha), tenta desktop+crop.
+  const got = await waitForExternalFrames(frameSource, 2200);
+  if (got) return fb;
+
+  const hwnd = state.gameHwnd;
+  if (hwnd && process.platform === "win32") {
+    try {
+      fb.stop?.();
+    } catch {
+      /* ignore */
+    }
+    await focusWindow(hwnd);
+    const rect = await getWindowClientRect(hwnd);
+    if (rect) {
+      process.env.HOST_BOT_FFMPEG_INPUT_KIND = "gdigrab";
+      process.env.HOST_BOT_FFMPEG_INPUT = "desktop";
+      process.env.HOST_BOT_FFMPEG_OFFSET_X = String(rect.x);
+      process.env.HOST_BOT_FFMPEG_OFFSET_Y = String(rect.y);
+      process.env.HOST_BOT_FFMPEG_SIZE = `${rect.width}x${rect.height}`;
+      emit({
+        event: "progress",
+        stage: "framebuffer-fallback",
+        detail: { to: "desktop-crop", ...rect },
+      });
+      fb = tryStart("desktop-crop");
+      if (fb.ok) await waitForExternalFrames(frameSource, 2000);
+    }
+  } else {
+    emit({
+      event: "progress",
+      stage: "framebuffer-empty",
+      detail: {
+        stderr: (fb.stderr || "").slice(-400),
+        hint: "gdigrab sem frames — verifica janela RetroArch visível",
+      },
+    });
+  }
+  return fb;
+}
+
 async function ensureMedia(iceServers) {
   if (state.media) return state.media;
+  // auto + TTL alto: se gdigrab falhar, não fica preto para sempre (external-only).
+  if (!process.env.HOST_BOT_FRAME_MODE) process.env.HOST_BOT_FRAME_MODE = "auto";
+  if (!process.env.HOST_BOT_EXTERNAL_TTL_MS)
+    process.env.HOST_BOT_EXTERNAL_TTL_MS = "2500";
+
   state.media = await createNativeMediaBridge({
     iceServers: iceServers || [],
+    frameMode: process.env.HOST_BOT_FRAME_MODE,
     emit: (ev) => {
       if (ev.event === "peer") {
         if (ev.state === "connected") state.peers.add(ev.slot);
@@ -107,23 +189,9 @@ async function ensureMedia(iceServers) {
   });
   state.mediaBackend = state.media.backend;
 
-  // Framebuffer real/lab via ffmpeg (gdigrab / lavfi testsrc / ficheiro).
   if (!state.ffmpegFb && state.media.frameSource) {
-    const fb = startFfmpegFramebuffer(state.media.frameSource);
-    if (fb.ok) {
-      state.ffmpegFb = fb;
-      emit({
-        event: "progress",
-        stage: "framebuffer",
-        detail: { via: "ffmpeg", input: fb.capture?.args?.slice(0, 8) },
-      });
-    } else if (fb.error) {
-      emit({
-        event: "progress",
-        stage: "framebuffer-skip",
-        detail: { error: fb.error },
-      });
-    }
+    const fb = await startFramebufferWithFallback(state.media.frameSource);
+    if (fb.ok) state.ffmpegFb = fb;
   }
   return state.media;
 }
@@ -198,8 +266,7 @@ async function handle(msg) {
           if (win?.hwnd) {
             state.gameHwnd = win.hwnd;
             await focusWindow(win.hwnd);
-            // appendconfig força video_driver=sdl2 → hwnd= deixa de ser preto.
-            // desktop= crop do ecrã (falha se o browser tapar a janela do jogo).
+            // hwnd (sdl2) primeiro; se 0 frames, ensureMedia faz fallback desktop-crop.
             const grabMode = String(
               process.env.HOST_BOT_FFMPEG_GRAB || "hwnd",
             ).toLowerCase();
@@ -246,13 +313,6 @@ async function handle(msg) {
           // Hosted bloqueia FICHA no cliente — o server injeta créditos no core.
           await injectCabinetCredits(state.input, { pulses: 3 });
           emit({ event: "progress", stage: "cabinet-credits" });
-          // Evita misturar barras synthetic (riscas) com o vídeo real.
-          if (process.env.HOST_BOT_FFMPEG_INPUT) {
-            process.env.HOST_BOT_FRAME_MODE =
-              process.env.HOST_BOT_FRAME_MODE || "external";
-            process.env.HOST_BOT_EXTERNAL_TTL_MS =
-              process.env.HOST_BOT_EXTERNAL_TTL_MS || "2500";
-          }
           await new Promise((r) => setTimeout(r, 500));
         } else {
           emit({
