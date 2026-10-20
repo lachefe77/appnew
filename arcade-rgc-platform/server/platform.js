@@ -103,6 +103,26 @@ import {
 } from "./sistema-plano.js";
 import { getActiveSeason } from "./seasons.js";
 import { runOffboxBackup } from "../scripts/offbox-backup.js";
+import {
+  scoreInputBurst,
+  logAnomaly,
+  computeAmlRisk,
+  registerFingerprint,
+  Social,
+  KycDocs,
+  TournamentEscrow,
+  SeasonCalendar,
+  PushStore,
+  sendEmailResend,
+  alertTurnMisconfig,
+  matchReceipt,
+  forfeitRulesCopy,
+} from "./plano-30.js";
+import {
+  freerollPendingSlots,
+  freerollCheckIn,
+  freerollResolveNoShows,
+} from "./freeroll.js";
 
 const scrypt = promisify(crypto.scrypt),
   uuid = () => crypto.randomUUID();
@@ -137,6 +157,8 @@ const json = (res, status, value) => {
   });
   res.end(JSON.stringify(value));
 };
+const inputBurstWindows = new Map(); // userId -> [{t,button}]
+
 const userView = (u) => ({
   id: u.id,
   username: u.username,
@@ -169,7 +191,9 @@ const adminUserView = (u) => {
     macFingerprint: u.mac_fp || "",
     location: u.location || "",
     fraudScore: "N/D",
-    amlRisk: "Não avaliado",
+    amlRisk: computeAmlRisk(u.id).level,
+    amlScore: computeAmlRisk(u.id).score,
+    linkedAccounts: registerFingerprint(u.id, u.mac_fp || "")?.linked || [],
   };
 };
 const disputeLockedCents = (id) => {
@@ -241,7 +265,12 @@ export function startPlatform({
   const payments = createPaymentProvider({ simulation });
   const freerolls = new Map();
   const warmPool = new WarmPool({
-    size: Number(process.env.HOSTED_WARM_POOL) || 0,
+    // Default 1 em lab — ETA mais estável; 0 desliga. Isolamento: 1 worker/processo por sessão.
+    size: Number(
+      process.env.HOSTED_WARM_POOL != null && process.env.HOSTED_WARM_POOL !== ""
+        ? process.env.HOSTED_WARM_POOL
+        : 1,
+    ),
     factory: async (meta) => {
       // Pool só pré-aloca handles leves; a sessão real nasce no launchHosted.
       return {
@@ -517,6 +546,52 @@ export function startPlatform({
         m.stake || 0,
       );
     } catch {}
+    // Torneio / freeroll: avança bracket se a partida estiver ligada
+    try {
+      if (m.tournamentId != null && m.tournamentSlot) {
+        tournaments.reportWinner(
+          m.tournamentId,
+          m.tournamentSlot.roundIndex,
+          m.tournamentSlot.matchIndex,
+          winner,
+        );
+        const esc = TournamentEscrow.get(m.tournamentId);
+        if (tournaments.get(m.tournamentId)?.status === "DONE" && esc) {
+          TournamentEscrow.closeAndPayout(m.tournamentId);
+          if (esc.pool_cents > 0) {
+            finance.credit(
+              winner,
+              esc.pool_cents,
+              "TOURNAMENT_PAYOUT",
+              "payout:" + m.tournamentId,
+              "Prêmio torneio",
+            );
+          }
+        }
+      }
+      if (m.freerollId != null && m.freerollSlot) {
+        const fr = freerolls.get(m.freerollId);
+        if (fr)
+          reportFreerollWinner(
+            fr,
+            m.freerollSlot.roundIndex,
+            m.freerollSlot.matchIndex,
+            winner,
+          );
+      }
+    } catch (e) {
+      console.error("[BRACKET]", e.message);
+    }
+    const receipt = matchReceipt({
+      matchId: m.id,
+      mode: m.mode,
+      stakeCents: m.stake,
+      prizeCents: m.prize,
+      rakeCents: m.rake,
+      winnerId: winner,
+      seriesScore: m.seriesScore || { a: 0, b: 0 },
+      seriesBestOf: m.seriesBestOf || 1,
+    });
     both(m, {
       type: "MATCH_ENDED",
       matchId: m.id,
@@ -527,6 +602,9 @@ export function startPlatform({
       seriesScore: m.seriesScore || { a: 0, b: 0 },
       seriesBestOf: m.seriesBestOf || 1,
       rematchEligible: true,
+      receipt,
+      trustNote: receipt.trustNote,
+      forfeitRules: forfeitRulesCopy(),
     });
     for (const id of [m.a, m.b]) {
       const peer = id === m.a ? m.b : m.a;
@@ -1418,9 +1496,16 @@ export function startPlatform({
             } catch (e) {
               throw fail(e.message || "Saldo insuficiente para o buy-in.", 400);
             }
+            TournamentEscrow.addBuyIn(t.id, t.buyInCents);
             walletUpdate(u.id);
+          } else {
+            TournamentEscrow.ensure(t.id);
           }
-          return json(res, 200, { ok: true, tournament: t });
+          return json(res, 200, {
+            ok: true,
+            tournament: t,
+            escrow: TournamentEscrow.get(t.id),
+          });
         }
         if (p === "/api/auth/forgot" && req.method === "POST") {
           const d = await body(req);
@@ -1433,12 +1518,24 @@ export function startPlatform({
               message: "Se o e-mail existir, enviaremos instruções.",
             });
           const { token, expiresAt } = PlanoPasswordReset.create(u.id);
+          const resetUrl = `${process.env.PUBLIC_BASE_URL || ""}/recuperar-senha.html?token=${token}`;
+          const mailed = await sendEmailResend({
+            to: email,
+            subject: "Recuperar senha — Arena Arcade",
+            html: `<p>Use este link (1h): <a href="${resetUrl}">${resetUrl}</a></p><p>Token: ${token}</p>`,
+          });
           const payload = {
             ok: true,
-            message: "Token de recuperação gerado (lab: devolvido na resposta).",
+            message: mailed.sent
+              ? "E-mail de recuperação enviado."
+              : "Se o e-mail existir, enviaremos instruções.",
             expiresAt,
+            email: mailed,
           };
-          if (simulation || process.env.NODE_ENV === "development")
+          if (
+            !mailed.sent &&
+            (simulation || process.env.NODE_ENV === "development")
+          )
             payload.resetToken = token;
           return json(res, 200, payload);
         }
@@ -1463,11 +1560,132 @@ export function startPlatform({
           return json(res, 200, {
             simulation,
             realPix: false,
+            asaasEnabled:
+              String(process.env.ASAAS_ENABLED || "").toLowerCase() === "1",
+            paymentProvider: payments.name,
             kycRequiredForWithdraw: true,
             label: simulation
               ? "Créditos fictícios (lab) — PIX real desligado"
               : "PIX real desligado neste ambiente",
           });
+        }
+        if (p === "/api/rules/forfeit" && req.method === "GET")
+          return json(res, 200, forfeitRulesCopy());
+        if (p === "/api/friends" && req.method === "GET") {
+          const u = httpAccount(req);
+          return json(res, 200, { friends: Social.listFriends(u.id) });
+        }
+        if (p === "/api/dm" && req.method === "GET") {
+          const u = httpAccount(req);
+          const peer = url.searchParams.get("peerId");
+          return json(res, 200, {
+            messages: Social.dmHistory(u.id, peer, 50),
+          });
+        }
+        if (p === "/api/season/calendar" && req.method === "GET") {
+          if (!SeasonCalendar.list().length) {
+            const active = getActiveSeason();
+            if (active)
+              SeasonCalendar.upsert({
+                id: active.id,
+                name: active.name,
+                starts_at: active.starts_at,
+                ends_at: active.ends_at,
+                rewards: [{ place: 1, label: "Badge Temporada" }],
+                ceremony_note: "Encerramento com ranking público.",
+              });
+          }
+          return json(res, 200, { calendar: SeasonCalendar.list() });
+        }
+        if (p === "/api/push/vapid" && req.method === "GET")
+          return json(res, 200, { publicKey: PushStore.vapidPublic() });
+        if (p === "/api/push/subscribe" && req.method === "POST") {
+          const u = httpAccount(req);
+          const d = await body(req);
+          PushStore.save(u.id, d.subscription || d);
+          return json(res, 200, { ok: true });
+        }
+        if (p === "/api/payments/asaas/webhook" && req.method === "POST") {
+          const d = await body(req);
+          const token =
+            req.headers["asaas-access-token"] ||
+            url.searchParams.get("token") ||
+            "";
+          const result = await payments.handleWebhook(d, token);
+          return json(res, 200, result);
+        }
+        if (p === "/api/tournaments/pending" && req.method === "GET") {
+          const id = url.searchParams.get("id");
+          if (!id) return json(res, 200, { pending: [] });
+          return json(res, 200, {
+            pending: tournaments.pendingMatches(id),
+            escrow: TournamentEscrow.get(id) || null,
+          });
+        }
+        if (p === "/api/tournaments/checkin" && req.method === "POST") {
+          const u = httpAccount(req);
+          const d = await body(req);
+          const m = tournaments.checkIn(
+            d.tournamentId,
+            Number(d.roundIndex),
+            Number(d.matchIndex),
+            u.id,
+          );
+          return json(res, 200, { ok: true, match: m });
+        }
+        if (p === "/api/freeroll/checkin" && req.method === "POST") {
+          const u = httpAccount(req);
+          const d = await body(req);
+          const fr = freerolls.get(d.freerollId);
+          if (!fr) throw fail("Freeroll não encontrado.", 404);
+          const m = freerollCheckIn(
+            fr,
+            Number(d.roundIndex),
+            Number(d.matchIndex),
+            u.id,
+          );
+          freerollResolveNoShows(fr);
+          return json(res, 200, {
+            ok: true,
+            match: m,
+            pending: freerollPendingSlots(fr),
+          });
+        }
+        if (p === "/api/overlay/live" && req.method === "GET") {
+          const live = [...matches.values()]
+            .filter((m) => ["RUNNING", "LOADING"].includes(m.phase))
+            .map((m) => ({
+              matchId: m.id,
+              phase: m.phase,
+              mode: m.mode,
+              seriesScore: m.seriesScore || { a: 0, b: 0 },
+              seriesBestOf: m.seriesBestOf || 1,
+              playerA: Users.getById(m.a)?.username,
+              playerB: Users.getById(m.b)?.username,
+              eloA: Users.getById(m.a)?.elo,
+              eloB: Users.getById(m.b)?.elo,
+            }));
+          return json(res, 200, { matches: live });
+        }
+        if (p === "/api/me/kyc" && req.method === "GET") {
+          const u = httpAccount(req);
+          return json(res, 200, {
+            kycStatus: u.kyc_status,
+            doc: KycDocs.get(u.id) || null,
+          });
+        }
+        if (p === "/api/admin/kyc" && req.method === "POST") {
+          const admin = httpAccount(req);
+          if (!can(admin, "admin.kyc")) throw fail("Acesso negado.", 403);
+          const d = await body(req);
+          KycDocs.setStatus(d.userId, text(d.status, 20));
+          if (["APROVADO", "REJEITADO"].includes(d.status))
+            Users.updateKyc(
+              Users.getById(d.userId).email,
+              d.status,
+              Users.getById(d.userId).kyc_photo,
+            );
+          return json(res, 200, { ok: true, doc: KycDocs.get(d.userId) });
         }
         if (p === "/api/ops/backup" && req.method === "POST") {
           const admin = httpAccount(req);
@@ -2453,11 +2671,33 @@ export function startPlatform({
                 );
                 return;
               }
-              if (rawText.startsWith("/")) {
-                // Comandos desconhecidos não vão para o chat público.
+              if (rawText.startsWith("/ajuda") || rawText.startsWith("/help")) {
                 send(ws, {
                   type: "SYSTEM_MESSAGE",
-                  text: "Comandos: /mute @nick [min] (moderadores).",
+                  text: "Comandos: /ajuda · /ping · /regras · /mute @nick [min] (mod).",
+                });
+                return;
+              }
+              if (rawText.startsWith("/ping")) {
+                const rtt = Number(c.ping) || null;
+                send(ws, {
+                  type: "SYSTEM_MESSAGE",
+                  text: rtt != null ? `Pong — RTT ~${rtt}ms` : "Pong — meça com achar partida (RTT).",
+                });
+                return;
+              }
+              if (rawText.startsWith("/regras")) {
+                const fr = forfeitRulesCopy();
+                send(ws, {
+                  type: "SYSTEM_MESSAGE",
+                  text: fr.title + ": " + fr.rules.join(" "),
+                });
+                return;
+              }
+              if (rawText.startsWith("/")) {
+                send(ws, {
+                  type: "SYSTEM_MESSAGE",
+                  text: "Comando desconhecido. Use /ajuda.",
                 });
                 return;
               }
@@ -2500,11 +2740,45 @@ export function startPlatform({
                 });
                 const picks = PlanoCharacters.list(m.id);
                 if (picks.length >= 2) {
+                  m.characterPicks = picks;
                   both(m, {
                     type: "CHAR_SELECT_DONE",
                     matchId: m.id,
                     picks,
+                    inject: true,
+                    message:
+                      "Personagens confirmados — injetando seleção no gabinete (setas+botão).",
                   });
+                  // Injeta navegação aproximada no select do KOF (hosted).
+                  if (m.worker?.input) {
+                    const rosterOrder = [
+                      "kyo",
+                      "benimaru",
+                      "daimon",
+                      "terry",
+                      "andy",
+                      "joe",
+                      "iori",
+                      "kim",
+                    ];
+                    for (const p of picks) {
+                      const slot = p.user_id === m.a ? 1 : 2;
+                      const idx = Math.max(
+                        0,
+                        rosterOrder.indexOf(String(p.character).toLowerCase()),
+                      );
+                      (async () => {
+                        try {
+                          for (let i = 0; i < idx; i++) {
+                            await m.worker.input(slot, 3, 1); // right
+                            await m.worker.input(slot, 3, 0);
+                          }
+                          await m.worker.input(slot, 4, 1); // A confirm
+                          await m.worker.input(slot, 4, 0);
+                        } catch {}
+                      })();
+                    }
+                  }
                 }
               }
               send(ws, {
@@ -2534,6 +2808,86 @@ export function startPlatform({
               send(ws, { type: "CLAN_UPDATED", clan: null });
               return;
             }
+            if (d.type === "CLAN_INVITE") {
+              clanSystem.invite(d.tag, d.userId, u.id);
+              send(ws, { type: "SYSTEM_MESSAGE", text: "Convite de clã enviado." });
+              send(connection(d.userId)?.[0], {
+                type: "CLAN_INVITE",
+                tag: d.tag,
+                from: u.username,
+              });
+              return;
+            }
+            if (d.type === "CLAN_KICK") {
+              clanSystem.kick(d.tag, d.userId, u.id);
+              send(ws, { type: "SYSTEM_MESSAGE", text: "Membro removido." });
+              return;
+            }
+            if (d.type === "CLAN_TRANSFER") {
+              clanSystem.transferLeader(d.tag, d.userId, u.id);
+              send(ws, { type: "CLAN_UPDATED", clan: clanSystem.ofUser(u.id) });
+              return;
+            }
+            if (d.type === "CLAN_SET_ROLE") {
+              clanSystem.setRole(d.tag, d.userId, d.role, u.id);
+              send(ws, { type: "SYSTEM_MESSAGE", text: "Cargo atualizado." });
+              return;
+            }
+            if (d.type === "FRIEND_REQUEST") {
+              Social.requestFriend(u.id, d.userId);
+              send(connection(d.userId)?.[0], {
+                type: "FRIEND_REQUEST",
+                fromId: u.id,
+                fromUsername: u.username,
+              });
+              send(ws, { type: "SYSTEM_MESSAGE", text: "Pedido de amizade enviado." });
+              return;
+            }
+            if (d.type === "FRIEND_ACCEPT") {
+              Social.acceptFriend(u.id, d.userId);
+              send(ws, { type: "SYSTEM_MESSAGE", text: "Amizade aceita." });
+              return;
+            }
+            if (d.type === "BLOCK_USER") {
+              Social.block(u.id, d.userId);
+              send(ws, { type: "SYSTEM_MESSAGE", text: "Utilizador bloqueado." });
+              return;
+            }
+            if (d.type === "SEND_DM") {
+              Social.sendDm(u.id, d.userId, text(d.text, 500));
+              send(connection(d.userId)?.[0], {
+                type: "DM_MESSAGE",
+                fromId: u.id,
+                fromUsername: u.username,
+                text: text(d.text, 500),
+              });
+              send(ws, { type: "DM_SENT", toId: d.userId });
+              return;
+            }
+            if (d.type === "REGISTER_DEVICE") {
+              const linked = registerFingerprint(u.id, text(d.fingerprint, 128));
+              send(ws, {
+                type: "DEVICE_REGISTERED",
+                linkedAccounts: linked.linked,
+              });
+              return;
+            }
+            if (d.type === "MEDIA_ICE_RESTART") {
+              if (!c.matchId) throw fail("Sem partida.");
+              const m = matches.get(c.matchId);
+              if (!m) throw fail("Partida inválida.");
+              const peer = u.id === m.a ? m.b : m.a;
+              send(connection(peer)?.[0], {
+                type: "MEDIA_ICE_RESTART",
+                matchId: m.id,
+                fromId: u.id,
+              });
+              if (m.worker?.signal) {
+                m.worker.signal(u.id, { type: "ice-restart" }).catch(() => {});
+              }
+              send(ws, { type: "MEDIA_ICE_RESTART_ACK", matchId: m.id });
+              return;
+            }
             if (d.type === "DEPOSIT_PIX") {
               const deposit = await payments.createDeposit({
                 userId: u.id,
@@ -2556,13 +2910,16 @@ export function startPlatform({
               throw fail("Roleta indisponível.");
             if (d.type === "WITHDRAW_PIX") {
               const pixKey = text(d.pixKey || d.key || "", 120);
+              try {
+                KycDocs.assertWithdrawOk(u.id, u.kyc_status);
+              } catch (e) {
+                throw fail(e.message, 403);
+              }
               await payments.createWithdraw({
                 userId: u.id,
                 amountCents: cents(d.amountCents),
                 pixKey,
               });
-              if (u.kyc_status !== "APROVADO")
-                throw fail("KYC obrigatório para saque.");
               const ref = finance.requestWithdrawal(
                 u.id,
                 cents(d.amountCents),
@@ -2585,10 +2942,17 @@ export function startPlatform({
               )
                 throw fail("Imagem KYC inválida.");
               Users.updateKyc(u.email, "PENDENTE", photo);
+              KycDocs.submit(u.id, {
+                docType: text(d.docType || "RG", 32),
+                docNumber: text(d.docNumber || "", 40),
+                expiresAt: d.expiresAt || null,
+                photoRef: "inline",
+              });
               send(ws, {
                 type: "KYC_STATUS_UPDATED",
                 kycStatus: "PENDENTE",
                 message: "Documento recebido para análise manual.",
+                kycDoc: KycDocs.get(u.id),
               });
               return;
             }
@@ -3120,6 +3484,23 @@ export function startPlatform({
                   d.userId !== undefined
                 )
                   throw fail("A porta de controle é definida pela sessão.");
+                // Detector de macro/burst (sinal — não prova)
+                const win = inputBurstWindows.get(u.id) || [];
+                win.push({ t: Date.now(), button: d.button });
+                while (win.length > 40) win.shift();
+                inputBurstWindows.set(u.id, win);
+                const anomaly = scoreInputBurst(win);
+                if (anomaly.flag) {
+                  logAnomaly(u.id, m.id, anomaly.score, anomaly.reason);
+                  send(ws, {
+                    type: "INPUT_ANOMALY",
+                    matchId: m.id,
+                    score: anomaly.score,
+                    reason: anomaly.reason,
+                    message:
+                      "Padrão de input suspeito (macro/burst). Autoridade do servidor ≠ ban automático.",
+                  });
+                }
                 const input = acceptInput(c.input, d);
                 if (!m.rules.allowedButtons.includes(d.button)) {
                   c.input.pressed.delete(d.button);
@@ -3318,11 +3699,20 @@ export function startPlatform({
       });
     else if (!Users.get(email))
       console.log("[SETUP] Defina ADMIN_PASSWORD para criar o administrador.");
-    server.listen(port, host, () =>
+    server.listen(port, host, () => {
       console.log(
-        `[Arena 13.0] http://${host}:${server.address().port} | fundos simulados: ${simulation ? "SIM" : "NÃO"}`,
-      ),
-    );
+        `[Arena 13.0] http://${host}:${server.address().port} | fundos simulados: ${simulation ? "SIM" : "NÃO"} | warmPool idle=${warmPool.stats().idle}`,
+      );
+      alertTurnMisconfig().catch(() => {});
+      // Freeroll: resolve no-shows a cada 30s
+      setInterval(() => {
+        for (const fr of freerolls.values()) {
+          try {
+            freerollResolveNoShows(fr);
+          } catch {}
+        }
+      }, 30000).unref();
+    });
   })().catch((e) => {
     console.error(e.message);
     process.exitCode = 1;

@@ -312,14 +312,34 @@ export class NativeHostSession {
     });
     await this.send("captureEvidence", { path: filePath });
     await done;
+    // Clip curto (manifesto): sequências de frames recentes / nota para review
+    const clipName = `clip-${Date.now()}.json`;
+    const clipPath = path.join(dir, clipName);
+    fs.writeFileSync(
+      clipPath,
+      JSON.stringify(
+        {
+          kind: "evidence-clip-stub",
+          matchId: String(matchId),
+          at: Date.now(),
+          frames: [name],
+          durationMs: 2000,
+          note: "Placeholder AV — troca por ffmpeg -t 2 quando pipeline estável.",
+        },
+        null,
+        2,
+      ),
+    );
     return {
-      kind: "native-phase2",
+      kind: "native-phase2+clip",
       matchId: String(matchId),
       at: Date.now(),
       sample: this.lastSample,
       mappedInput: this.lastMappedInput,
       path: filePath,
-      note: "PPM lab 320p; framebuffer FBNeo/ffmpeg na próxima etapa.",
+      clipPath,
+      relativePath: path.relative(path.join(root, "data"), clipPath),
+      note: "PPM + clip manifesto 2s para fila de review.",
     };
   }
 

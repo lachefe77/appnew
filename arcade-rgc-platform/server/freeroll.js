@@ -90,6 +90,59 @@ export function registerFreerollPlayer(state, userId) {
   return state;
 }
 
+/**
+ * Agenda partidas PENDING com check-in; no-show promove o presente.
+ */
+export function freerollPendingSlots(state) {
+  if (!state?.rounds) return [];
+  const out = [];
+  state.rounds.forEach((round, roundIndex) => {
+    for (const m of round) {
+      if (m.status === "PENDING" && m.a && m.b)
+        out.push({ roundIndex, matchIndex: m.matchIndex, a: m.a, b: m.b });
+    }
+  });
+  return out;
+}
+
+export function freerollCheckIn(state, roundIndex, matchIndex, userId) {
+  const match = state.rounds[roundIndex]?.find((m) => m.matchIndex === matchIndex);
+  if (!match) throw new Error("Partida inválida.");
+  match.checkIn = match.checkIn || { a: false, b: false, deadline: Date.now() + 120000 };
+  if (match.a === userId) match.checkIn.a = true;
+  else if (match.b === userId) match.checkIn.b = true;
+  else throw new Error("Jogador fora do confronto.");
+  return match;
+}
+
+export function freerollResolveNoShows(state, now = Date.now()) {
+  if (!state?.rounds) return [];
+  const promoted = [];
+  for (let ri = 0; ri < state.rounds.length; ri++) {
+    for (const m of state.rounds[ri]) {
+      if (m.status !== "PENDING") continue;
+      const ci = m.checkIn;
+      if (!ci?.deadline || now < ci.deadline) continue;
+      if (ci.a && !ci.b) {
+        reportFreerollWinner(state, ri, m.matchIndex, m.a);
+        promoted.push({ matchIndex: m.matchIndex, winnerId: m.a, reason: "no-show" });
+      } else if (ci.b && !ci.a) {
+        reportFreerollWinner(state, ri, m.matchIndex, m.b);
+        promoted.push({ matchIndex: m.matchIndex, winnerId: m.b, reason: "no-show" });
+      }
+    }
+  }
+  return promoted;
+}
+
+export function bindFreerollPlatformMatch(state, roundIndex, matchIndex, platformMatchId) {
+  const match = state.rounds[roundIndex]?.find((m) => m.matchIndex === matchIndex);
+  if (!match) throw new Error("Partida inválida.");
+  match.platformMatchId = platformMatchId;
+  match.status = "LIVE";
+  return match;
+}
+
 export function reportFreerollWinner(state, roundIndex, matchIndex, winnerId) {
   if (!state || state.status !== "RUNNING")
     throw new Error("Freeroll não está em execução.");

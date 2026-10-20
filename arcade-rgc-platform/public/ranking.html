@@ -27,6 +27,7 @@
   </header>
   <main>
     <div class="season" id="seasonBox">Carregando temporada…</div>
+    <div class="season" id="calBox">Calendário…</div>
     <table>
       <thead><tr><th>#</th><th>Jogador</th><th>ELO</th><th>W</th><th>L</th></tr></thead>
       <tbody id="rows"></tbody>
@@ -43,6 +44,13 @@
       document.getElementById("rows").innerHTML = (data.leaderboard || [])
         .map((u, i) => `<tr><td>${i + 1}</td><td>${u.username}</td><td class="elo">${u.elo}</td><td>${u.wins}</td><td>${u.losses}</td></tr>`)
         .join("");
+      const cal = await fetch("/api/season/calendar").then((r) => r.json());
+      document.getElementById("calBox").innerHTML = (cal.calendar || [])
+        .map(
+          (c) =>
+            `<strong>${c.name}</strong><br><span style="color:var(--muted)">${c.starts_at} → ${c.ends_at || "aberto"} · ${c.ceremony_note || ""}</span><br>Recompensas: ${(c.rewards || []).map((x) => x.label || x.place).join(", ") || "—"}`,
+        )
+        .join("<hr>") || "Sem calendário — ative uma temporada no admin.";
     })().catch((e) => {
       document.getElementById("seasonBox").textContent = e.message;
     });

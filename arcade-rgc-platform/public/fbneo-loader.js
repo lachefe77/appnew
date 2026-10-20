@@ -244,7 +244,7 @@ export class FBNeoLoader {
       this.video = document.createElement("video");
       this.video.autoplay = true;
       this.video.playsInline = true;
-      // WebRTC lab = vídeo; som sai da janela RetroArch (audio_enable=true).
+      // Preferir áudio remoto WebRTC quando houver track; fallback RetroArch local.
       this.video.muted = true;
       this.video.tabIndex = 0;
       this.video.style.cssText =
@@ -254,7 +254,7 @@ export class FBNeoLoader {
         this.focused = true;
         this.video.focus();
         this.status(
-          `P${this.slot} foco no jogo. Y=ficha · Enter=START · setas · Z/X/A/S. Som na janela RetroArch.`,
+          `P${this.slot} foco no jogo. Y=ficha · Enter=START · setas · Z/X/A/S.`,
         );
       });
       this.stageEl.append(this.video);
@@ -263,11 +263,21 @@ export class FBNeoLoader {
       });
       button("ATIVAR SOM", () => {
         this.video.muted = false;
+        const stream = this.video.srcObject;
+        const hasAudio = stream?.getAudioTracks?.()?.some((t) => t.enabled !== false);
         this.video.play().catch(() => {});
         this.status(
-          "Som do combate: na janela RetroArch (não mute o Windows). WebRTC é só vídeo neste lab.",
+          hasAudio
+            ? "Áudio remoto WebRTC ativo."
+            : "Sem track de áudio no stream — use o som da janela RetroArch neste host.",
         );
       });
+      button("RECONECTAR MÍDIA", () => {
+        this.restartIce();
+      });
+      if (window.matchMedia("(pointer:coarse)").matches) {
+        this.mountTouchStick();
+      }
       this.video.onloadeddata = () => {
         if (!this.ready) {
           this.ready = true;
@@ -333,10 +343,21 @@ export class FBNeoLoader {
     this.pc.ontrack = (e) => {
       this.loading(
         "negotiating",
-        "Canal de vídeo encontrado. Recebendo o primeiro quadro…",
+        "Canal de mídia encontrado. Recebendo o primeiro quadro…",
       );
       if (this.video) {
-        this.video.srcObject = e.streams[0] || new MediaStream([e.track]);
+        const stream = e.streams[0] || new MediaStream([e.track]);
+        // Acumula tracks se já houver stream (áudio pode chegar depois do vídeo)
+        if (this.video.srcObject instanceof MediaStream && e.track) {
+          const cur = this.video.srcObject;
+          if (!cur.getTracks().includes(e.track)) cur.addTrack(e.track);
+        } else {
+          this.video.srcObject = stream;
+        }
+        if (e.track.kind === "audio") {
+          this.video.muted = false;
+          this.status("Track de áudio remoto recebida — toque ATIVAR SOM se preciso.");
+        }
         this.video
           .play()
           .catch(() =>
@@ -351,11 +372,67 @@ export class FBNeoLoader {
           "negotiating",
           "Negociando a conexão de vídeo com o servidor.",
         );
-      if (this.pc.connectionState === "failed")
-        this.failure(
-          "Conexão de vídeo falhou. Tente novamente; redes externas podem precisar de TURN.",
-        );
+      if (this.pc.connectionState === "failed") {
+        this.status("Mídia falhou — tentando ICE restart…");
+        this.restartIce();
+      }
     };
+    this.pc.oniceconnectionstatechange = () => {
+      const st = this.pc.iceConnectionState;
+      if (st === "disconnected" || st === "failed") {
+        this.status("ICE " + st + " — pedindo restart…");
+        this.restartIce();
+      }
+    };
+  }
+  restartIce() {
+    if (this._iceRestartAt && Date.now() - this._iceRestartAt < 4000) return;
+    this._iceRestartAt = Date.now();
+    try {
+      this.ws?.send(
+        JSON.stringify({
+          type: "MEDIA_ICE_RESTART",
+          matchId: this.matchId,
+          token: localStorage.getItem("arenaToken"),
+        }),
+      );
+    } catch {}
+    if (this.pc && this.hosted) {
+      this._connectHost?.().catch(() => {});
+    }
+  }
+  mountTouchStick() {
+    if (this._touchPad) return;
+    const pad = document.createElement("div");
+    this._touchPad = pad;
+    pad.style.cssText =
+      "position:absolute;left:0;right:0;bottom:0;height:140px;display:flex;justify-content:space-between;padding:8px 12px;pointer-events:none;z-index:15;";
+    const mk = (label, btn, side) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.style.cssText =
+        "pointer-events:auto;min-width:56px;min-height:56px;margin:4px;border:1px solid #444;background:rgba(0,0,0,.55);color:#fff;font-weight:800;border-radius:10px;";
+      const down = (e) => {
+        e.preventDefault();
+        this.sendInput?.(btn, 1);
+      };
+      const up = (e) => {
+        e.preventDefault();
+        this.sendInput?.(btn, 0);
+      };
+      b.addEventListener("touchstart", down, { passive: false });
+      b.addEventListener("touchend", up, { passive: false });
+      b.addEventListener("mousedown", down);
+      b.addEventListener("mouseup", up);
+      return b;
+    };
+    const left = document.createElement("div");
+    left.append(mk("←", 6), mk("↑", 4), mk("↓", 5), mk("→", 7));
+    const right = document.createElement("div");
+    right.append(mk("A", 0), mk("B", 8), mk("C", 1), mk("D", 9), mk("ST", 3), mk("Y", 2));
+    pad.append(left, right);
+    this.stageEl.style.position = "relative";
+    this.stageEl.append(pad);
   }
   async _connectHost() {
     if (this.stopped || !this.ready || this.slot !== 1) return;

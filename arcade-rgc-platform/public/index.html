@@ -13,6 +13,7 @@
   <!-- Toast notification system (must load before any JS) -->
   <script src="/toast.js"></script>
   <script src="/plano-ui.js"></script>
+  <script src="/plano-30-ui.js"></script>
   <!-- Audio engine (sets window.ArcadeAudio) -->
   <script src="/audio.js"></script>
   <script type="module" src="/theme-apply.js"></script>
@@ -607,6 +608,10 @@
                 <a href="/privacidade.html" style="color:var(--text-muted);">LGPD</a>
                 <button type="button" onclick="window.ArenaPlano?.redeemCoupon()" style="background:none;border:0;color:var(--neon-gold);cursor:pointer;font:inherit;padding:0;">Cupom</button>
                 <button type="button" onclick="window.ArenaPlano?.showTutorial(0)" style="background:none;border:0;color:var(--neon-cyan);cursor:pointer;font:inherit;padding:0;">Tutorial</button>
+                <button type="button" onclick="window.ArenaPlano30?.showForfeitHelp()" style="background:none;border:0;color:var(--text-muted);cursor:pointer;font:inherit;padding:0;">Regras forfeit</button>
+                <button type="button" onclick="window.ArenaPlano30?.cancelLoadingMatch()" style="background:none;border:0;color:var(--kof-fire);cursor:pointer;font:inherit;padding:0;">Cancelar LOADING</button>
+                <a href="/amigos.html" style="color:var(--text-muted);">Amigos</a>
+                <a href="/stream-overlay.html" style="color:var(--text-muted);" target="_blank">OBS</a>
               </div>
             </div>
           </div>
@@ -1154,6 +1159,8 @@
               if (a) a.style.display = '';
             }
             setTimeout(() => window.ArenaPlano?.startTutorialIfNeeded(), 600);
+            setTimeout(() => window.ArenaPlano30?.registerDevice(), 400);
+            setTimeout(() => window.ArenaPlano30?.subscribePush(), 2000);
           } catch {}
           app.user = msg.user;
           app.sessionToken = msg.sessionToken || msg.token;
@@ -1363,6 +1370,15 @@
         }
 
         case 'MATCH_ENDED': {
+          if (msg.receipt) {
+            try {
+              sessionStorage.setItem('lastMatchReceipt', JSON.stringify(msg.receipt));
+            } catch {}
+            window.toast?.success(
+              'Recibo',
+              `Prêmio R$ ${msg.receipt.prizeReais} · rake R$ ${msg.receipt.rakeReais} · stake R$ ${msg.receipt.stakeReais}`,
+            );
+          }
           window.showMatchReceipt?.(msg);
           app.currentMatchId=null;app.activeMatch=null;
           document.getElementById('arenaModal').style.display = 'none';
@@ -1431,8 +1447,22 @@
           if (app.fbneo?.metricsEl && msg.commandToImageMs != null) {
             app._lastCmdImageMs = msg.commandToImageMs;
           }
+          window.ArenaPlano30?.onLatency(msg.commandToImageMs, msg.rttMs);
           break;
         }
+        case 'INPUT_ANOMALY':
+          window.toast?.warn('Integridade', msg.message || 'Padrão de input suspeito');
+          break;
+        case 'MEDIA_ICE_RESTART':
+          app.fbneo?.restartIce?.();
+          window.toast?.info('Mídia', 'ICE restart pedido pelo oponente/servidor');
+          break;
+        case 'FRIEND_REQUEST':
+          window.toast?.info('Amizade', (msg.fromUsername || 'Alguém') + ' quer ser seu amigo');
+          break;
+        case 'DM_MESSAGE':
+          window.toast?.info('DM ' + (msg.fromUsername || ''), msg.text);
+          break;
 
         case 'CHALLENGE_EXPIRED':
           clearInterval(app._icmInterval);

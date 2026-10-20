@@ -161,17 +161,29 @@
   </div>
 
   <script>
-    // Conecta ao WebSocket local da Arena para receber os ticks da partida
-    const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
-    ws.onmessage = (event) => {
+    async function refresh() {
       try {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'MATCH_UPDATE' || msg.type === 'NETPLAY_FRAME') {
-          if (msg.p1Hp !== undefined) document.getElementById('p1HpBar').style.width = msg.p1Hp + '%';
-          if (msg.p2Hp !== undefined) document.getElementById('p2HpBar').style.width = msg.p2Hp + '%';
+        const r = await fetch('/api/overlay/live');
+        const d = await r.json();
+        const m = (d.matches || [])[0];
+        if (!m) {
+          document.getElementById('potValue').textContent = 'AGUARDANDO';
+          return;
         }
-      } catch (e) {}
-    };
+        document.getElementById('p1Name').textContent = m.playerA || 'P1';
+        document.getElementById('p2Name').textContent = m.playerB || 'P2';
+        document.getElementById('p1Elo').textContent = m.eloA ?? '—';
+        document.getElementById('p2Elo').textContent = m.eloB ?? '—';
+        const a = m.seriesScore?.a ?? 0, b = m.seriesScore?.b ?? 0;
+        document.getElementById('potValue').textContent = `BO${m.seriesBestOf || 1} · ${a}×${b}`;
+        document.querySelector('.pot-label').textContent = (m.mode || 'X1') + ' · ' + (m.phase || '');
+        const tot = Math.max(1, (m.seriesBestOf || 1));
+        document.getElementById('p1HpBar').style.width = Math.min(100, (a / Math.ceil(tot/2)) * 100) + '%';
+        document.getElementById('p2HpBar').style.width = Math.min(100, (b / Math.ceil(tot/2)) * 100) + '%';
+      } catch {}
+    }
+    refresh();
+    setInterval(refresh, 2000);
   </script>
 </body>
 </html>

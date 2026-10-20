@@ -19,7 +19,15 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS clan_members (
     tag TEXT NOT NULL REFERENCES clans(tag),
     user_id TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'MEMBER',
     joined_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (tag, user_id)
+  );
+  CREATE TABLE IF NOT EXISTS clan_invites (
+    tag TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    invited_by TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
     PRIMARY KEY (tag, user_id)
   );
   CREATE TABLE IF NOT EXISTS password_resets (
@@ -76,6 +84,13 @@ function seedClansIfEmpty() {
   }
 }
 seedClansIfEmpty();
+try {
+  db.exec(
+    "ALTER TABLE clan_members ADD COLUMN role TEXT NOT NULL DEFAULT 'MEMBER'",
+  );
+} catch {
+  /* already exists */
+}
 
 export const PlanoClans = {
   list() {
@@ -99,7 +114,9 @@ export const PlanoClans = {
     db.prepare(
       "INSERT INTO clans(tag,name,description,leader_id) VALUES(?,?,?,?)",
     ).run(t, String(name || t).slice(0, 48), String(description || "").slice(0, 160), leaderId);
-    db.prepare("INSERT INTO clan_members(tag,user_id) VALUES(?,?)").run(t, leaderId);
+    db.prepare(
+      "INSERT INTO clan_members(tag,user_id,role) VALUES(?,?,?)",
+    ).run(t, leaderId, "LEADER");
     return this.get(t);
   },
   join(tag, userId) {
@@ -108,11 +125,81 @@ export const PlanoClans = {
       throw new Error("Clã inexistente.");
     if (db.prepare("SELECT 1 FROM clan_members WHERE user_id=?").get(userId))
       throw new Error("Já estás num clã.");
-    db.prepare("INSERT INTO clan_members(tag,user_id) VALUES(?,?)").run(t, userId);
+    const invite = db
+      .prepare("SELECT 1 FROM clan_invites WHERE tag=? AND user_id=?")
+      .get(t, userId);
+    // convite opcional: se houver invites pendentes para o clã, exige um
+    const inviteOnly = db
+      .prepare("SELECT COUNT(*) c FROM clan_invites WHERE tag=?")
+      .get(t).c;
+    if (inviteOnly > 0 && !invite)
+      throw new Error("Entrada só por convite neste clã.");
+    db.prepare(
+      "INSERT INTO clan_members(tag,user_id,role) VALUES(?,?,?)",
+    ).run(t, userId, "MEMBER");
+    db.prepare("DELETE FROM clan_invites WHERE tag=? AND user_id=?").run(t, userId);
     return this.get(t);
   },
   leave(userId) {
     db.prepare("DELETE FROM clan_members WHERE user_id=?").run(userId);
+  },
+  memberRole(tag, userId) {
+    return db
+      .prepare("SELECT role FROM clan_members WHERE tag=? AND user_id=?")
+      .get(String(tag).toUpperCase(), userId)?.role;
+  },
+  invite(tag, userId, byUserId) {
+    const t = String(tag).toUpperCase();
+    const role = this.memberRole(t, byUserId);
+    if (!["LEADER", "OFFICER"].includes(role))
+      throw new Error("Só líder/oficial convida.");
+    db.prepare(
+      `INSERT INTO clan_invites(tag,user_id,invited_by,created_at) VALUES(?,?,?,?)
+       ON CONFLICT(tag,user_id) DO UPDATE SET invited_by=excluded.invited_by`,
+    ).run(t, userId, byUserId, Date.now());
+  },
+  kick(tag, targetId, byUserId) {
+    const t = String(tag).toUpperCase();
+    const role = this.memberRole(t, byUserId);
+    if (!["LEADER", "OFFICER"].includes(role))
+      throw new Error("Sem permissão.");
+    if (this.memberRole(t, targetId) === "LEADER")
+      throw new Error("Não pode expulsar o líder.");
+    db.prepare("DELETE FROM clan_members WHERE tag=? AND user_id=?").run(
+      t,
+      targetId,
+    );
+  },
+  transferLeader(tag, newLeaderId, byUserId) {
+    const t = String(tag).toUpperCase();
+    if (this.memberRole(t, byUserId) !== "LEADER")
+      throw new Error("Só o líder transfere.");
+    if (!this.memberRole(t, newLeaderId))
+      throw new Error("Novo líder precisa ser membro.");
+    db.prepare(
+      "UPDATE clan_members SET role='MEMBER' WHERE tag=? AND role='LEADER'",
+    ).run(t);
+    db.prepare(
+      "UPDATE clan_members SET role='LEADER' WHERE tag=? AND user_id=?",
+    ).run(t, newLeaderId);
+    db.prepare("UPDATE clans SET leader_id=? WHERE tag=?").run(newLeaderId, t);
+  },
+  setRole(tag, userId, role, byUserId) {
+    const t = String(tag).toUpperCase();
+    if (this.memberRole(t, byUserId) !== "LEADER")
+      throw new Error("Só o líder define cargos.");
+    if (!["OFFICER", "MEMBER"].includes(role))
+      throw new Error("Cargo inválido.");
+    db.prepare(
+      "UPDATE clan_members SET role=? WHERE tag=? AND user_id=?",
+    ).run(role, t, userId);
+  },
+  members(tag) {
+    return db
+      .prepare(
+        "SELECT user_id, role, joined_at FROM clan_members WHERE tag=? ORDER BY role",
+      )
+      .all(String(tag).toUpperCase());
   },
   get(tag) {
     return db.prepare("SELECT * FROM clans WHERE tag=?").get(String(tag).toUpperCase());
@@ -120,7 +207,7 @@ export const PlanoClans = {
   ofUser(userId) {
     return db
       .prepare(
-        `SELECT c.* FROM clans c JOIN clan_members m ON m.tag=c.tag WHERE m.user_id=?`,
+        `SELECT c.*, m.role AS my_role FROM clans c JOIN clan_members m ON m.tag=c.tag WHERE m.user_id=?`,
       )
       .get(userId);
   },
@@ -137,6 +224,7 @@ export const PlanoClans = {
         "UPDATE clans SET losses=losses+1, points=MAX(0,points-10) WHERE tag=?",
       ).run(l.tag);
     }
+    return { winnerTag: w?.tag, loserTag: l?.tag };
   },
 };
 

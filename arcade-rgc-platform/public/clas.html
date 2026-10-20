@@ -60,8 +60,16 @@
       const clans = await r.json();
       document.getElementById("list").innerHTML = (clans||[]).map(c => `
         <div class="card"><span class="tag">[${c.tag}]</span> ${c.name}
-        <div style="color:var(--muted);margin-top:6px;">${c.points} pts · ${c.wins}W/${c.losses}L · ${c.members||1} membros · nv ${c.level||1}</div>
-        <div style="font-size:.85rem;color:var(--muted)">${c.description||""}</div></div>`).join("") || "<p>Sem clãs.</p>";
+        <div style="color:var(--muted);margin-top:6px;">${c.points} pts · ${c.wins}W/${c.losses}L · ${c.members||1} membros · nv ${c.level||1}
+        · tesouraria R$ ${c.treasuryReais || "0,00"}</div>
+        <div style="font-size:.85rem;color:var(--muted)">${c.description||""}</div>
+        <button onclick="invite('${c.tag}')" style="margin-top:8px;background:#1c1c20;border:1px solid var(--line);">Convidar userId</button>
+        </div>`).join("") || "<p>Sem clãs.</p>";
+    }
+    function invite(tag){
+      const userId = prompt("userId para convidar:");
+      if (!userId) return;
+      wsSend({ type:"CLAN_INVITE", tag, userId });
     }
     load();
   </script>
