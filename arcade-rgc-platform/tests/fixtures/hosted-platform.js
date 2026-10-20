@@ -6,6 +6,7 @@ const sessions = new Map();
 const app = startPlatform({
   hostedFactory: (options) => {
     const session = {
+      iceServers: options.iceServers || [],
       async start() {
         sessions.set(options.matchId, options);
         options.onPeer(1, "connected");
@@ -19,6 +20,16 @@ const app = startPlatform({
       async signal() {},
       async pause() {},
       async resume() {},
+      resetObserver() {},
+      async captureEvidence(matchId) {
+        return {
+          kind: "screenshot",
+          path: `/tmp/fixture-evidence-${matchId}.png`,
+          relativePath: `data/evidence/${matchId}/fixture.png`,
+          at: Date.now(),
+          sample: { frame: 1, health: [50, 40], wins: [0, 0], timer: 0 },
+        };
+      },
     };
     return session;
   },

@@ -22,6 +22,7 @@ import db, {
 import { finance, cents, recoverMatches } from "./finance.js";
 import { HostedSession } from "./hosted-session.js";
 import { verifyHostedAssets } from "./hosted-assets.js";
+import { mintIceServers } from "./turn-credentials.js";
 import {
   makeRules,
   saveRules,
@@ -206,6 +207,13 @@ export function startPlatform({
         (m.worker || m.workerReady || m.phase === "LOADING" || m.phase === "RUNNING"),
     ).length;
   const hostedBusy = () => hostedActiveCount() >= hostedCap();
+  const hostedAvgMatchSec = () =>
+    Math.max(30, Number(process.env.HOSTED_AVG_MATCH_SEC) || 180);
+  const queueEtaPayload = (position) => {
+    const placeInQueue = Math.max(1, Number(position) || 1);
+    const etaSeconds = placeInQueue * hostedAvgMatchSec();
+    return { placeInQueue, position: placeInQueue, etaSeconds };
+  };
   const manager = new RoomManager(
     db
       .prepare("SELECT payload FROM platform_rooms")
@@ -300,25 +308,33 @@ export function startPlatform({
       newElo: Users.getById(id).elo,
       message,
     });
-  const payload = (m, id) => ({
-    matchId: m.id,
-    mode: m.mode,
-    stakeReais: (m.stake / 100).toFixed(2),
-    prizeReais: (m.prize / 100).toFixed(2),
-    mySlot: m.a === id ? 1 : 2,
-    phase: m.phase,
-    playerA: { id: m.a, username: Users.getById(m.a).username },
-    playerB: { id: m.b, username: Users.getById(m.b).username },
-    transport: m.rules.transport,
-    hostedReady: Boolean(m.workerReady),
-    simulation,
-    queuePosition: m.queuePosition || null,
-    seriesBestOf: m.seriesBestOf || m.rules.seriesBestOf || 1,
-    seriesScore: m.seriesScore || { a: 0, b: 0 },
-    rules: m.rules,
-    inputEpoch: connection(id)?.[1].input.epoch,
-    nextInputSeq: (connection(id)?.[1].input.seq || 0) + 1,
-  });
+  const payload = (m, id) => {
+    const queue =
+      m.phase === "QUEUED" && m.queuePosition
+        ? queueEtaPayload(m.queuePosition)
+        : { placeInQueue: null, position: null, etaSeconds: null };
+    return {
+      matchId: m.id,
+      mode: m.mode,
+      stakeReais: (m.stake / 100).toFixed(2),
+      prizeReais: (m.prize / 100).toFixed(2),
+      mySlot: m.a === id ? 1 : 2,
+      phase: m.phase,
+      playerA: { id: m.a, username: Users.getById(m.a).username },
+      playerB: { id: m.b, username: Users.getById(m.b).username },
+      transport: m.rules.transport,
+      hostedReady: Boolean(m.workerReady),
+      simulation,
+      queuePosition: queue.position,
+      placeInQueue: queue.placeInQueue,
+      etaSeconds: queue.etaSeconds,
+      seriesBestOf: m.seriesBestOf || m.rules.seriesBestOf || 1,
+      seriesScore: m.seriesScore || { a: 0, b: 0 },
+      rules: m.rules,
+      inputEpoch: connection(id)?.[1].input.epoch,
+      nextInputSeq: (connection(id)?.[1].input.seq || 0) + 1,
+    };
+  };
   const both = (m, d) => {
     for (const id of [m.a, m.b]) send(connection(id)?.[0], d);
   };
@@ -486,6 +502,10 @@ export function startPlatform({
         phase(m, "RUNNING");
       } catch {}
     }
+    // Série continua: rearm o observador do worker para o próximo game.
+    try {
+      m.worker?.resetObserver?.();
+    } catch {}
     both(m, {
       type: "SERIES_NEXT_GAME",
       matchId: m.id,
@@ -534,19 +554,43 @@ export function startPlatform({
     // Trava imediata em memória para bloquear onResult/settle concorrentes
     // antes da transação SQLite concluir.
     m.reviewLock = true;
-    const { deadlineAt } = openReview(m, actor, reason);
-    m.phase = "REVIEW";
-    both(m, {
-      type: "MATCH_REVIEW_OPENED",
-      matchId: m.id,
-      reason,
-      deadlineAt,
-      message:
-        "Partida em análise. Reservas preservadas até decisão ou prazo de revisão.",
-    });
-    for (const id of [m.a, m.b])
-      walletUpdate(id, "Partida em análise; consulte o histórico de revisões.");
-    clearMatch(m);
+    const worker = m.worker;
+    const matchId = m.id;
+    const finish = (evidence) => {
+      if (m._reviewOpened) return;
+      m._reviewOpened = true;
+      const { deadlineAt } = openReview(m, actor, reason, evidence);
+      m.phase = "REVIEW";
+      both(m, {
+        type: "MATCH_REVIEW_OPENED",
+        matchId: m.id,
+        reason,
+        deadlineAt,
+        evidence: evidence
+          ? {
+              kind: evidence.kind,
+              relativePath: evidence.relativePath,
+              at: evidence.at,
+            }
+          : null,
+        message:
+          "Partida em análise. Reservas preservadas até decisão ou prazo de revisão.",
+      });
+      for (const id of [m.a, m.b])
+        walletUpdate(
+          id,
+          "Partida em análise; consulte o histórico de revisões.",
+        );
+      clearMatch(m);
+    };
+    if (worker?.captureEvidence) {
+      Promise.race([
+        worker.captureEvidence(matchId),
+        new Promise((resolve) => setTimeout(() => resolve(null), 2500)),
+      ])
+        .then((evidence) => finish(evidence))
+        .catch(() => finish(null));
+    } else finish(null);
   }
   function promoteHostedQueue() {
     while (!hostedBusy() && hostedWaitQueue.length) {
@@ -579,11 +623,12 @@ export function startPlatform({
       const queued = matches.get(hostedWaitQueue[i]);
       if (!queued) continue;
       queued.queuePosition = i + 1;
+      const eta = queueEtaPayload(i + 1);
       both(queued, {
         type: "HOSTED_QUEUED",
         matchId: queued.id,
-        position: i + 1,
-        message: `Aguardando sessão oficial. Posição ${i + 1} na fila.`,
+        ...eta,
+        message: `Aguardando sessão oficial. Posição ${eta.placeInQueue} na fila (~${eta.etaSeconds}s).`,
       });
     }
   }
@@ -756,6 +801,7 @@ export function startPlatform({
     if (enqueue) {
       hostedWaitQueue.push(m.id);
       m.queuePosition = hostedWaitQueue.length;
+      const eta = queueEtaPayload(m.queuePosition);
       for (const id of [m.a, m.b]) {
         send(connection(id)[0], {
           type: "MATCH_STARTED",
@@ -764,8 +810,8 @@ export function startPlatform({
         send(connection(id)[0], {
           type: "HOSTED_QUEUED",
           matchId: m.id,
-          position: m.queuePosition,
-          message: `Servidor ocupado. Você está na posição ${m.queuePosition} da fila; as reservas estão preservadas.`,
+          ...eta,
+          message: `Servidor ocupado. Posição ${eta.placeInQueue} na fila (~${eta.etaSeconds}s); reservas preservadas.`,
         });
         walletUpdate(id);
       }
@@ -892,6 +938,8 @@ export function startPlatform({
 
   async function launchHosted(m) {
     try {
+      const iceBundle = mintIceServers();
+      m.iceBundle = iceBundle;
       m.worker = hostedFactory({
         matchId: m.id,
         onProgress: (stage) => {
@@ -925,7 +973,7 @@ export function startPlatform({
         },
         onFailure: (message) =>
           cancel(m, "Falha da execução oficial: " + message),
-        onSample: (sample) => {},
+        onSample: () => {},
         onObservation: (observation) => {
           if (!matches.has(m.id)) return;
           appendEvent(
@@ -955,11 +1003,7 @@ export function startPlatform({
           )
             return;
           appendEvent(m.id, "SERVER_WORKER", "SERVER_RESULT", proof);
-          applyGameResult(
-            m,
-            proof.winnerSlot === 1 ? m.a : m.b,
-            proof,
-          );
+          applyGameResult(m, proof.winnerSlot === 1 ? m.a : m.b, proof);
         },
         onMetrics: (metrics) => {
           if (!matches.has(m.id)) return;
@@ -967,15 +1011,23 @@ export function startPlatform({
           both(m, { type: "HOSTED_METRICS", matchId: m.id, metrics });
           broadcastScoreboard(m);
         },
-        iceServers: JSON.parse(process.env.HOSTED_ICE_SERVERS || "[]"),
+        iceServers: iceBundle.iceServers,
       });
       const result = await m.worker.start();
       if (!matches.has(m.id)) return m.worker.stop();
       m.workerReady = true;
       appendEvent(m.id, "SERVER_WORKER", "WORKER_READY", {
         manifest: result.manifest,
+        turnEphemeral: iceBundle.ephemeral,
+        turnTtlSec: iceBundle.ttlSec,
       });
-      both(m, { type: "HOSTED_READY", matchId: m.id });
+      both(m, {
+        type: "HOSTED_READY",
+        matchId: m.id,
+        iceServers: iceBundle.iceServers,
+        turnEphemeral: iceBundle.ephemeral,
+        turnTtlSec: iceBundle.ttlSec,
+      });
       startIfReady(m);
     } catch (error) {
       cancel(m, "A execução oficial não iniciou: " + error.message);
@@ -1810,6 +1862,25 @@ export function startPlatform({
                   matchId: m.id,
                   userId: u.id,
                 });
+                // Reenvio HOSTED_READY para renegociar WebRTC sem matar o worker.
+                if (
+                  m.workerReady &&
+                  m.rules?.transport === "server-stream" &&
+                  ["LOADING", "RUNNING", "AWAITING_RESULT"].includes(m.phase)
+                ) {
+                  const ice =
+                    m.iceBundle ||
+                    mintIceServers();
+                  m.iceBundle = ice;
+                  send(ws, {
+                    type: "HOSTED_READY",
+                    matchId: m.id,
+                    iceServers: ice.iceServers,
+                    turnEphemeral: ice.ephemeral,
+                    turnTtlSec: ice.ttlSec,
+                    resumed: true,
+                  });
+                }
               }
               refresh(c.roomId);
               return;
@@ -2337,22 +2408,25 @@ export function startPlatform({
                   command: d.type,
                   phase: m.phase,
                 });
-                if (m.phase !== "LOADING") {
-                  review(
+                // QUEUED/LOADING: estorno limpo. Depois de RUNNING: revisão.
+                if (m.phase === "LOADING" || m.phase === "QUEUED") {
+                  cancel(
                     m,
-                    u.id,
                     d.type === "DISPUTE_MATCH"
-                      ? "Resultado contestado pelo participante."
-                      : "Interrupção após início solicitada pelo participante.",
+                      ? "Resultado contestado. Reservas devolvidas."
+                      : m.phase === "QUEUED"
+                        ? "Fila cancelada. Reservas devolvidas."
+                        : "Preparação ou conexão interrompida. Reservas devolvidas.",
+                    d.type === "DISPUTE_MATCH",
                   );
                   return;
                 }
-                cancel(
+                review(
                   m,
+                  u.id,
                   d.type === "DISPUTE_MATCH"
-                    ? "Resultado contestado. Reservas devolvidas."
-                    : "Preparação ou conexão interrompida. Reservas devolvidas.",
-                  d.type === "DISPUTE_MATCH",
+                    ? "Resultado contestado pelo participante."
+                    : "Interrupção após início solicitada pelo participante.",
                 );
                 return;
               }

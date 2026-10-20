@@ -5,12 +5,18 @@ import { finance } from "./finance.js";
 db.exec(`
   CREATE TABLE IF NOT EXISTS match_rules(match_id TEXT PRIMARY KEY REFERENCES matches(id), payload TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS match_events(match_id TEXT NOT NULL REFERENCES matches(id), seq INTEGER NOT NULL, at_ms INTEGER NOT NULL, actor TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, previous_hash TEXT NOT NULL, hash TEXT NOT NULL, PRIMARY KEY(match_id,seq));
-  CREATE TABLE IF NOT EXISTS match_reviews(match_id TEXT PRIMARY KEY REFERENCES matches(id), status TEXT NOT NULL DEFAULT 'OPEN', reason TEXT NOT NULL, opened_by TEXT NOT NULL, opened_at INTEGER NOT NULL, deadline_at INTEGER NOT NULL, decision TEXT, decision_reason TEXT, decided_by TEXT, decided_at INTEGER);
+  CREATE TABLE IF NOT EXISTS match_reviews(match_id TEXT PRIMARY KEY REFERENCES matches(id), status TEXT NOT NULL DEFAULT 'OPEN', reason TEXT NOT NULL, opened_by TEXT NOT NULL, opened_at INTEGER NOT NULL, deadline_at INTEGER NOT NULL, decision TEXT, decision_reason TEXT, decided_by TEXT, decided_at INTEGER, evidence TEXT);
   CREATE TRIGGER IF NOT EXISTS match_rules_no_update BEFORE UPDATE ON match_rules BEGIN SELECT RAISE(ABORT,'Regras imutáveis'); END;
   CREATE TRIGGER IF NOT EXISTS match_rules_no_delete BEFORE DELETE ON match_rules BEGIN SELECT RAISE(ABORT,'Regras imutáveis'); END;
   CREATE TRIGGER IF NOT EXISTS match_events_no_update BEFORE UPDATE ON match_events BEGIN SELECT RAISE(ABORT,'Eventos imutáveis'); END;
   CREATE TRIGGER IF NOT EXISTS match_events_no_delete BEFORE DELETE ON match_events BEGIN SELECT RAISE(ABORT,'Eventos imutáveis'); END;
 `);
+
+try {
+  db.exec(`ALTER TABLE match_reviews ADD COLUMN evidence TEXT`);
+} catch {
+  /* coluna já existe */
+}
 
 export const allowedButtons = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 export const SERIES_BEST_OF = Object.freeze([1, 3, 5]);
@@ -148,26 +154,49 @@ export function acceptInput(stream, input) {
   return { button: input.button, value: input.value, seq: input.seq };
 }
 
-export const openReview = db.transaction((m, actor, reason) => {
+export const openReview = db.transaction((m, actor, reason, evidence = null) => {
   const now = Date.now(),
     deadlineAt = now + m.rules.reviewMs;
+  const evidenceJson =
+    evidence == null
+      ? null
+      : typeof evidence === "string"
+        ? evidence
+        : JSON.stringify(evidence);
   const result = db
     .prepare(
-      "INSERT OR IGNORE INTO match_reviews(match_id,reason,opened_by,opened_at,deadline_at) VALUES(?,?,?,?,?)",
+      "INSERT OR IGNORE INTO match_reviews(match_id,reason,opened_by,opened_at,deadline_at,evidence) VALUES(?,?,?,?,?,?)",
     )
-    .run(m.id, reason, actor, now, deadlineAt);
-  if (!result.changes)
+    .run(m.id, reason, actor, now, deadlineAt, evidenceJson);
+  if (!result.changes) {
+    if (evidenceJson) {
+      db.prepare(
+        "UPDATE match_reviews SET evidence=COALESCE(evidence, ?) WHERE match_id=? AND status='OPEN'",
+      ).run(evidenceJson, m.id);
+    }
     return db
       .prepare(
         "SELECT deadline_at deadlineAt FROM match_reviews WHERE match_id=?",
       )
       .get(m.id);
+  }
   // Trava liquidação automática: settleMatch só aceita DISPUTE via fromReview.
   db.prepare(
     "UPDATE matches SET status='DISPUTE',dispute=1 WHERE id=? AND status='IN_PROGRESS'",
   ).run(m.id);
   transition(m, "REVIEW");
-  appendEvent(m.id, actor, "REVIEW_OPENED", { reason, deadlineAt });
+  appendEvent(m.id, actor, "REVIEW_OPENED", {
+    reason,
+    deadlineAt,
+    evidence: evidence
+      ? {
+          kind: evidence.kind,
+          relativePath: evidence.relativePath,
+          at: evidence.at,
+          sample: evidence.sample || null,
+        }
+      : null,
+  });
   return { deadlineAt };
 });
 

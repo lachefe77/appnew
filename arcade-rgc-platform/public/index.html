@@ -1198,7 +1198,7 @@
           app.fbneo.launch(null,{ws:app.ws,matchId:msg.matchId,localSlot:msg.mySlot,players:msg}).then(()=>{
             if(msg.type==='MATCH_RESUMED'&&msg.mySlot===1&&msg.transport!=='server-stream')app.fbneo.failure('O navegador foi recarregado e perdeu o estado do emulador. Inicie uma nova partida.');
             else if(msg.phase==='RUNNING')app.fbneo.setRunning();
-            if(msg.transport==='server-stream'&&msg.hostedReady)app.fbneo.onHostedReady();
+            if(msg.transport==='server-stream'&&msg.hostedReady)app.fbneo.onHostedReady(msg);
           }).catch(e=>{window.toast.error('Jogo',e.message);wsSend({type:'GAME_FAILED',matchId:msg.matchId});});
           break;
         }
@@ -1208,7 +1208,7 @@
         case 'HOSTED_PROGRESS':
           if(app.fbneo?.matchId===msg.matchId)app.fbneo.loading(msg.stage, {assets:'Conferindo a integridade dos arquivos privados do jogo.',runtime:'Iniciando o processo do emulador no servidor.',boot:'Carregando o jogo no emulador oficial.',credits:'Preparando as fichas do gabinete.'}[msg.stage]);break;
         case 'HOSTED_READY':
-          if(app.fbneo?.matchId===msg.matchId)app.fbneo.onHostedReady();break;
+          if(app.fbneo?.matchId===msg.matchId)app.fbneo.onHostedReady(msg);break;
         case 'HOSTED_METRICS':
           if(app.fbneo?.matchId===msg.matchId)app.fbneo.onHostedMetrics(msg.metrics);
           renderScoreboard({ ...msg, metrics: msg.metrics });

@@ -227,6 +227,11 @@ export class HostedSession {
       await this.onSample?.(state);
       const observation = this.observer.observe(state);
       this.lastSample = observation.sample;
+      if (observation.needsReview) {
+        await this.pause().catch(() => {});
+        this.fail(observation.reason || observation.event);
+        return;
+      }
       if (observation.event) this.onObservation?.(observation);
       if (observation.result) {
         await this.pause();
@@ -294,6 +299,40 @@ export class HostedSession {
   resume() {
     this.observer.arm();
     return this.enqueue(() => this.page.evaluate(() => hostedWorker.resume()));
+  }
+  /** Entre games de série: rearm o detector sem derrubar o worker. */
+  resetObserver() {
+    this.observer.resetForNextGame();
+  }
+  /**
+   * Evidência mínima para revisão: screenshot PNG via CDP.
+   * Arquivo privado em data/evidence/<matchId>/ (nunca servido em /public).
+   */
+  async captureEvidence(matchId) {
+    if (this.closed || !this.cdp || !this.page) return null;
+    const { data } = await this.cdp.send("Page.captureScreenshot", {
+      format: "png",
+      fromSurface: true,
+    });
+    const dir = path.join(projectRoot, "data", "evidence", String(matchId));
+    fs.mkdirSync(dir, { recursive: true });
+    const name = `frame-${Date.now()}.png`;
+    const file = path.join(dir, name);
+    fs.writeFileSync(file, Buffer.from(data, "base64"));
+    let sample = this.lastSample || null;
+    try {
+      if (!sample) await this.sample();
+      sample = this.lastSample || sample;
+    } catch {
+      /* sample best-effort */
+    }
+    return {
+      kind: "screenshot",
+      path: file,
+      relativePath: path.relative(projectRoot, file),
+      at: Date.now(),
+      sample,
+    };
   }
   fail(message) {
     if (!this.closed && !this.failed) {

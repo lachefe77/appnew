@@ -104,11 +104,11 @@ test("empate incoerente, salto de contador e retrocesso bloqueiam resultado", ()
     [1, 1],
     [2, 0],
     [0, 2],
-  ])
-    assert.throws(
-      () => armed().observe(state(200, { wins })),
-      /inconsistentes/,
-    );
+  ]) {
+    const out = armed().observe(state(200, { wins }));
+    assert.equal(out.needsReview, true);
+    assert.equal(out.event, "INCOHERENT_WINS");
+  }
   assert.throws(() => armed().observe(state(20)), /retrocedeu/);
 });
 test("manifesto inválido não habilita servidor de jogo", () => {

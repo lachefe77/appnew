@@ -44,12 +44,24 @@ export class Kof2002Observer {
     this.lastFrame = -1;
     this.samples = 0;
     this.candidate = null;
+    this.baseline = null;
+    this.timeOverSince = null;
   }
   arm() {
     this.armed = true;
   }
   startPressed(slot) {
     this.starts.add(slot);
+  }
+  /** Reinicia o detector entre games de uma série Bo3/Bo5 sem zerar o relógio. */
+  resetForNextGame() {
+    this.finished = false;
+    this.started = false;
+    this.starts.clear();
+    this.candidate = null;
+    this.baseline = null;
+    this.timeOverSince = null;
+    this.armed = false;
   }
   observe(state) {
     const sample = readKofSample(state);
@@ -69,20 +81,65 @@ export class Kof2002Observer {
       ) {
         this.started = true;
         this.baseline = [...sample.wins];
+        this.timeOverSince = null;
         return { sample, event: "COMBAT_OBSERVED" };
       }
       return { sample };
     }
     const delta = sample.wins.map((w, i) => w - this.baseline[i]);
-    if (delta.some((n) => n < 0 || n > 1) || delta.every((n) => n === 1))
-      throw Error("Contadores de vitória inconsistentes; revisão necessária.");
-    const winnerSlot = delta[0] === 1 ? 1 : delta[1] === 1 ? 2 : null;
+    if (delta.some((n) => n < 0 || n > 1) || delta.every((n) => n === 1)) {
+      return {
+        sample,
+        event: "INCOHERENT_WINS",
+        needsReview: true,
+        reason:
+          "Contadores de vitória inconsistentes (possível double KO / empate incoerente); revisão necessária.",
+      };
+    }
+
+    // Round intermediário: ambos com vida 0 e sem incremento oficial de wins.
+    if (
+      sample.health.every((h) => h === 0) &&
+      delta.every((n) => n === 0)
+    ) {
+      return { sample, event: "DOUBLE_KO_ROUND" };
+    }
+
+    let winnerSlot = delta[0] === 1 ? 1 : delta[1] === 1 ? 2 : null;
+
+    // Time-over: timer zera e o core ainda não atualizou o contador de wins.
+    // Após ~90 frames (~1.5s @60), usa health como desempate estável.
+    if (!winnerSlot && sample.timer === 0) {
+      if (this.timeOverSince == null) this.timeOverSince = sample.frame;
+      const held = sample.frame - this.timeOverSince;
+      const [h1, h2] = sample.health;
+      if (held >= 90) {
+        if (h1 === h2) {
+          return {
+            sample,
+            event: "TIME_OVER_DRAW",
+            needsReview: true,
+            reason:
+              "Time-over com vida empatada; evidência insuficiente para liquidar automaticamente.",
+          };
+        }
+        winnerSlot = h1 > h2 ? 1 : 2;
+        return this._confirmWinner(sample, winnerSlot, "time-over-health");
+      }
+      return { sample, event: "TIME_OVER_PENDING" };
+    } else {
+      this.timeOverSince = null;
+    }
+
     if (!winnerSlot) {
       this.candidate = null;
       return { sample };
     }
+    return this._confirmWinner(sample, winnerSlot, "win-counter");
+  }
+  _confirmWinner(sample, winnerSlot, source) {
     if (this.candidate?.winnerSlot === winnerSlot) this.candidate.count++;
-    else this.candidate = { winnerSlot, count: 1, firstFrame: sample.frame };
+    else this.candidate = { winnerSlot, count: 1, firstFrame: sample.frame, source };
     if (
       this.candidate.count >= 3 &&
       sample.frame - this.candidate.firstFrame >= 30
@@ -95,7 +152,10 @@ export class Kof2002Observer {
           profile: kofProfile.id,
           frame: sample.frame,
           wins: sample.wins,
+          health: sample.health,
+          timer: sample.timer,
           source: "private-server-memory",
+          detection: this.candidate.source || source,
         },
       };
     }

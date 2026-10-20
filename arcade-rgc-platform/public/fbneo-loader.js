@@ -284,13 +284,20 @@ export class FBNeoLoader {
     this._padLoop();
     return this;
   }
-  _peer() {
+  _peer(iceServers) {
     this.pc?.close();
     this.receivedVideo = null;
     this.lastVideoFrameAt = Date.now();
     this.candidates = [];
+    const servers =
+      iceServers?.length > 0
+        ? iceServers
+        : this.iceServers?.length > 0
+          ? this.iceServers
+          : [{ urls: "stun:stun.l.google.com:19302" }];
+    this.iceServers = servers;
     this.pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      iceServers: servers,
     });
     this.pc.onicecandidate = (e) => {
       if (e.candidate)
@@ -592,7 +599,9 @@ export class FBNeoLoader {
     this.frame?.contentWindow.arenaEmulator?.pause();
     this.status(message);
   }
-  onHostedReady() {
+  onHostedReady(msg) {
+    if (msg?.iceServers?.length) this.iceServers = msg.iceServers;
+    this._peer(this.iceServers);
     this.loading(
       "ready",
       "Emulador preparado. Conectando os jogadores ao vídeo oficial.",
