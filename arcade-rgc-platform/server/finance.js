@@ -187,7 +187,15 @@ export const finance = {
     txRecord(id, "ADMIN_DEBIT", -amount, ref, desc);
   }),
   createMatch: db.transaction((m) => {
-    cents(m.stakeCents, { zero: m.mode === "AMISTOSO" });
+    // AMISTOSO/RANKED: stake 0. APOSTADO: créditos reservados.
+    const zeroStake = m.mode === "AMISTOSO" || m.mode === "RANKED" || !m.stakeCents;
+    cents(m.stakeCents, { zero: zeroStake });
+    if (!["AMISTOSO", "RANKED", "APOSTADO"].includes(m.mode))
+      throw new Error("Modo de partida inválido.");
+    if (m.mode === "APOSTADO" && !m.stakeCents)
+      throw new Error("APOSTADO exige stake em créditos.");
+    if (m.mode !== "APOSTADO" && m.stakeCents)
+      throw new Error("Somente APOSTADO usa créditos.");
     if (m.playerAId === m.playerBId)
       throw new Error("A partida exige duas contas diferentes.");
     const phase = m.phase === "QUEUED" ? "QUEUED" : "LOADING";
@@ -249,6 +257,9 @@ export const finance = {
       throw new Error("Partida não está em andamento.");
     }
     const loserId = winnerId === m.player_a_id ? m.player_b_id : m.player_a_id;
+    const mode =
+      db.prepare("SELECT mode FROM match_state WHERE match_id=?").get(matchId)
+        ?.mode || "AMISTOSO";
     if (m.stake_cents) {
       const a = consume(matchId, m.player_a_id),
         b = consume(matchId, m.player_b_id);
@@ -272,18 +283,26 @@ export const finance = {
         "Prêmio da partida",
       );
       txRecord(loserId, "MATCH_LOSS", 0, matchId, "Reserva destinada ao pote");
+      // Limite diário de perda (créditos) — espelho em wallets + user_limits.
+      Wallets.addDailyLoss(loserId, m.stake_cents);
     }
-    const win = db.prepare("SELECT elo FROM users WHERE id=?").get(winnerId),
-      lose = db.prepare("SELECT elo FROM users WHERE id=?").get(loserId);
-    const elo = calculateElo(win.elo, lose.elo);
-    db.prepare("UPDATE users SET elo=?,wins=wins+1 WHERE id=?").run(
-      elo.newWinnerElo,
-      winnerId,
-    );
-    db.prepare("UPDATE users SET elo=?,losses=losses+1 WHERE id=?").run(
-      elo.newLoserElo,
-      loserId,
-    );
+    // RANKED altera ELO; APOSTADO só créditos; AMISTOSO nenhum dos dois.
+    if (mode === "RANKED") {
+      const win = db.prepare("SELECT elo FROM users WHERE id=?").get(winnerId),
+        lose = db.prepare("SELECT elo FROM users WHERE id=?").get(loserId);
+      const elo = calculateElo(win.elo, lose.elo);
+      db.prepare("UPDATE users SET elo=?,wins=wins+1 WHERE id=?").run(
+        elo.newWinnerElo,
+        winnerId,
+      );
+      db.prepare("UPDATE users SET elo=?,losses=losses+1 WHERE id=?").run(
+        elo.newLoserElo,
+        loserId,
+      );
+    } else if (mode === "APOSTADO") {
+      db.prepare("UPDATE users SET wins=wins+1 WHERE id=?").run(winnerId);
+      db.prepare("UPDATE users SET losses=losses+1 WHERE id=?").run(loserId);
+    }
     db.prepare(
       "UPDATE matches SET winner_id=?,status='RESOLVED',ended_at=datetime('now') WHERE id=?",
     ).run(winnerId, matchId);

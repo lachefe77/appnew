@@ -18,6 +18,9 @@ const SENSITIVE_TYPES = new Set([
   "REGISTER_ACCOUNT",
   "DEPOSIT_PIX",
   "SPIN_LUCKY_WHEEL",
+  "FIND_MATCH",
+  "CREATE_ROOM_INVITE",
+  "REMATCH_OFFER",
 ]);
 
 // ── HTTP ──────────────────────────────────────────────────────────────────────

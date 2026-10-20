@@ -15,6 +15,9 @@ import db, {
   Stats,
   cleanupExpiredSessions,
   MatchmakingQueue,
+  InviteCodes,
+  UserLimits,
+  UserStats,
 } from "./db.js";
 import { finance, cents, recoverMatches } from "./finance.js";
 import { HostedSession } from "./hosted-session.js";
@@ -28,6 +31,8 @@ import {
   openReview,
   resolveReview,
   expireReviews,
+  SERIES_BEST_OF,
+  seriesWinsNeeded,
 } from "./match-integrity.js";
 import { RoomManager } from "./rooms-manager.js";
 import { rakeCentsForPot } from "./escrow.js";
@@ -48,6 +53,8 @@ import {
   clientIpFromReq,
   recordAuthFailure,
 } from "./security.js";
+import { can, roleAtLeast, assignableRoles, normalizeRole } from "./roles.js";
+import { audit } from "./audit-middleware.js";
 
 const scrypt = promisify(crypto.scrypt),
   uuid = () => crypto.randomUUID();
@@ -59,6 +66,10 @@ const production = process.env.NODE_ENV === "production";
 const simulation = !production && process.env.ENABLE_SIMULATED_FUNDS === "1";
 const defaultHostedFactory = (options) => new HostedSession(options);
 const graceMs = Number(process.env.RECONNECT_GRACE_MS) || 30000;
+const dailyLossLimitCents =
+  Number(process.env.DAILY_LOSS_LIMIT_CENTS) || 5000;
+const MATCH_MODES = Object.freeze(["AMISTOSO", "RANKED", "APOSTADO"]);
+const scoreboardMs = Number(process.env.SCOREBOARD_INTERVAL_MS) || 2000;
 const send = (ws, data) => {
   if (ws?.readyState === WebSocket.OPEN && ws.bufferedAmount < 2097152)
     ws.send(JSON.stringify(data));
@@ -157,8 +168,29 @@ export function startPlatform({
   const clients = new Map(),
     matches = new Map(),
     challenges = new Map(),
+    foundMatches = new Map(), // MATCH_FOUND pendentes (fila Find Match)
+    rematchOffers = new Map(), // ofertas de revanche pós-série
     hostedWaitQueue = []; // match ids aguardando slot server-stream
   const tournaments = new TournamentEngine();
+  const parseSeriesBestOf = (value, fallback = 1) => {
+    const n = value === undefined || value === null ? fallback : Number(value);
+    if (!SERIES_BEST_OF.includes(n))
+      throw fail("Formato de série inválido (Bo1, Bo3 ou Bo5).");
+    return n;
+  };
+  const assertDailyLossOk = (userId, stakeCents) => {
+    if (!stakeCents) return;
+    const lim = UserLimits.get(userId);
+    if ((lim.daily_loss_cents || 0) + stakeCents > dailyLossLimitCents)
+      throw fail(
+        `Limite diário de perda atingido (${(dailyLossLimitCents / 100).toFixed(2)} créditos).`,
+        429,
+      );
+  };
+  const isBusyUser = (userId) =>
+    [...matches.values()].some((m) => [m.a, m.b].includes(userId)) ||
+    [...challenges.values()].some((ch) => [ch.from, ch.to].includes(userId)) ||
+    [...foundMatches.values()].some((f) => [f.a, f.b].includes(userId));
   const hostedCap = () => Math.max(1, Number(process.env.HOSTED_MAX_SESSIONS) || 1);
   const hostedActiveCount = () =>
     [...matches.values()].filter(
@@ -220,7 +252,7 @@ export function startPlatform({
       s = Sessions.validate(token);
     if (!s) throw fail("Não autorizado.", 401);
     const u = Users.getById(s.user_id);
-    if (u.is_frozen || (admin && u.role !== "ADMIN"))
+    if (u.is_frozen || (admin && !roleAtLeast(u.role, "ADMIN")))
       throw fail("Acesso negado.", 403);
     if (admin) assertAdminIpAllowed(req);
     return u;
@@ -275,6 +307,8 @@ export function startPlatform({
     hostedReady: Boolean(m.workerReady),
     simulation,
     queuePosition: m.queuePosition || null,
+    seriesBestOf: m.seriesBestOf || m.rules.seriesBestOf || 1,
+    seriesScore: m.seriesScore || { a: 0, b: 0 },
     rules: m.rules,
     inputEpoch: connection(id)?.[1].input.epoch,
     nextInputSeq: (connection(id)?.[1].input.seq || 0) + 1,
@@ -286,11 +320,30 @@ export function startPlatform({
     transition(m, p);
     m.phase = p;
   };
+  function broadcastScoreboard(m) {
+    if (!m || !matches.has(m.id)) return;
+    both(m, {
+      type: "SCOREBOARD_UPDATE",
+      matchId: m.id,
+      seriesScore: m.seriesScore || { a: 0, b: 0 },
+      seriesBestOf: m.seriesBestOf || 1,
+      games: m.games || [],
+      phase: m.phase,
+      metrics: m.lastMetrics || null,
+    });
+  }
+  function armScoreboard(m) {
+    clearInterval(m.scoreboardTimer);
+    m.scoreboardTimer = setInterval(() => broadcastScoreboard(m), scoreboardMs);
+    if (typeof m.scoreboardTimer.unref === "function") m.scoreboardTimer.unref();
+    broadcastScoreboard(m);
+  }
   function clearMatch(m) {
     m.worker?.stop().catch((error) => console.error("[HOSTED]", error.message));
     for (const t of m.grace.values()) clearTimeout(t);
     clearTimeout(m.deadline);
     clearTimeout(m.reportTimer);
+    clearInterval(m.scoreboardTimer);
     matches.delete(m.id);
     const qi = hostedWaitQueue.indexOf(m.id);
     if (qi >= 0) hostedWaitQueue.splice(qi, 1);
@@ -311,13 +364,13 @@ export function startPlatform({
       message: reason,
     });
     for (const id of [m.a, m.b]) walletUpdate(id, reason);
-    AuditLog.record(
-      "SYSTEM",
-      "SYSTEM",
-      dispute ? "MATCH_DISPUTE" : "MATCH_CANCEL",
-      m.id,
-      { reason },
-    );
+    audit({ id: "SYSTEM", role: "SYSTEM" }, dispute ? "MATCH_DISPUTE" : "MATCH_CANCEL", {
+      targetType: "match",
+      targetId: m.id,
+      matchId: m.id,
+      roomId: m.room,
+      reason,
+    });
     clearMatch(m);
   }
   function settle(m, winner) {
@@ -331,8 +384,20 @@ export function startPlatform({
       {
         winner,
         authority: m.worker ? "server-session" : "dual-client-confirmation",
+        seriesScore: m.seriesScore,
+        seriesBestOf: m.seriesBestOf,
       },
     );
+    try {
+      const ranked = m.mode === "RANKED",
+        credit = m.mode === "APOSTADO";
+      UserStats.recordMatch(winner, { ranked, credit, win: true });
+      UserStats.recordMatch(winner === m.a ? m.b : m.a, {
+        ranked,
+        credit,
+        win: false,
+      });
+    } catch {}
     both(m, {
       type: "MATCH_ENDED",
       matchId: m.id,
@@ -340,10 +405,123 @@ export function startPlatform({
       winnerUsername: Users.getById(winner).username,
       prizeReais: (m.prize / 100).toFixed(2),
       rakeReais: (m.rake / 100).toFixed(2),
+      seriesScore: m.seriesScore || { a: 0, b: 0 },
+      seriesBestOf: m.seriesBestOf || 1,
+      rematchEligible: true,
     });
     for (const id of [m.a, m.b]) walletUpdate(id, "Partida encerrada.");
-    AuditLog.record("SYSTEM", "SYSTEM", "MATCH_SETTLE", m.id, { winner });
+    audit({ id: "SYSTEM", role: "SYSTEM" }, "MATCH_SETTLE", {
+      targetType: "match",
+      targetId: m.id,
+      matchId: m.id,
+      roomId: m.room,
+      winner,
+    });
+    // Guarda contexto curto para REMATCH_OFFER após clearMatch.
+    rematchOffers.set(m.id, {
+      matchId: m.id,
+      a: m.a,
+      b: m.b,
+      room: m.room,
+      mode: m.mode,
+      stake: m.stake,
+      seriesBestOf: m.seriesBestOf || 1,
+      expires: Date.now() + 120000,
+    });
+    setTimeout(() => rematchOffers.delete(m.id), 120000).unref?.();
     clearMatch(m);
+  }
+  /** Resultado de um game da série (observador / fixture SERIES_GAME_RESULT). */
+  function applyGameResult(m, winnerId, proof = {}) {
+    if (
+      !m ||
+      !matches.has(m.id) ||
+      m.reviewLock ||
+      !["RUNNING", "AWAITING_RESULT"].includes(m.phase) ||
+      ![m.a, m.b].includes(winnerId)
+    )
+      return;
+    const key = winnerId === m.a ? "a" : "b";
+    m.seriesScore = m.seriesScore || { a: 0, b: 0 };
+    m.seriesScore[key] += 1;
+    m.games = m.games || [];
+    m.games.push({
+      n: m.games.length + 1,
+      winnerId,
+      at: Date.now(),
+      proof: proof?.source || proof?.event || "game-result",
+    });
+    appendEvent(m.id, "SERVER_WORKER", "SERIES_GAME_RESULT", {
+      winnerId,
+      seriesScore: m.seriesScore,
+      proof,
+    });
+    both(m, {
+      type: "SERIES_GAME_ENDED",
+      matchId: m.id,
+      winnerId,
+      seriesScore: m.seriesScore,
+      seriesBestOf: m.seriesBestOf,
+      games: m.games,
+    });
+    broadcastScoreboard(m);
+    const need = seriesWinsNeeded(m.seriesBestOf || 1);
+    if (m.seriesScore.a >= need || m.seriesScore.b >= need) {
+      settle(m, m.seriesScore.a >= need ? m.a : m.b);
+      return;
+    }
+    // Série continua: reservas preservadas; limpa reports/ready do game.
+    m.reports = new Map();
+    m.ready = new Set();
+    clearTimeout(m.reportTimer);
+    m.reportTimer = null;
+    if (m.phase === "AWAITING_RESULT") {
+      try {
+        phase(m, "RUNNING");
+      } catch {}
+    }
+    both(m, {
+      type: "SERIES_NEXT_GAME",
+      matchId: m.id,
+      seriesScore: m.seriesScore,
+      seriesBestOf: m.seriesBestOf,
+      message: "Próximo game da série. Reservas mantidas até o fechamento.",
+    });
+  }
+  function onGraceExpired(m, userId) {
+    if (!matches.has(m.id) || !m.grace.has(userId)) return;
+    m.grace.delete(userId);
+    const peerOnline = (id) => Boolean(connection(id));
+    const aGone = !peerOnline(m.a);
+    const bGone = !peerOnline(m.b);
+    if (m.phase === "QUEUED" || m.phase === "LOADING") {
+      cancel(m, "Prazo de reconexão esgotado.");
+      return;
+    }
+    // Anti-rage-quit: um desconectado após RUNNING → vitória do oponente
+    // quando rules.rageQuit='loss' e o peer permanece online.
+    if (
+      m.phase === "RUNNING" &&
+      m.rules?.rageQuit === "loss" &&
+      ((aGone && !bGone) || (bGone && !aGone))
+    ) {
+      const loser = aGone ? m.a : m.b;
+      const winner = aGone ? m.b : m.a;
+      appendEvent(m.id, loser, "RAGE_QUIT_FORFEIT", {
+        winner,
+        rageQuit: m.rules.rageQuit,
+      });
+      settle(m, winner);
+      return;
+    }
+    // Ambos off ou política review / evidência ambígua.
+    review(
+      m,
+      "SYSTEM",
+      aGone && bGone
+        ? "Ambos desconectaram após o início; evidência insuficiente para forfeit."
+        : "Prazo de reconexão esgotado.",
+    );
   }
   function review(m, actor, reason) {
     if (!matches.has(m.id) || m.phase === "REVIEW" || m.reviewLock) return;
@@ -431,6 +609,262 @@ export function startPlatform({
       throw fail("Você não participa desta partida.", 403);
     return { u, m, other: u.id === m.a ? m.b : m.a };
   }
+  function validateModeStake(mode, stakeCents, room) {
+    if (!MATCH_MODES.includes(mode)) throw fail("Modo inválido.");
+    if (mode === "APOSTADO" && !simulation)
+      throw fail(
+        "Partidas com saldo disponíveis somente no ambiente de teste.",
+        409,
+      );
+    if (mode === "APOSTADO") {
+      if (room?.game !== "KOF 2002")
+        throw fail(
+          "Este jogo ainda não possui perfil de execução oficial validado.",
+          409,
+        );
+      if (hostedFactory === defaultHostedFactory) verifyHostedAssets();
+      return cents(stakeCents, { max: 100000 });
+    }
+    return 0;
+  }
+  function issueChallenge({
+    fromId,
+    toId,
+    roomId,
+    mode,
+    stake,
+    seriesBestOf = 1,
+    inviteCode = null,
+  }) {
+    const ch = {
+      id: "chal_" + uuid(),
+      from: fromId,
+      to: toId,
+      room: roomId,
+      mode,
+      stake,
+      seriesBestOf,
+      inviteCode,
+      expires: Date.now() + 30000,
+    };
+    ch.timer = setTimeout(
+      () => challengeEnd(ch, "Desafio expirado."),
+      30000,
+    );
+    challenges.set(ch.id, ch);
+    const fromUser = Users.getById(fromId);
+    send(connection(toId)?.[0], {
+      type: "CHALLENGE_RECEIVED",
+      challengeId: ch.id,
+      from: { id: fromId, username: fromUser.username, elo: fromUser.elo },
+      mode: ch.mode,
+      stakeCents: stake,
+      stakeReais: (stake / 100).toFixed(2),
+      seriesBestOf: ch.seriesBestOf,
+      inviteCode: ch.inviteCode || null,
+    });
+    send(connection(fromId)?.[0], {
+      type: "CHALLENGE_SENT",
+      challengeId: ch.id,
+      targetUsername: Users.getById(toId).username,
+      seriesBestOf: ch.seriesBestOf,
+      inviteCode: ch.inviteCode || null,
+    });
+    refresh(roomId);
+    return ch;
+  }
+  function startMatchBetween({
+    playerAId,
+    playerBId,
+    roomId,
+    mode,
+    stake,
+    seriesBestOf = 1,
+  }) {
+    const room = manager.getById(roomId);
+    const ua = Users.getById(playerAId),
+      ub = Users.getById(playerBId);
+    const vip = [ua.vip_level, ub.vip_level].sort(
+        (a, b) =>
+          ["BRONZE", "OURO", "DIAMANTE", "CRISTAL"].indexOf(b) -
+          ["BRONZE", "OURO", "DIAMANTE", "CRISTAL"].indexOf(a),
+      )[0],
+      rake = stake
+        ? rakeCentsForPot(stake, {
+            vipLevel: vip,
+            roomRakePercent: room?.rakePercent,
+          })
+        : 0;
+    const needsHosted = mode === "APOSTADO";
+    const enqueue = needsHosted && hostedBusy();
+    const bestOf = parseSeriesBestOf(seriesBestOf, 1);
+    const m = {
+      id: "match_" + uuid(),
+      a: playerAId,
+      b: playerBId,
+      room: roomId,
+      mode,
+      stake,
+      prize: stake * 2 - rake,
+      rake,
+      phase: enqueue ? "QUEUED" : "LOADING",
+      queuePosition: null,
+      seriesBestOf: bestOf,
+      seriesScore: { a: 0, b: 0 },
+      games: [],
+      lastMetrics: null,
+      rules: makeRules({
+        durationMs: Number(process.env.MATCH_DURATION_MS) || 1200000,
+        reviewMs: Number(process.env.MATCH_REVIEW_MS) || 86400000,
+        hosted: needsHosted,
+        seriesBestOf: bestOf,
+        rageQuit: "loss",
+      }),
+      ready: new Set(),
+      mediaConnected: new Set(),
+      reports: new Map(),
+      grace: new Map(),
+    };
+    db.transaction(() => {
+      finance.createMatch({
+        id: m.id,
+        roomId: m.room,
+        playerAId: m.a,
+        playerBId: m.b,
+        mode: m.mode,
+        stakeCents: m.stake,
+        prizeCents: m.prize,
+        rakeCents: rake,
+        phase: m.phase,
+      });
+      saveRules(m.id, m.rules);
+    })();
+    const ca = connection(playerAId)?.[1],
+      cb = connection(playerBId)?.[1];
+    for (const client of [ca, cb]) {
+      if (!client) continue;
+      client.input = { epoch: uuid(), seq: 0, pressed: new Set() };
+      client.matchId = m.id;
+    }
+    matches.set(m.id, m);
+    if (enqueue) {
+      hostedWaitQueue.push(m.id);
+      m.queuePosition = hostedWaitQueue.length;
+      for (const id of [m.a, m.b]) {
+        send(connection(id)[0], {
+          type: "MATCH_STARTED",
+          ...payload(m, id),
+        });
+        send(connection(id)[0], {
+          type: "HOSTED_QUEUED",
+          matchId: m.id,
+          position: m.queuePosition,
+          message: `Servidor ocupado. Você está na posição ${m.queuePosition} da fila; as reservas estão preservadas.`,
+        });
+        walletUpdate(id);
+      }
+      refresh(m.room);
+      return m;
+    }
+    m.deadline = setTimeout(
+      () =>
+        cancel(m, "Tempo de preparação esgotado. Reservas devolvidas."),
+      Number(process.env.MATCH_LOADING_MS) || 180000,
+    );
+    for (const id of [m.a, m.b]) {
+      send(connection(id)[0], {
+        type: "MATCH_STARTED",
+        ...payload(m, id),
+      });
+      walletUpdate(id);
+    }
+    refresh(m.room);
+    if (m.rules.transport === "server-stream") launchHosted(m);
+    return m;
+  }
+  function notifyRoomMatchOpen(roomId, found) {
+    broadcast(
+      {
+        type: "MATCH_OPEN",
+        foundMatchId: found.id,
+        mode: found.mode,
+        stakeCents: found.stake,
+        seriesBestOf: found.seriesBestOf,
+        players: [
+          { id: found.a, username: Users.getById(found.a).username },
+          { id: found.b, username: Users.getById(found.b).username },
+        ],
+      },
+      roomId,
+    );
+  }
+  function createFoundMatch(rowA, rowB) {
+    const id = "found_" + uuid();
+    const roomId = rowA.room_id || rowB.room_id || "";
+    const found = {
+      id,
+      a: rowA.user_id,
+      b: rowB.user_id,
+      mode: rowA.mode,
+      stake: rowA.stake_cents,
+      seriesBestOf: rowA.series_best_of || 1,
+      room: roomId,
+      accepts: new Set(),
+      expires: Date.now() + 30000,
+    };
+    found.timer = setTimeout(() => {
+      foundMatches.delete(id);
+      for (const uid of [found.a, found.b]) {
+        MatchmakingQueue.leave(uid);
+        send(connection(uid)?.[0], {
+          type: "MATCH_FOUND_EXPIRED",
+          foundMatchId: id,
+          message: "Proposta de fila expirou.",
+        });
+      }
+      refresh(found.room);
+    }, 30000);
+    foundMatches.set(id, found);
+    MatchmakingQueue.leave(found.a);
+    MatchmakingQueue.leave(found.b);
+    for (const uid of [found.a, found.b]) {
+      const peer = uid === found.a ? found.b : found.a;
+      send(connection(uid)?.[0], {
+        type: "MATCH_FOUND",
+        foundMatchId: id,
+        mode: found.mode,
+        stakeCents: found.stake,
+        seriesBestOf: found.seriesBestOf,
+        opponent: {
+          id: peer,
+          username: Users.getById(peer).username,
+          elo: Users.getById(peer).elo,
+        },
+        expiresAt: found.expires,
+      });
+    }
+    if (found.room) notifyRoomMatchOpen(found.room, found);
+    return found;
+  }
+  function tryFindMatch(userId) {
+    MatchmakingQueue.cleanup();
+    const self = MatchmakingQueue.get(userId);
+    if (!self) return null;
+    const opp = MatchmakingQueue.findMatch(
+      userId,
+      self.elo,
+      self.mode,
+      self.stake_cents,
+      self.room_id,
+      self.series_best_of || 1,
+    );
+    if (!opp) return null;
+    if (isBusyUser(opp.user_id) || connection(opp.user_id)?.[1]?.matchId) {
+      MatchmakingQueue.leave(opp.user_id);
+      return null;
+    }
+    return createFoundMatch(self, opp);
+  }
 
   function startIfReady(m) {
     if (
@@ -447,6 +881,7 @@ export function startPlatform({
     );
     m.worker?.resume().catch((error) => cancel(m, error.message));
     both(m, { type: "GAME_RUNNING", matchId: m.id });
+    armScoreboard(m);
   }
 
   async function launchHosted(m) {
@@ -486,28 +921,45 @@ export function startPlatform({
           cancel(m, "Falha da execução oficial: " + message),
         onSample: (sample) => {},
         onObservation: (observation) => {
-          if (matches.has(m.id))
-            appendEvent(
-              m.id,
-              "SERVER_WORKER",
-              observation.event,
+          if (!matches.has(m.id)) return;
+          appendEvent(
+            m.id,
+            "SERVER_WORKER",
+            observation.event,
+            observation.sample,
+          );
+          // Fixture/worker pode emitir SERIES_GAME_RESULT sem fechar a série.
+          if (
+            observation.event === "SERIES_GAME_RESULT" &&
+            [1, 2].includes(observation.sample?.winnerSlot)
+          ) {
+            applyGameResult(
+              m,
+              observation.sample.winnerSlot === 1 ? m.a : m.b,
               observation.sample,
             );
+          }
         },
         onResult: (proof) => {
           if (
             !matches.has(m.id) ||
             m.reviewLock ||
-            m.phase !== "RUNNING" ||
+            !["RUNNING", "AWAITING_RESULT"].includes(m.phase) ||
             ![1, 2].includes(proof.winnerSlot)
           )
             return;
           appendEvent(m.id, "SERVER_WORKER", "SERVER_RESULT", proof);
-          settle(m, proof.winnerSlot === 1 ? m.a : m.b);
+          applyGameResult(
+            m,
+            proof.winnerSlot === 1 ? m.a : m.b,
+            proof,
+          );
         },
         onMetrics: (metrics) => {
-          if (matches.has(m.id))
-            both(m, { type: "HOSTED_METRICS", matchId: m.id, metrics });
+          if (!matches.has(m.id)) return;
+          m.lastMetrics = metrics;
+          both(m, { type: "HOSTED_METRICS", matchId: m.id, metrics });
+          broadcastScoreboard(m);
         },
         iceServers: JSON.parse(process.env.HOSTED_ICE_SERVERS || "[]"),
       });
@@ -568,6 +1020,10 @@ export function startPlatform({
             realMoneyEnabled: false,
             disputeMode: "review-with-deadline",
             reconnectMs: graceMs,
+            modes: MATCH_MODES,
+            seriesBestOf: SERIES_BEST_OF,
+            dailyLossLimitCents,
+            rageQuitDefault: "loss",
           });
         if (p === "/api/rooms") return json(res, 200, manager.publicList());
         if (p === "/api/tournaments")
@@ -612,7 +1068,7 @@ export function startPlatform({
               .get(integrityRoute[1]);
           if (
             !match ||
-            (u.role !== "ADMIN" &&
+            (!roleAtLeast(u.role, "ADMIN") &&
               ![match.player_a_id, match.player_b_id].includes(u.id))
           )
             throw fail("Acesso negado.", 403);
@@ -662,7 +1118,7 @@ export function startPlatform({
         if (p === "/api/transactions") {
           const u = httpAccount(req),
             id = url.searchParams.get("userId") || u.id;
-          if (id !== u.id && u.role !== "ADMIN")
+          if (id !== u.id && !roleAtLeast(u.role, "ADMIN"))
             throw fail("Acesso negado.", 403);
           return json(res, 200, {
             transactions: Transactions.forUser(id).map((t) => ({
@@ -689,11 +1145,35 @@ export function startPlatform({
           });
         }
         if (p === "/api/matchmaking/join" && req.method === "POST") {
-          httpAccount(req);
-          throw fail(
-            "Matchmaking automático desativado. Entre na sala KOF 2002 e desafie o oponente.",
-            501,
+          const u = httpAccount(req);
+          const d = await body(req);
+          const roomId = text(d.roomId || "", 80);
+          const room = manager.getById(roomId);
+          if (!room?.active || room.game !== "KOF 2002")
+            throw fail("Informe uma sala KOF 2002 ativa.");
+          if (isBusyUser(u.id))
+            throw fail("Já existe desafio ou partida em andamento.");
+          const seriesBestOf = parseSeriesBestOf(d.seriesBestOf, 1);
+          const stake = validateModeStake(d.mode, d.stakeCents, room);
+          if (stake) {
+            assertDailyLossOk(u.id, stake);
+            if (Wallets.get(u.id).balance < stake)
+              throw fail("Saldo insuficiente para a fila.");
+          }
+          MatchmakingQueue.join(
+            u.id,
+            u.elo,
+            d.mode,
+            stake,
+            roomId,
+            seriesBestOf,
           );
+          const found = tryFindMatch(u.id);
+          return json(res, 200, {
+            ok: true,
+            queued: !found,
+            foundMatchId: found?.id || null,
+          });
         }
         if (
           p.startsWith("/api/matchmaking/leave/") &&
@@ -701,9 +1181,41 @@ export function startPlatform({
         ) {
           const u = httpAccount(req);
           MatchmakingQueue.leave(u.id);
+          return json(res, 200, { ok: true, message: "Saiu da fila." });
+        }
+        if (p === "/api/invites/redeem" && req.method === "POST") {
+          const u = httpAccount(req);
+          const d = await body(req);
+          const invite = InviteCodes.redeem(text(d.code, 16).toUpperCase());
+          const room = manager.getById(invite.room_id);
+          if (!room?.active) throw fail("Sala do convite indisponível.");
           return json(res, 200, {
             ok: true,
-            message: "Matchmaking automático desativado.",
+            code: invite.code,
+            kind: invite.kind,
+            roomId: room.id,
+            room: { id: room.id, name: room.name, game: room.game },
+            payload: invite.payload,
+            userId: u.id,
+          });
+        }
+        if (p.startsWith("/api/invites/") && req.method === "GET") {
+          httpAccount(req);
+          const code = decodeURIComponent(p.slice("/api/invites/".length));
+          const invite = InviteCodes.get(code);
+          if (!invite || invite.expired)
+            throw fail("Código de convite inválido ou expirado.", 404);
+          const room = manager.getById(invite.room_id);
+          return json(res, 200, {
+            code: invite.code,
+            kind: invite.kind,
+            roomId: invite.room_id,
+            roomName: room?.name || null,
+            game: room?.game || null,
+            expiresAt: invite.expires_at,
+            uses: invite.uses,
+            maxUses: invite.max_uses,
+            payload: invite.payload,
           });
         }
         if (p.startsWith("/api/admin/")) {
@@ -804,15 +1316,20 @@ export function startPlatform({
               matches: Stats.daily(7),
               users: Stats.newUsers(7),
             });
-          if (p === "/api/admin/audit-log")
+          if (p === "/api/admin/audit-log") {
+            if (!can(admin, "admin.audit")) throw fail("Acesso negado.", 403);
+            const limit = Math.min(
+              500,
+              Math.max(1, Number(url.searchParams.get("limit")) || 100),
+            );
+            const action = url.searchParams.get("action") || undefined;
+            const actorId = url.searchParams.get("actorId") || undefined;
+            const since = url.searchParams.get("since") || undefined;
             return json(res, 200, {
-              log: AuditLog.recent(
-                Math.min(
-                  500,
-                  Math.max(1, Number(url.searchParams.get("limit")) || 100),
-                ),
-              ),
+              log: AuditLog.recent(limit),
+              trail: AuditLog.query({ limit, action, actorId, since }),
             });
+          }
           if (p === "/api/admin/reconciliation")
             return json(res, 200, finance.reconcile());
           if (p === "/api/admin/export-csv") {
@@ -842,12 +1359,31 @@ export function startPlatform({
             );
           }
           if (p === "/api/admin/action" && req.method === "POST") {
-            const d = await body(req),
-              u =
-                Users.getById(d.userId) ||
-                db
-                  .prepare("SELECT * FROM users WHERE username=?")
-                  .get(d.userId);
+            const d = await body(req);
+            if (d.action === "START_SEASON") {
+              if (!can(admin, "admin.seasons"))
+                throw fail("Acesso negado.", 403);
+              const { activateSeason, resetEloForSeason } = await import(
+                "./seasons.js"
+              );
+              const season = activateSeason({
+                actor: admin,
+                name: text(d.name || "Season", 80),
+              });
+              let reset = null;
+              if (d.resetElo !== false)
+                reset = resetEloForSeason({
+                  actor: admin,
+                  seasonId: season.id,
+                });
+              return json(res, 200, { success: true, season, reset });
+            }
+            const u =
+              Users.getById(d.userId) ||
+              Users.get?.(d.userId) ||
+              db
+                .prepare("SELECT * FROM users WHERE username=? OR email=? OR id=?")
+                .get(d.userId, d.userId, d.userId);
             if (!u) throw fail("Usuário não encontrado.", 404);
             db.transaction(() => {
               if (d.action === "ADD_BALANCE")
@@ -875,12 +1411,14 @@ export function startPlatform({
                   "UPDATE users SET elo=1200,wins=0,losses=0 WHERE id=?",
                 ).run(u.id);
               else if (d.action === "SET_ROLE") {
-                if (!["USER", "MODERATOR", "ADMIN"].includes(d.role))
+                const nextRole = normalizeRole(d.role);
+                if (
+                  !nextRole ||
+                  nextRole === "GUEST" ||
+                  !assignableRoles(admin.role).includes(nextRole)
+                )
                   throw fail("Papel inválido.");
-                db.prepare("UPDATE users SET role=? WHERE id=?").run(
-                  d.role,
-                  u.id,
-                );
+                Users.setRole(u.id, nextRole);
                 Sessions.destroyUser(u.id);
               } else if (["APPROVE_KYC", "REJECT_KYC"].includes(d.action))
                 Users.updateKyc(
@@ -889,9 +1427,16 @@ export function startPlatform({
                   u.kyc_photo,
                 );
               else throw fail("Ação não suportada.");
-              AuditLog.record(admin.id, "ADMIN", d.action, u.id, {
-                reason: d.reason || "",
-                amountCents: d.amountCents || 0,
+              AuditLog.record({
+                actorId: admin.id,
+                actorRole: admin.role,
+                action: d.action,
+                targetType: "user",
+                targetId: u.id,
+                meta: {
+                  reason: d.reason || "",
+                  amountCents: d.amountCents || 0,
+                },
               });
             })();
             if (["BAN", "FREEZE", "SET_ROLE"].includes(d.action))
@@ -1197,7 +1742,7 @@ export function startPlatform({
                 }
                 if (u.is_banned || u.is_frozen)
                   throw fail("Conta indisponível.", 403);
-                if (u.role === "ADMIN") assertAdminIpAllowed(req);
+                if (roleAtLeast(u.role, "ADMIN")) assertAdminIpAllowed(req);
                 token = crypto.randomBytes(32).toString("hex");
                 Sessions.create(token, u.id, u.email, u.role);
               }
@@ -1356,7 +1901,7 @@ export function startPlatform({
               return;
             }
             if (d.type === "ADMIN_DECIDE_KYC") {
-              if (u.role !== "ADMIN") throw fail("Acesso negado.", 403);
+              if (!can(u, "admin.kyc")) throw fail("Acesso negado.", 403);
               assertAdminIpAllowed(req);
               if (!["APROVADO", "REJEITADO"].includes(d.decision))
                 throw fail("Decisão inválida.");
@@ -1364,8 +1909,13 @@ export function startPlatform({
               if (!target) throw fail("Conta não encontrada.", 404);
               db.transaction(() => {
                 Users.updateKyc(target.email, d.decision, target.kyc_photo);
-                AuditLog.record(u.id, "ADMIN", "KYC_DECISION", target.id, {
-                  decision: d.decision,
+                AuditLog.record({
+                  actorId: u.id,
+                  actorRole: u.role,
+                  action: "KYC_DECISION",
+                  targetType: "user",
+                  targetId: target.id,
+                  meta: { decision: d.decision },
                 });
               })();
               send(connection(target.id)?.[0], {
@@ -1393,62 +1943,44 @@ export function startPlatform({
               )
                 throw fail("Já existe desafio ou partida em andamento.");
               account(target[1]);
-              if (!["AMISTOSO", "APOSTADO"].includes(d.mode))
-                throw fail("Modo inválido.");
-              if (d.mode === "APOSTADO" && !simulation)
-                throw fail(
-                  "Partidas com saldo disponíveis somente no ambiente de teste.",
-                  409,
-                );
-              if (d.mode === "APOSTADO") {
-                if (room.game !== "KOF 2002")
-                  throw fail(
-                    "Este jogo ainda não possui perfil de execução oficial validado.",
-                    409,
-                  );
-                // Verify before issuing an invitation or reserving either wallet.
-                // Se o servidor estiver cheio, o accept entra na fila HOSTED.
-                if (hostedFactory === defaultHostedFactory)
-                  verifyHostedAssets();
+              const seriesBestOf = parseSeriesBestOf(d.seriesBestOf, 1);
+              const stake = validateModeStake(d.mode, d.stakeCents, room);
+              if (stake) {
+                assertDailyLossOk(u.id, stake);
+                assertDailyLossOk(d.targetUserId, stake);
+                if (
+                  Wallets.get(u.id).balance < stake ||
+                  Wallets.get(d.targetUserId).balance < stake
+                )
+                  throw fail("Um dos jogadores não possui saldo suficiente.");
               }
-              const stake =
-                d.mode === "APOSTADO"
-                  ? cents(d.stakeCents, { max: 100000 })
-                  : 0;
-              if (
-                stake &&
-                (Wallets.get(u.id).balance < stake ||
-                  Wallets.get(d.targetUserId).balance < stake)
-              )
-                throw fail("Um dos jogadores não possui saldo suficiente.");
-              const ch = {
-                id: "chal_" + uuid(),
-                from: u.id,
-                to: d.targetUserId,
-                room: c.roomId,
+              let inviteCode = null;
+              if (d.includeInviteCode || d.inviteCode === true) {
+                inviteCode = InviteCodes.allocate({
+                  roomId: c.roomId,
+                  createdBy: u.id,
+                  kind: "CHALLENGE",
+                  payload: {
+                    mode: d.mode,
+                    stakeCents: stake,
+                    seriesBestOf,
+                    targetUserId: d.targetUserId,
+                  },
+                  ttlMs: 300000,
+                  maxUses: 1,
+                }).code;
+              } else if (typeof d.inviteCode === "string" && d.inviteCode.trim()) {
+                inviteCode = text(d.inviteCode, 16).toUpperCase();
+              }
+              issueChallenge({
+                fromId: u.id,
+                toId: d.targetUserId,
+                roomId: c.roomId,
                 mode: d.mode,
                 stake,
-                expires: Date.now() + 30000,
-              };
-              ch.timer = setTimeout(
-                () => challengeEnd(ch, "Desafio expirado."),
-                30000,
-              );
-              challenges.set(ch.id, ch);
-              send(target[0], {
-                type: "CHALLENGE_RECEIVED",
-                challengeId: ch.id,
-                from: { id: u.id, username: u.username, elo: u.elo },
-                mode: ch.mode,
-                stakeCents: stake,
-                stakeReais: (stake / 100).toFixed(2),
+                seriesBestOf,
+                inviteCode,
               });
-              send(ws, {
-                type: "CHALLENGE_SENT",
-                challengeId: ch.id,
-                targetUsername: Users.getById(ch.to).username,
-              });
-              refresh(ch.room);
               return;
             }
             if (d.type === "DECLINE_CHALLENGE") {
@@ -1465,7 +1997,9 @@ export function startPlatform({
               if (
                 (d.stakeCents !== undefined && d.stakeCents !== ch.stake) ||
                 (d.mode !== undefined && d.mode !== ch.mode) ||
-                (d.fromUserId !== undefined && d.fromUserId !== ch.from)
+                (d.fromUserId !== undefined && d.fromUserId !== ch.from) ||
+                (d.seriesBestOf !== undefined &&
+                  d.seriesBestOf !== ch.seriesBestOf)
               )
                 throw fail("Dados do convite foram alterados.");
               const from = connection(ch.from);
@@ -1478,103 +2012,256 @@ export function startPlatform({
               )
                 throw fail("Jogador indisponível.");
               account(from[1]);
+              if (ch.stake) {
+                assertDailyLossOk(u.id, ch.stake);
+                assertDailyLossOk(ch.from, ch.stake);
+              }
               if (
                 ch.mode === "APOSTADO" &&
                 hostedFactory === defaultHostedFactory
               )
                 verifyHostedAssets();
-              const room = manager.getById(ch.room);
-              const vip = [u.vip_level, Users.getById(ch.from).vip_level].sort(
-                  (a, b) =>
-                    ["BRONZE", "OURO", "DIAMANTE", "CRISTAL"].indexOf(b) -
-                    ["BRONZE", "OURO", "DIAMANTE", "CRISTAL"].indexOf(a),
-                )[0],
-                rake = ch.stake
-                  ? rakeCentsForPot(ch.stake, {
-                      vipLevel: vip,
-                      roomRakePercent: room?.rakePercent,
-                    })
-                  : 0;
-              const needsHosted = ch.mode === "APOSTADO";
-              const enqueue = needsHosted && hostedBusy();
-              const m = {
-                id: "match_" + uuid(),
-                a: ch.from,
-                b: u.id,
-                room: ch.room,
+              // Só remove o desafio após createMatch/regras — falha financeira
+              // deve preservar o convite para decline/retry.
+              startMatchBetween({
+                playerAId: ch.from,
+                playerBId: u.id,
+                roomId: ch.room,
                 mode: ch.mode,
                 stake: ch.stake,
-                prize: ch.stake * 2 - rake,
-                rake,
-                phase: enqueue ? "QUEUED" : "LOADING",
-                queuePosition: null,
-                rules: makeRules({
-                  durationMs: Number(process.env.MATCH_DURATION_MS) || 1200000,
-                  reviewMs: Number(process.env.MATCH_REVIEW_MS) || 86400000,
-                  hosted: needsHosted,
-                }),
-                ready: new Set(),
-                mediaConnected: new Set(),
-                reports: new Map(),
-                grace: new Map(),
-              };
-              db.transaction(() => {
-                finance.createMatch({
-                  id: m.id,
-                  roomId: m.room,
-                  playerAId: m.a,
-                  playerBId: m.b,
-                  mode: m.mode,
-                  stakeCents: m.stake,
-                  prizeCents: m.prize,
-                  rakeCents: rake,
-                  phase: m.phase,
-                });
-                saveRules(m.id, m.rules);
-              })();
-              for (const client of [c, from[1]])
-                client.input = { epoch: uuid(), seq: 0, pressed: new Set() };
+                seriesBestOf: ch.seriesBestOf || 1,
+              });
               clearTimeout(ch.timer);
               challenges.delete(ch.id);
-              matches.set(m.id, m);
-              c.matchId = m.id;
-              from[1].matchId = m.id;
-              if (enqueue) {
-                hostedWaitQueue.push(m.id);
-                m.queuePosition = hostedWaitQueue.length;
-                for (const id of [m.a, m.b]) {
-                  send(connection(id)[0], {
-                    type: "MATCH_STARTED",
-                    ...payload(m, id),
+              return;
+            }
+            if (d.type === "CREATE_ROOM_INVITE") {
+              if (!c.roomId) throw fail("Entre em uma sala primeiro.");
+              const room = manager.getById(c.roomId);
+              if (!room?.active) throw fail("Sala não encontrada.");
+              const invite = InviteCodes.allocate({
+                roomId: c.roomId,
+                createdBy: u.id,
+                kind: "ROOM",
+                payload: { game: room.game, name: room.name },
+                ttlMs: Number(d.ttlMs) || 3600000,
+                maxUses: Number(d.maxUses) || 20,
+              });
+              send(ws, {
+                type: "ROOM_INVITE_CREATED",
+                code: invite.code,
+                roomId: invite.room_id,
+                expiresAt: invite.expires_at,
+                maxUses: invite.max_uses,
+              });
+              return;
+            }
+            if (d.type === "JOIN_VIA_CODE" || d.type === "REDEEM_INVITE") {
+              const invite = InviteCodes.redeem(text(d.code, 16).toUpperCase());
+              const room = manager.getById(invite.room_id);
+              if (!room?.active) throw fail("Sala do convite indisponível.");
+              if (c.matchId) throw fail("Você já está em uma partida.");
+              if (room.count >= room.maxPlayers && c.roomId !== room.id)
+                throw fail("Sala lotada.");
+              c.roomId = room.id;
+              refresh(room.id);
+              send(ws, {
+                type: "INVITE_REDEEMED",
+                code: invite.code,
+                kind: invite.kind,
+                roomId: room.id,
+                room: {
+                  id: room.id,
+                  name: room.name,
+                  game: room.game,
+                },
+                payload: invite.payload,
+              });
+              send(ws, { type: "ROOM_USERS", users: roster(room.id) });
+              return;
+            }
+            if (d.type === "FIND_MATCH") {
+              if (!c.roomId) throw fail("Entre em uma sala KOF 2002 primeiro.");
+              const room = manager.getById(c.roomId);
+              if (!room?.active || room.game !== "KOF 2002")
+                throw fail("Find Match disponível apenas em salas KOF 2002.");
+              if (c.matchId || isBusyUser(u.id))
+                throw fail("Já existe desafio ou partida em andamento.");
+              const seriesBestOf = parseSeriesBestOf(d.seriesBestOf, 1);
+              const stake = validateModeStake(d.mode, d.stakeCents, room);
+              if (stake) {
+                assertDailyLossOk(u.id, stake);
+                if (Wallets.get(u.id).balance < stake)
+                  throw fail("Saldo insuficiente para a fila.");
+              }
+              MatchmakingQueue.leave(u.id);
+              MatchmakingQueue.join(
+                u.id,
+                u.elo,
+                d.mode,
+                stake,
+                c.roomId,
+                seriesBestOf,
+              );
+              send(ws, {
+                type: "FIND_MATCH_QUEUED",
+                mode: d.mode,
+                stakeCents: stake,
+                seriesBestOf,
+                message: "Procurando oponente compatível…",
+              });
+              const found = tryFindMatch(u.id);
+              if (!found)
+                broadcast(
+                  {
+                    type: "MATCHMAKING_WAITING",
+                    userId: u.id,
+                    username: u.username,
+                    mode: d.mode,
+                    stakeCents: stake,
+                  },
+                  c.roomId,
+                );
+              return;
+            }
+            if (d.type === "CANCEL_FIND_MATCH") {
+              MatchmakingQueue.leave(u.id);
+              for (const [fid, found] of [...foundMatches.entries()]) {
+                if (![found.a, found.b].includes(u.id)) continue;
+                clearTimeout(found.timer);
+                foundMatches.delete(fid);
+                for (const uid of [found.a, found.b])
+                  send(connection(uid)?.[0], {
+                    type: "MATCH_FOUND_EXPIRED",
+                    foundMatchId: fid,
+                    message: "Fila cancelada.",
                   });
-                  send(connection(id)[0], {
-                    type: "HOSTED_QUEUED",
-                    matchId: m.id,
-                    position: m.queuePosition,
-                    message: `Servidor ocupado. Você está na posição ${m.queuePosition} da fila; as reservas estão preservadas.`,
-                  });
-                  walletUpdate(id);
-                }
-                refresh(m.room);
+              }
+              send(ws, { type: "FIND_MATCH_CANCELLED" });
+              refresh(c.roomId);
+              return;
+            }
+            if (d.type === "ACCEPT_FOUND_MATCH") {
+              const found = foundMatches.get(d.foundMatchId);
+              if (!found || found.expires < Date.now())
+                throw fail("Proposta de fila inválida ou expirada.");
+              if (![found.a, found.b].includes(u.id))
+                throw fail("Você não participa desta proposta.");
+              found.accepts.add(u.id);
+              send(ws, {
+                type: "FOUND_MATCH_ACCEPTED",
+                foundMatchId: found.id,
+              });
+              if (found.accepts.size < 2) {
+                const other = found.a === u.id ? found.b : found.a;
+                send(connection(other)?.[0], {
+                  type: "FOUND_MATCH_PEER_ACCEPTED",
+                  foundMatchId: found.id,
+                  userId: u.id,
+                });
                 return;
               }
-              m.deadline = setTimeout(
-                () =>
-                  cancel(
-                    m,
-                    "Tempo de preparação esgotado. Reservas devolvidas.",
-                  ),
-                Number(process.env.MATCH_LOADING_MS) || 180000,
-              );
-              for (const id of [m.a, m.b]) {
-                send(connection(id)[0], {
-                  type: "MATCH_STARTED",
-                  ...payload(m, id),
-                });
-                walletUpdate(id);
+              const roomA = connection(found.a)?.[1]?.roomId,
+                roomB = connection(found.b)?.[1]?.roomId;
+              const roomId = found.room || roomA || roomB;
+              if (!roomId || !connection(found.a) || !connection(found.b))
+                throw fail("Jogadores indisponíveis para iniciar.");
+              if (found.stake) {
+                assertDailyLossOk(found.a, found.stake);
+                assertDailyLossOk(found.b, found.stake);
               }
-              refresh(m.room);
-              if (m.rules.transport === "server-stream") launchHosted(m);
+              startMatchBetween({
+                playerAId: found.a,
+                playerBId: found.b,
+                roomId,
+                mode: found.mode,
+                stake: found.stake,
+                seriesBestOf: found.seriesBestOf,
+              });
+              clearTimeout(found.timer);
+              foundMatches.delete(found.id);
+              return;
+            }
+            if (d.type === "REMATCH_OFFER") {
+              const prev =
+                rematchOffers.get(d.matchId) ||
+                [...rematchOffers.values()].find(
+                  (r) => [r.a, r.b].includes(u.id) && r.expires > Date.now(),
+                );
+              if (!prev || ![prev.a, prev.b].includes(u.id))
+                throw fail("Revanche indisponível para esta partida.");
+              if (prev.expires < Date.now())
+                throw fail("Prazo de revanche expirado.");
+              if (c.matchId || isBusyUser(u.id))
+                throw fail("Já existe desafio ou partida em andamento.");
+              const otherId = prev.a === u.id ? prev.b : prev.a;
+              const other = connection(otherId);
+              if (!other || other[1].roomId !== c.roomId)
+                throw fail("Oponente precisa estar na mesma sala.");
+              if (prev.stake) {
+                assertDailyLossOk(u.id, prev.stake);
+                assertDailyLossOk(otherId, prev.stake);
+              }
+              const ch = issueChallenge({
+                fromId: u.id,
+                toId: otherId,
+                roomId: c.roomId,
+                mode: prev.mode,
+                stake: prev.stake,
+                seriesBestOf: prev.seriesBestOf,
+              });
+              send(other[0], {
+                type: "REMATCH_OFFERED",
+                challengeId: ch.id,
+                fromMatchId: prev.matchId,
+                mode: ch.mode,
+                stakeCents: ch.stake,
+                seriesBestOf: ch.seriesBestOf,
+              });
+              send(ws, {
+                type: "REMATCH_OFFER_SENT",
+                challengeId: ch.id,
+                fromMatchId: prev.matchId,
+              });
+              return;
+            }
+            if (d.type === "REMATCH_ACCEPT") {
+              // Aceita o desafio gerado pelo REMATCH_OFFER (mesmo fluxo de ACCEPT_CHALLENGE).
+              if (!d.challengeId) throw fail("challengeId obrigatório.");
+              const ch = challenges.get(d.challengeId);
+              if (!ch || ch.to !== u.id || ch.expires < Date.now())
+                throw fail("Revanche inválida ou expirada.");
+              if (
+                (d.stakeCents !== undefined && d.stakeCents !== ch.stake) ||
+                (d.mode !== undefined && d.mode !== ch.mode) ||
+                (d.seriesBestOf !== undefined &&
+                  d.seriesBestOf !== ch.seriesBestOf)
+              )
+                throw fail("Dados do convite foram alterados.");
+              const from = connection(ch.from);
+              if (
+                !from ||
+                from[1].roomId !== ch.room ||
+                c.roomId !== ch.room ||
+                c.matchId ||
+                from[1].matchId
+              )
+                throw fail("Jogador indisponível.");
+              account(from[1]);
+              if (ch.stake) {
+                assertDailyLossOk(u.id, ch.stake);
+                assertDailyLossOk(ch.from, ch.stake);
+              }
+              startMatchBetween({
+                playerAId: ch.from,
+                playerBId: u.id,
+                roomId: ch.room,
+                mode: ch.mode,
+                stake: ch.stake,
+                seriesBestOf: ch.seriesBestOf || 1,
+              });
+              clearTimeout(ch.timer);
+              challenges.delete(ch.id);
               return;
             }
             if (
@@ -1720,7 +2407,7 @@ export function startPlatform({
                     "Resultados divergentes. Reservas devolvidas.",
                     true,
                   );
-                else settle(m, a);
+                else applyGameResult(m, a, { source: "dual-confirmation" });
               } else {
                 phase(m, "AWAITING_RESULT");
                 both(m, {
@@ -1776,7 +2463,7 @@ export function startPlatform({
         appendEvent(m.id, c.userId, "DISCONNECTED", { phase: m.phase });
         m.grace.set(
           c.userId,
-          setTimeout(() => cancel(m, "Prazo de reconexão esgotado."), graceMs),
+          setTimeout(() => onGraceExpired(m, c.userId), graceMs),
         );
         both(m, {
           type: "PEER_DISCONNECTED",
@@ -1784,6 +2471,20 @@ export function startPlatform({
           userId: c.userId,
           reconnectMs: graceMs,
         });
+      }
+      if (c.userId) {
+        MatchmakingQueue.leave(c.userId);
+        for (const [fid, found] of [...foundMatches.entries()]) {
+          if (![found.a, found.b].includes(c.userId)) continue;
+          clearTimeout(found.timer);
+          foundMatches.delete(fid);
+          for (const uid of [found.a, found.b])
+            send(connection(uid)?.[0], {
+              type: "MATCH_FOUND_EXPIRED",
+              foundMatchId: fid,
+              message: "Jogador saiu da fila.",
+            });
+        }
       }
       refresh(c.roomId);
     });

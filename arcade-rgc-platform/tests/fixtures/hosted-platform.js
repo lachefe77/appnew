@@ -24,14 +24,23 @@ const app = startPlatform({
   },
 });
 process.on("message", (message) => {
-  if (message?.type === "FIXTURE_RESULT")
-    sessions
-      .get(message.matchId)
-      ?.onResult({
-        winnerSlot: message.winnerSlot,
-        source: "test-fixture-not-real-kof",
-        frame: 12345,
+  if (message?.type === "FIXTURE_RESULT" || message?.type === "SERIES_GAME_RESULT") {
+    const session = sessions.get(message.matchId);
+    if (!session) return;
+    const proof = {
+      winnerSlot: message.winnerSlot,
+      source: "test-fixture-not-real-kof",
+      frame: message.frame || 12345,
+    };
+    if (message.type === "SERIES_GAME_RESULT") {
+      session.onObservation?.({
+        event: "SERIES_GAME_RESULT",
+        sample: proof,
       });
+      return;
+    }
+    session.onResult(proof);
+  }
 });
 for (const signal of ["SIGTERM", "SIGINT"])
   process.once(signal, () => app.close());

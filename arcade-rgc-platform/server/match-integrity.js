@@ -13,10 +13,28 @@ db.exec(`
 `);
 
 export const allowedButtons = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+export const SERIES_BEST_OF = Object.freeze([1, 3, 5]);
+
+/** Vitórias necessárias para fechar a série (Bo1→1, Bo3→2, Bo5→3). */
+export function seriesWinsNeeded(bestOf) {
+  if (!SERIES_BEST_OF.includes(bestOf))
+    throw Error("Formato de série inválido (use 1, 3 ou 5).");
+  return Math.ceil(bestOf / 2);
+}
+
+/**
+ * Regras imutáveis por partida.
+ * - seriesBestOf: 1|3|5 (melhor de N; liquidação só ao fechar a série).
+ * - rageQuit: 'loss' → desconexão sem reconexão após RUNNING concede vitória
+ *   da série ao oponente ainda conectado; 'review' → abre revisão.
+ *   Ambos desconectados ou evidência ambígua sempre abrem revisão.
+ */
 export function makeRules({
   durationMs = 1200000,
   reviewMs = 86400000,
   hosted = false,
+  seriesBestOf = 1,
+  rageQuit = "loss",
 } = {}) {
   if (
     ![durationMs, reviewMs].every(
@@ -24,6 +42,10 @@ export function makeRules({
     )
   )
     throw Error("Prazo de partida/revisão inválido.");
+  if (!SERIES_BEST_OF.includes(seriesBestOf))
+    throw Error("Formato de série inválido (use 1, 3 ou 5).");
+  if (!["loss", "review"].includes(rageQuit))
+    throw Error("Política de rage-quit inválida.");
   return Object.freeze({
     version: 1,
     protocol: 2,
@@ -33,11 +55,18 @@ export function makeRules({
     resultMode: hosted ? "server-observer" : "demo-dual-confirmation",
     durationMs,
     reviewMs,
+    seriesBestOf,
+    seriesWinsNeeded: seriesWinsNeeded(seriesBestOf),
+    rageQuit,
     allowedButtons: hosted
       ? allowedButtons.filter((button) => button !== 2)
       : allowedButtons,
     cancellation: "refund-before-running-review-after-running",
     reviewTimeout: "refund-without-verdict",
+    disconnectAfterRunning:
+      rageQuit === "loss"
+        ? "opponent-series-win-if-peer-online-else-review"
+        : "open-review",
   });
 }
 
