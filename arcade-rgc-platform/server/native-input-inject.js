@@ -139,20 +139,23 @@ function createWindowsInjector(hwnd) {
 }
 
 /** Insere fichas no gabinete FBNeo (hosted bloqueia button 2 no cliente). */
-export async function injectCabinetCredits(input, { pulses = 3, gapMs = 120 } = {}) {
+export async function injectCabinetCredits(
+  input,
+  { pulses = 5, gapMs = 160, holdMs = 120 } = {},
+) {
   if (!input?.pulse && !input?.apply) return;
   for (let i = 0; i < pulses; i++) {
     if (input.pulse) {
-      await input.pulse(1, 2, 70);
+      await input.pulse(1, 2, holdMs);
       await new Promise((r) => setTimeout(r, gapMs));
-      await input.pulse(2, 2, 70);
+      await input.pulse(2, 2, holdMs);
     } else {
       input.apply(1, 2, 1);
-      await new Promise((r) => setTimeout(r, 70));
+      await new Promise((r) => setTimeout(r, holdMs));
       input.apply(1, 2, 0);
       await new Promise((r) => setTimeout(r, gapMs));
       input.apply(2, 2, 1);
-      await new Promise((r) => setTimeout(r, 70));
+      await new Promise((r) => setTimeout(r, holdMs));
       input.apply(2, 2, 0);
     }
     await new Promise((r) => setTimeout(r, gapMs));

@@ -535,6 +535,12 @@ export class FBNeoLoader {
       }
     };
     const blur = () => {
+      // Hosted: o host foca o RetroArch para SendInput — não soltar teclas
+      // nem assustar com "sem foco" (senão START/controlos parecem mortos).
+      if (this.hosted) {
+        this.focused = true;
+        return;
+      }
       this.focused = false;
       this.releaseAll();
       this.status("Janela sem foco. Clique no jogo para voltar a controlar.");
@@ -543,7 +549,9 @@ export class FBNeoLoader {
       this.focused = true;
       if (this.running)
         this.status(
-          `P${this.slot} conectado. Enter = Start. CONTROLES permite testar e remapear.`,
+          this.hosted
+            ? `P${this.slot} conectado. Jogo no servidor. Fichas no gabinete — pressione START.`
+            : `P${this.slot} conectado. Enter = Start. CONTROLES permite testar e remapear.`,
         );
     };
     const onVisibility = () => {

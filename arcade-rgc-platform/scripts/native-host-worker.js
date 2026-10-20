@@ -478,6 +478,22 @@ async function handle(msg) {
         },
       });
       emitSample();
+      // Fichas no gabinete (cliente hosted não pode mandar button 2).
+      if (state.input && state.game?.ok) {
+        state.pendingCredits = true;
+        injectCabinetCredits(state.input, { pulses: 5, gapMs: 180, holdMs: 140 })
+          .then(() => {
+            state.pendingCredits = false;
+            emit({
+              event: "progress",
+              stage: "cabinet-credits",
+              detail: { pulses: 5, backend: state.input?.backend },
+            });
+          })
+          .catch(() => {
+            state.pendingCredits = false;
+          });
+      }
       return;
     }
     case "input": {
@@ -487,13 +503,17 @@ async function handle(msg) {
       state.lastMapped = mapped;
       if (mapped.button === 3 && mapped.value === 1) {
         state.starts.add(mapped.slot);
-        // Reforça fichas quando ambos dão START (sai do INSERT COIN / attract).
-        if (state.starts.size >= 2 && state.input && !state.creditsTopup) {
+        // Reforça fichas no 1.º START (e se ainda estiver em INSERT COIN).
+        if (state.input && !state.creditsTopup) {
           state.creditsTopup = true;
-          injectCabinetCredits(state.input, { pulses: 2 }).catch(() => {});
+          injectCabinetCredits(state.input, {
+            pulses: 3,
+            gapMs: 160,
+            holdMs: 140,
+          }).catch(() => {});
         }
       }
-      // Fase 4c: PostMessage no HWND do RetroArch (browser mantém o foco).
+      // SendInput (+ foco breve) — PostMessage sozinho o DirectInput ignora.
       try {
         state.input?.apply(msg.slot, msg.button, msg.value);
       } catch {

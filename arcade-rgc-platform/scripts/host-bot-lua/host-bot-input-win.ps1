@@ -1,25 +1,72 @@
-# Host Bot — injeta teclas no HWND do RetroArch via PostMessage (sem roubar foco do browser).
+# Host Bot — teclas no RetroArch.
+# DirectInput ignora PostMessage sozinho → keybd_event + foco breve na janela.
 # Linha JSONL: {"vk":90,"down":1,"hwnd":12345,"ext":0}
 $ErrorActionPreference = "SilentlyContinue"
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public class ArenaKey {
-  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
-  [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint uCode, uint uMapType);
-  [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
   public const uint WM_KEYDOWN = 0x0100;
   public const uint WM_KEYUP = 0x0101;
   public const uint KEYEVENTF_KEYUP = 0x0002;
   public const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
+
+  [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
+  [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint uCode, uint uMapType);
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int nCmdShow);
+  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr h);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+  [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+  [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+  [DllImport("user32.dll")] public static extern bool AllowSetForegroundWindow(int dwProcessId);
 }
 "@
 
 $defaultHwnd = 0L
 if ($env:ARENA_HWND) { [int64]::TryParse($env:ARENA_HWND, [ref]$defaultHwnd) | Out-Null }
+$doFocus = $true
+if ($env:ARENA_INPUT_FOCUS -eq "0") { $doFocus = $false }
 
-# VK que precisam flag extended (numpad / arrows em alguns layouts)
-$extended = @(0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x2d,0x2e,0x5b,0x5c)
+function Focus-Game([IntPtr]$h) {
+  if ($h -eq [IntPtr]::Zero) { return [IntPtr]::Zero }
+  $prev = [ArenaKey]::GetForegroundWindow()
+  if ($prev -eq $h) { return $prev }
+  if ([ArenaKey]::IsIconic($h)) { [ArenaKey]::ShowWindow($h, 9) | Out-Null }
+  [ArenaKey]::ShowWindow($h, 5) | Out-Null
+  $pid = [uint32]0
+  $tidTarget = [ArenaKey]::GetWindowThreadProcessId($h, [ref]$pid)
+  $tidFore = [ArenaKey]::GetWindowThreadProcessId($prev, [ref]$pid)
+  $tidSelf = [ArenaKey]::GetCurrentThreadId()
+  if ($tidFore -ne 0 -and $tidFore -ne $tidSelf) {
+    [ArenaKey]::AttachThreadInput($tidSelf, $tidFore, $true) | Out-Null
+  }
+  if ($tidTarget -ne 0 -and $tidTarget -ne $tidSelf) {
+    [ArenaKey]::AttachThreadInput($tidSelf, $tidTarget, $true) | Out-Null
+  }
+  [ArenaKey]::AllowSetForegroundWindow(-1) | Out-Null
+  [ArenaKey]::BringWindowToTop($h) | Out-Null
+  [ArenaKey]::SetForegroundWindow($h) | Out-Null
+  return $prev
+}
+
+function Restore-Focus([IntPtr]$prev, [IntPtr]$game) {
+  if ($prev -eq [IntPtr]::Zero -or $prev -eq $game) { return }
+  [ArenaKey]::SetForegroundWindow($prev) | Out-Null
+  $pid = [uint32]0
+  $tidTarget = [ArenaKey]::GetWindowThreadProcessId($game, [ref]$pid)
+  $tidFore = [ArenaKey]::GetWindowThreadProcessId($prev, [ref]$pid)
+  $tidSelf = [ArenaKey]::GetCurrentThreadId()
+  if ($tidTarget -ne 0 -and $tidTarget -ne $tidSelf) {
+    [ArenaKey]::AttachThreadInput($tidSelf, $tidTarget, $false) | Out-Null
+  }
+  if ($tidFore -ne 0 -and $tidFore -ne $tidSelf) {
+    [ArenaKey]::AttachThreadInput($tidSelf, $tidFore, $false) | Out-Null
+  }
+}
 
 while ($true) {
   $line = [Console]::In.ReadLine()
@@ -30,28 +77,37 @@ while ($true) {
     $vk = [uint32]$msg.vk
     $hwnd = $defaultHwnd
     if ($null -ne $msg.hwnd) { $hwnd = [int64]$msg.hwnd }
-    $scan = [ArenaKey]::MapVirtualKey($vk, 0)
-    $isExt = ($extended -contains [int]$vk) -or ($msg.ext -eq 1)
-    $lp = [int64](1 -bor ([int64]$scan -shl 16))
-    if ($isExt) { $lp = $lp -bor (1 -shl 24) }
+    $scan = [byte]([ArenaKey]::MapVirtualKey($vk, 0) -band 0xFF)
+    $isExt = ($msg.ext -eq 1)
+    $down = ($msg.down -eq 1)
+    $h = [IntPtr]::Zero
+    if ($hwnd -gt 0) { $h = [IntPtr]$hwnd }
 
-    if ($hwnd -gt 0) {
-      $h = [IntPtr]$hwnd
-      if ($msg.down -eq 1) {
+    if ($h -ne [IntPtr]::Zero) {
+      $lp = [int64](1 -bor ([int64]$scan -shl 16))
+      if ($isExt) { $lp = $lp -bor (1 -shl 24) }
+      if ($down) {
         [ArenaKey]::PostMessage($h, [ArenaKey]::WM_KEYDOWN, [IntPtr]$vk, [IntPtr]$lp) | Out-Null
       } else {
         $lpUp = $lp -bor (1 -shl 30) -bor (1 -shl 31)
         [ArenaKey]::PostMessage($h, [ArenaKey]::WM_KEYUP, [IntPtr]$vk, [IntPtr]$lpUp) | Out-Null
       }
-    } else {
-      # Fallback global (só se não houver HWND)
-      $flags = 0
-      if ($isExt) { $flags = $flags -bor [ArenaKey]::KEYEVENTF_EXTENDEDKEY }
-      if ($msg.down -eq 1) {
-        [ArenaKey]::keybd_event([byte]$vk, [byte]$scan, $flags, [UIntPtr]::Zero)
-      } else {
-        [ArenaKey]::keybd_event([byte]$vk, [byte]$scan, ($flags -bor [ArenaKey]::KEYEVENTF_KEYUP), [UIntPtr]::Zero)
-      }
+    }
+
+    $prev = [IntPtr]::Zero
+    if ($doFocus -and $h -ne [IntPtr]::Zero) {
+      $prev = Focus-Game $h
+      Start-Sleep -Milliseconds 8
+    }
+
+    $flags = 0
+    if ($isExt) { $flags = $flags -bor [ArenaKey]::KEYEVENTF_EXTENDEDKEY }
+    if (-not $down) { $flags = $flags -bor [ArenaKey]::KEYEVENTF_KEYUP }
+    [ArenaKey]::keybd_event([byte]$vk, $scan, $flags, [UIntPtr]::Zero)
+
+    # Em key-up, devolve o foco ao browser para o próximo clique/tecla.
+    if ($doFocus -and $h -ne [IntPtr]::Zero -and -not $down) {
+      Restore-Focus $prev $h
     }
   } catch {
     # ignora linha inválida

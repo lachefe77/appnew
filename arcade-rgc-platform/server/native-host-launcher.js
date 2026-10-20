@@ -128,10 +128,11 @@ export function buildNativeHostLaunch(env = process.env) {
 
 /** Conteúdo mínimo de appendconfig para lab (teclado P1+P2). */
 export function defaultRetroArchLabConfig(env = process.env) {
-  const driver = String(env.HOST_BOT_VIDEO_DRIVER || "gdi").trim();
+  // Não forçar gdi/sdl2 por defeito — builds sem esse driver fecham no boot.
+  const driver = String(env.HOST_BOT_VIDEO_DRIVER || "").trim();
   return [
     "# Gerado para lab Host Bot — teclado P1/P2 (native-input-map)",
-    driver ? `video_driver = "${driver}"` : "# video_driver (default)",
+    driver ? `video_driver = "${driver}"` : "# video_driver: default do RetroArch",
     'video_fullscreen = "false"',
     'video_windowed_fullscreen = "false"',
     'video_threaded = "false"',
@@ -145,6 +146,10 @@ export function defaultRetroArchLabConfig(env = process.env) {
     'input_menu_toggle = "nul"',
     'input_toggle_fullscreen = "nul"',
     'input_autodetect_enable = "false"',
+    'input_max_users = "2"',
+    'input_auto_game_focus = "off"',
+    // dinput + SendInput com foco breve (ver host-bot-input-win.ps1)
+    'input_driver = "dinput"',
     ...retroArchKeyboardLines(1),
     ...retroArchKeyboardLines(2),
     "",
