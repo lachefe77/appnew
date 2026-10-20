@@ -2,6 +2,14 @@
 
 Esta versão integra salas, convites, duas contas, carteira com reservas identificadas e preparação do KOF 2002 original. Os créditos do teste não têm valor monetário. PIX real e operação comercial não estão liberados.
 
+
+## Temas visuais (escolha)
+
+Abra `/theme-gallery.html` para comparar **20 identidades autorais** (vitrine, sala, perfil, admin).
+O ID escolhido é salvo em `localStorage.arena.theme` e aplicado via `/theme-apply.js`.
+
+Painel operacional redesenhado: `/admin.html` (cargos MASTER → GUEST).
+
 ## Hardening KOF 2002 (esta entrega)
 
 Correções focadas no KOF sem ativar PIX real nem Bomberman:
