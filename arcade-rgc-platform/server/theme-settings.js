@@ -74,6 +74,8 @@ export function getActiveTheme() {
       id: t.id,
       name: t.name,
       pitch: t.pitch,
+      family: t.family || "",
+      mood: t.mood || "",
       colors: t.colors,
       fonts: t.fonts,
     })),
