@@ -46,9 +46,13 @@ export function buildFfmpegFrameCapture(env = process.env) {
 
   let args;
   if (kind === "gdigrab" || (!kind && process.platform === "win32")) {
-    // Preferir hwnd=12345 (resolvido pelo worker). title= é fallback frágil.
-    const i = input || "title=RetroArch";
-    args = [
+    // hwnd= de janela GL/D3D → frames pretos (GDI). Preferir desktop+crop (DWM)
+    // ou title= com video_driver sdl2/gdi no RetroArch.
+    const i = input || "desktop";
+    const ox = Number(env.HOST_BOT_FFMPEG_OFFSET_X);
+    const oy = Number(env.HOST_BOT_FFMPEG_OFFSET_Y);
+    const size = String(env.HOST_BOT_FFMPEG_SIZE || "").trim();
+    const grabArgs = [
       "-y",
       "-f",
       "gdigrab",
@@ -56,10 +60,14 @@ export function buildFfmpegFrameCapture(env = process.env) {
       String(fps),
       "-draw_mouse",
       "0",
-      "-i",
-      i,
-      ...outArgs,
     ];
+    if (i === "desktop" && Number.isFinite(ox) && Number.isFinite(oy) && size) {
+      grabArgs.push("-offset_x", String(Math.max(0, ox)));
+      grabArgs.push("-offset_y", String(Math.max(0, oy)));
+      grabArgs.push("-video_size", size);
+    }
+    grabArgs.push("-i", i, ...outArgs);
+    args = grabArgs;
   } else if (kind === "x11grab") {
     const i = input || ":0.0";
     args = [

@@ -27,6 +27,7 @@ import { createInputInjector } from "../server/native-input-inject.js";
 import {
   waitForWindowByPid,
   focusWindow,
+  getWindowClientRect,
   hwndGrabInput,
 } from "../server/native-win-window.js";
 
@@ -194,17 +195,36 @@ async function handle(msg) {
           if (win?.hwnd) {
             state.gameHwnd = win.hwnd;
             await focusWindow(win.hwnd);
-            const grab = hwndGrabInput(win.hwnd);
-            if (grab) {
-              // hwnd=… é fiável; title=RetroArch às vezes captura outra janela.
-              process.env.HOST_BOT_FFMPEG_INPUT_KIND =
-                process.env.HOST_BOT_FFMPEG_INPUT_KIND || "gdigrab";
-              process.env.HOST_BOT_FFMPEG_INPUT = grab;
+            // GL/D3D + gdigrab hwnd= → preto. Desktop crop (DWM) ou sdl2 no cfg.
+            const grabMode = String(
+              process.env.HOST_BOT_FFMPEG_GRAB || "desktop",
+            ).toLowerCase();
+            process.env.HOST_BOT_FFMPEG_INPUT_KIND =
+              process.env.HOST_BOT_FFMPEG_INPUT_KIND || "gdigrab";
+            let grabDetail = { mode: grabMode };
+            if (grabMode === "hwnd") {
+              const grab = hwndGrabInput(win.hwnd);
+              if (grab) process.env.HOST_BOT_FFMPEG_INPUT = grab;
+              grabDetail.grab = grab;
+            } else {
+              const rect = await getWindowClientRect(win.hwnd);
+              if (rect) {
+                process.env.HOST_BOT_FFMPEG_INPUT = "desktop";
+                process.env.HOST_BOT_FFMPEG_OFFSET_X = String(rect.x);
+                process.env.HOST_BOT_FFMPEG_OFFSET_Y = String(rect.y);
+                process.env.HOST_BOT_FFMPEG_SIZE = `${rect.width}x${rect.height}`;
+                grabDetail = { ...grabDetail, ...rect };
+              } else {
+                // Fallback: título (precisa video_driver sdl2/gdi no appendconfig).
+                process.env.HOST_BOT_FFMPEG_INPUT =
+                  process.env.HOST_BOT_FFMPEG_INPUT || "title=RetroArch";
+                grabDetail.fallback = process.env.HOST_BOT_FFMPEG_INPUT;
+              }
             }
             emit({
               event: "progress",
               stage: "game-window",
-              detail: { hwnd: win.hwnd, title: win.title, grab },
+              detail: { hwnd: win.hwnd, title: win.title, ...grabDetail },
             });
           } else {
             emit({

@@ -1,6 +1,7 @@
 /**
- * Windows: localiza HWND da janela do RetroArch (por PID) e traz para frente.
- * Usado por gdigrab (hwnd=…) e input (foco antes de keybd_event).
+ * Windows: HWND / rect da janela do RetroArch + foco.
+ * gdigrab em hwnd de janela GL/D3D vem preto; preferir desktop+crop (DWM)
+ * ou video_driver sdl2/gdi no RetroArch.
  */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -23,7 +24,7 @@ async function runPs(command, envExtra = {}) {
 
 /**
  * @param {number} pid
- * @returns {Promise<{ hwnd: number, title: string }|null>}
+ * @returns {Promise<{ hwnd: number, title: string, pid: number }|null>}
  */
 export async function findWindowByPid(pid) {
   if (process.platform !== "win32" || !pid) return null;
@@ -33,7 +34,6 @@ $p = Get-Process -Id $target -ErrorAction SilentlyContinue
 if (-not $p) { '{}'; exit 0 }
 $h = [int64]$p.MainWindowHandle
 if ($h -eq 0) {
-  # Algumas builds expõem a janela noutro processo filho — varre por título.
   $hit = Get-Process | Where-Object {
     $_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -match 'RetroArch|FinalBurn|FBNeo'
   } | Select-Object -First 1
@@ -56,7 +56,6 @@ if ($h -eq 0) {
   }
 }
 
-/** Espera a janela do processo (RetroArch) aparecer. */
 export async function waitForWindowByPid(
   pid,
   { timeoutMs = 20000, intervalMs = 400 } = {},
@@ -68,6 +67,51 @@ export async function waitForWindowByPid(
     await new Promise((r) => setTimeout(r, intervalMs));
   }
   return null;
+}
+
+/**
+ * Rect do cliente (área do jogo) em coordenadas de ecrã.
+ * @returns {Promise<{x:number,y:number,width:number,height:number}|null>}
+ */
+export async function getWindowClientRect(hwnd) {
+  if (process.platform !== "win32" || !hwnd) return null;
+  const cmd = `
+$h = [IntPtr][int64]$env:ARENA_HWND
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class ArenaRect {
+  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L,T,R,B; }
+  [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X,Y; }
+  [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
+  [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr h, ref POINT p);
+}
+"@
+$r = New-Object ArenaRect+RECT
+if (-not [ArenaRect]::GetClientRect($h, [ref]$r)) { '{}'; exit 0 }
+$pt = New-Object ArenaRect+POINT
+$pt.X = 0; $pt.Y = 0
+[ArenaRect]::ClientToScreen($h, [ref]$pt) | Out-Null
+$w = [Math]::Max(1, $r.R - $r.L)
+$ht = [Math]::Max(1, $r.B - $r.T)
+# gdigrab exige tamanho par
+if ($w % 2 -ne 0) { $w-- }
+if ($ht % 2 -ne 0) { $ht-- }
+@{ x = [int]$pt.X; y = [int]$pt.Y; width = [int]$w; height = [int]$ht } | ConvertTo-Json -Compress
+`;
+  try {
+    const raw = await runPs(cmd, { ARENA_HWND: String(hwnd) });
+    const data = JSON.parse(raw || "{}");
+    const x = Number(data.x),
+      y = Number(data.y),
+      width = Number(data.width),
+      height = Number(data.height);
+    if (![x, y, width, height].every((n) => Number.isFinite(n)) || width < 16 || height < 16)
+      return null;
+    return { x, y, width, height };
+  } catch {
+    return null;
+  }
 }
 
 export async function focusWindow(hwnd) {
@@ -98,7 +142,6 @@ if ([ArenaFocus]::IsIconic($h)) { [ArenaFocus]::ShowWindow($h, 9) | Out-Null }
   }
 }
 
-/** Formato aceite pelo ffmpeg gdigrab. */
 export function hwndGrabInput(hwnd) {
   const n = Number(hwnd);
   if (!Number.isFinite(n) || n <= 0) return null;
