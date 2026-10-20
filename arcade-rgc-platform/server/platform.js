@@ -35,6 +35,7 @@ import {
   estimateHostedCapacity,
   hostedCapOpsPayload,
 } from "./host-bot-capacity.js";
+import { resolveHostedMaxSessions } from "./hosted-queue.js";
 import {
   makeRules,
   saveRules,
@@ -270,7 +271,7 @@ export function startPlatform({
     [...matches.values()].some((m) => [m.a, m.b].includes(userId)) ||
     [...challenges.values()].some((ch) => [ch.from, ch.to].includes(userId)) ||
     [...foundMatches.values()].some((f) => [f.a, f.b].includes(userId));
-  const hostedCap = () => Math.max(1, Number(process.env.HOSTED_MAX_SESSIONS) || 1);
+  const hostedCap = () => resolveHostedMaxSessions(process.env, hostedEngine);
   const hostedActiveCount = () =>
     [...matches.values()].filter(
       (m) =>

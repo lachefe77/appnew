@@ -19,6 +19,11 @@ import {
   parseArenaFrameLine,
   startFfmpegFramebuffer,
 } from "../server/native-framebuffer.js";
+import {
+  launchFromWorkerEnv,
+  startNativeGameProcess,
+} from "../server/native-game-process.js";
+import { createInputInjector } from "../server/native-input-inject.js";
 
 const mode = String(process.env.HOST_BOT_MODE || "stub").toLowerCase();
 const autoPeers =
@@ -42,6 +47,8 @@ const state = {
   media: null,
   mediaBackend: null,
   ffmpegFb: null,
+  game: null,
+  input: null,
 };
 
 function emit(obj) {
@@ -130,6 +137,38 @@ async function handle(msg) {
       emit({ event: "progress", stage: "assets" });
       emit({ event: "progress", stage: "runtime" });
       emit({ event: "progress", stage: "boot" });
+
+      // Fase 4b: spawna RetroArch/FBNeo se HOST_BOT_LAUNCH_BIN estiver setado.
+      const gameLaunch = launchFromWorkerEnv();
+      if (gameLaunch) {
+        emit({ event: "progress", stage: "game" });
+        state.game = startNativeGameProcess(gameLaunch, {
+          onLog: (line) => {
+            if (line) emit({ event: "progress", stage: "game-log", detail: line.slice(0, 200) });
+          },
+          onExit: (code) => {
+            if (state.started && code !== 0 && code != null) {
+              emit({
+                event: "failure",
+                message: "Core do jogo encerrou (código " + code + ").",
+              });
+            }
+          },
+        });
+        if (state.game.ok) {
+          state.input = createInputInjector();
+          // Dá tempo à janela abrir antes do gdigrab.
+          const waitMs = Number(process.env.HOST_BOT_GAME_BOOT_MS) || 2500;
+          await new Promise((r) => setTimeout(r, waitMs));
+        } else {
+          emit({
+            event: "progress",
+            stage: "game-skip",
+            detail: state.game.reason || "skip",
+          });
+        }
+      }
+
       emit({ event: "progress", stage: "media" });
       await ensureMedia(state.iceServers);
       emit({ event: "progress", stage: "credits" });
@@ -141,10 +180,13 @@ async function handle(msg) {
         manifest: {
           engine: mode === "stub" ? "native-stub" : "native-lua",
           fixture: mode === "stub",
-          phase: 2,
+          phase: state.game?.ok ? 4 : 2,
           matchId: state.matchId,
           mode,
           media: state.mediaBackend,
+          game: state.game?.ok
+            ? { pid: state.game.pid, backend: state.input?.backend }
+            : null,
           framebuffer: state.ffmpegFb?.ok
             ? "ffmpeg"
             : "inject-or-synthetic",
@@ -161,6 +203,12 @@ async function handle(msg) {
       state.lastMapped = mapped;
       if (mapped.button === 3 && mapped.value === 1) {
         state.starts.add(mapped.slot);
+      }
+      // Fase 4b: teclado real no core (Windows keybd_event).
+      try {
+        state.input?.apply(msg.slot, msg.button, msg.value);
+      } catch {
+        /* ignore inject errors */
       }
       if (!state.paused) {
         maybeScriptedProgress();
@@ -274,6 +322,18 @@ async function handle(msg) {
     }
     case "stop":
       state.started = false;
+      try {
+        state.input?.stop();
+      } catch {
+        /* ignore */
+      }
+      state.input = null;
+      try {
+        state.game?.stop();
+      } catch {
+        /* ignore */
+      }
+      state.game = null;
       try {
         state.ffmpegFb?.stop();
       } catch {

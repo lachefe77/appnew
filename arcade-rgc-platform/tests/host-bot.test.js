@@ -9,6 +9,13 @@ import {
   hostedCapOpsPayload,
 } from "../server/host-bot-capacity.js";
 import {
+  resolveHostedMaxSessions,
+  isHostedBusy,
+  queueEta,
+} from "../server/hosted-queue.js";
+import { vkForKey } from "../server/native-input-inject.js";
+import { launchFromWorkerEnv } from "../server/native-game-process.js";
+import {
   resolveHostedEngine,
   createHostedFactory,
 } from "../server/host-bot-factory.js";
@@ -347,6 +354,32 @@ test("framebuffer: RGB24→I420 + pushExternal prioriza external", () => {
   assert.equal(src.externalCount, 1);
   assert.equal(lastSource, "external");
   src.stop();
+});
+
+test("Fase 4: resolveHostedMaxSessions native=6 chrome=1", () => {
+  assert.equal(resolveHostedMaxSessions({}, "native"), 6);
+  assert.equal(resolveHostedMaxSessions({}, "chrome"), 1);
+  assert.equal(resolveHostedMaxSessions({ HOSTED_MAX_SESSIONS: "4" }, "native"), 4);
+  assert.equal(isHostedBusy(6, 6), true);
+  assert.equal(isHostedBusy(5, 6), false);
+  assert.equal(queueEta(2, 180).etaSeconds, 360);
+});
+
+test("Fase 4b: vk + launchFromWorkerEnv", () => {
+  assert.equal(vkForKey("KeyZ"), 0x5a);
+  assert.equal(vkForKey("ArrowUp"), 0x26);
+  assert.equal(
+    launchFromWorkerEnv({ HOST_BOT_LAUNCH_MODE: "stub", HOST_BOT_LAUNCH_BIN: "x" }),
+    null,
+  );
+  const launch = launchFromWorkerEnv({
+    HOST_BOT_LAUNCH_MODE: "retroarch",
+    HOST_BOT_LAUNCH_BIN: "C:/ra/retroarch.exe",
+    HOST_BOT_LAUNCH_ARGS: JSON.stringify(["-L", "fbneo_libretro", "rom.zip"]),
+    HOST_BOT_WORKDIR: "data/hosted/kof2002",
+  });
+  assert.equal(launch.command, "C:/ra/retroarch.exe");
+  assert.ok(launch.args.includes("fbneo_libretro"));
 });
 
 test("Fase 3: calibrateFromMeasurement recomenda HOSTED_MAX_SESSIONS", () => {
