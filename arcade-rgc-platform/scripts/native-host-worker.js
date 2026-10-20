@@ -62,6 +62,8 @@ const state = {
   pendingCredits: false,
   readySent: false,
   creditsTopup: false,
+  creditsSeeded: false,
+  startCoin: null,
   gameWatch: null,
   closing: false,
 };
@@ -320,6 +322,8 @@ async function handle(msg) {
       state.pendingCredits = false;
       state.readySent = false;
       state.creditsTopup = false;
+      state.creditsSeeded = false;
+      state.startCoin = new Set();
       state.closing = false;
       if (state.gameWatch) {
         clearInterval(state.gameWatch);
@@ -502,23 +506,17 @@ async function handle(msg) {
         },
       });
       emitSample();
-      // Batch de fichas (1 foco + Y/H×2) — estável com gdigrab.
-      if (state.input && state.game?.ok) {
+      // Uma só semente de fichas (F1/F2). Flood de Y reiniciava o attract.
+      if (state.input && state.game?.ok && !state.creditsSeeded) {
         state.pendingCredits = true;
         const seed = async () => {
-          await new Promise((r) => setTimeout(r, 2000));
+          await new Promise((r) => setTimeout(r, 2800));
           if (!gameAlive()) return;
           await injectCabinetCredits(state.input, {
             pulses: 2,
-            holdMs: 170,
+            holdMs: 220,
           });
-          await new Promise((r) => setTimeout(r, 500));
-          if (!gameAlive()) return;
-          // Segunda leva leve se attract engolir o 1.º
-          await injectCabinetCredits(state.input, {
-            pulses: 1,
-            holdMs: 170,
-          });
+          state.creditsSeeded = true;
         };
         seed()
           .then(() => {
@@ -534,8 +532,8 @@ async function handle(msg) {
               event: "progress",
               stage: "cabinet-credits",
               detail: {
-                pulses: "2+2+1",
-                keys: "Y/H",
+                pulses: "2+2",
+                keys: "F1/F2",
                 backend: state.input?.backend,
                 alive: true,
               },
@@ -559,14 +557,15 @@ async function handle(msg) {
       state.lastMapped = mapped;
       if (mapped.button === 3 && mapped.value === 1) {
         state.starts.add(mapped.slot);
-        // Reforça fichas no 1.º START (sem foco — só PostMessage).
-        if (state.input && !state.creditsTopup && gameAlive()) {
-          state.creditsTopup = true;
-          injectCabinetCredits(state.input, {
-            pulses: 2,
-            gapMs: 200,
-            holdMs: 150,
-          }).catch(() => {});
+        // No 1.º START de cada slot: 1 ficha só desse jogador (não reinicia attract).
+        if (
+          state.input &&
+          gameAlive() &&
+          state.startCoin &&
+          !state.startCoin.has(mapped.slot)
+        ) {
+          state.startCoin.add(mapped.slot);
+          state.input.pulse(mapped.slot, 2, 220).catch(() => {});
         }
       }
       // SendInput (+ foco breve) — PostMessage sozinho o DirectInput ignora.

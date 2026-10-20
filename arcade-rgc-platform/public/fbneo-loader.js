@@ -112,19 +112,21 @@ export class FBNeoLoader {
       this.focused = true;
       this.pulse(2);
       this.status(
-        `P${this.slot}: ficha enviada (Y). No RetroArch o CREDIT deve subir.`,
+        `P${this.slot}: ficha enviada. Olha CREDIT no RetroArch (não spamar — 1× basta).`,
       );
     });
     coinButton.disabled = false;
     coinButton.title = this.hosted
-      ? "Inserir ficha (Y). Servidor também mete fichas ao iniciar."
+      ? "1 ficha (Y). Servidor já mete 2 ao iniciar. Não spamar — reinicia o attract."
       : "Inserir ficha (Y)";
     const startButton = button("START", () => {
       this.focused = true;
       this.pulse(3);
-      this.status(`P${this.slot}: START enviado. Ambos devem pressionar START.`);
+      this.status(
+        `P${this.slot}: START. Se CREDIT > 0, escolhe personagem. Os dois apertam START.`,
+      );
     });
-    startButton.title = "Enter / START — os dois jogadores precisam pressionar";
+    startButton.title = "Enter / START — só depois do CREDIT subir";
     button("CONTROLES", () => {
       this.releaseAll();
       openControls();
@@ -289,7 +291,7 @@ export class FBNeoLoader {
       help.textContent =
         `Controles: ${[4, 5, 6, 7].map(label).join(" ")} = movimento • ${[0, 8, 1, 9].map(label).join(" ")} = golpes • ${label(3)} = Start • ${label(2)} = Ficha. ` +
         (this.hosted
-          ? "Clique no vídeo antes de teclar. Som = janela RetroArch. Créditos fake na carteira."
+          ? "Clique no vídeo → teclar. 1× FICHA se CREDIT=0; depois START. Desliga overlay Discord no RetroArch. Som = janela RA."
           : "Amistoso local: ambos confirmam VENCI/PERDI.");
     };
     updateHelp();

@@ -30,7 +30,8 @@ const KEYS_P1 = Object.freeze({
   1: "KeyA",
   9: "KeyS",
   3: "Enter",
-  2: "KeyY", // Ficha (Neo Geo Select/Coin)
+  // F1 no RetroArch (Select/Coin). Browser continua a usar Y → button 2.
+  2: "F1",
 });
 
 /** P2: bloco numérico / teclas alternativas (sem conflito com P1). */
@@ -44,7 +45,7 @@ const KEYS_P2 = Object.freeze({
   1: "KeyJ",
   9: "KeyK",
   3: "NumpadEnter",
-  2: "KeyH", // Ficha P2
+  2: "F2", // Ficha P2 → Select
 });
 
 /** Nomes RetroArch input_playerN_* (appendconfig). */
@@ -82,6 +83,8 @@ export const RETRO_KEY_NAMES = Object.freeze({
   NumpadEnter: "keypad enter",
   KeyY: "y",
   KeyH: "h",
+  F1: "f1",
+  F2: "f2",
   Digit5: "5",
   Digit6: "6",
   Numpad8: "keypad8",

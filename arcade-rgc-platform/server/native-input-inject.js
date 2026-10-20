@@ -25,6 +25,8 @@ export const VK = Object.freeze({
   KeyS: 0x53,
   KeyY: 0x59,
   KeyH: 0x48,
+  F1: 0x70,
+  F2: 0x71,
   KeyU: 0x55,
   KeyI: 0x49,
   KeyJ: 0x4a,
@@ -86,8 +88,8 @@ async function oneShotBatch(hwnd, pulses, holdMs) {
   if (h <= 0) return;
   const items = [];
   for (let i = 0; i < pulses; i++) {
-    items.push({ vk: VK.KeyY, holdMs }); // P1 coin
-    items.push({ vk: VK.KeyH, holdMs }); // P2 coin
+    items.push({ vk: VK.F1, holdMs }); // P1 Select/Coin
+    items.push({ vk: VK.F2, holdMs }); // P2 Select/Coin
   }
   const cmd = `
 Add-Type @"
@@ -189,16 +191,16 @@ function createWindowsInjector(hwnd, env = process.env) {
       await new Promise((r) => setTimeout(r, holdMs));
       this.apply(slot, button, 0);
     },
-    async batchCredits(pulses = 2, holdMs = 160) {
-      // Prefer bridge batch (mesmo processo PS)
+    async batchCredits(pulses = 2, holdMs = 200) {
+      // Prefer bridge batch (mesmo processo PS) — F1/F2 = Select/Coin Neo Geo
       if (!dead && child.stdin?.writable) {
         const batch = [];
         for (let i = 0; i < pulses; i++) {
-          batch.push({ vk: VK.KeyY, holdMs, ext: 0 });
-          batch.push({ vk: VK.KeyH, holdMs, ext: 0 });
+          batch.push({ vk: VK.F1, holdMs, ext: 0 });
+          batch.push({ vk: VK.F2, holdMs, ext: 0 });
         }
         send({ batch, hwnd: hwnd || undefined });
-        await new Promise((r) => setTimeout(r, pulses * 2 * (holdMs + 160)));
+        await new Promise((r) => setTimeout(r, pulses * 2 * (holdMs + 180)));
         return;
       }
       await oneShotBatch(hwnd, pulses, holdMs);
@@ -218,10 +220,10 @@ function createWindowsInjector(hwnd, env = process.env) {
   };
 }
 
-/** Insere fichas: 2× P1(Y) + 2× P2(H) num batch estável. */
+/** Insere fichas: 2× P1(F1) + 2× P2(F2) num batch estável. */
 export async function injectCabinetCredits(
   input,
-  { pulses = 2, gapMs = 200, holdMs = 160 } = {},
+  { pulses = 2, gapMs = 220, holdMs = 200 } = {},
 ) {
   if (!input) return;
   if (typeof input.batchCredits === "function") {
