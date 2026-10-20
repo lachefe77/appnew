@@ -120,9 +120,12 @@ export class FBNeoLoader {
     const startButton = button("START", () => {
       this.focused = true;
       this.pulse(3);
-      this.status(`P${this.slot}: START — os dois jogadores. CREDIT deve ser > 0.`);
+      this.status(
+        `P${this.slot}: START enviado ao servidor. Os DOIS jogadores devem carregar START.`,
+      );
     });
-    startButton.title = "Enter / START";
+    startButton.style.background = "#ffe14a";
+    startButton.title = "Enter / START — obrigatório nos dois lados";
     button("CONTROLES", () => {
       this.releaseAll();
       openControls();

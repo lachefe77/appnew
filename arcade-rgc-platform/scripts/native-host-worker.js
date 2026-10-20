@@ -551,9 +551,23 @@ async function handle(msg) {
         state.starts.add(mapped.slot);
         // Fichas já foram 1+1 no ready — não reinjectar no START (evita attract loop).
       }
-      // SendInput (+ foco breve) — PostMessage sozinho o DirectInput ignora.
+      // keybd_event + foco suave (PostMessage sozinho = só assistes à transmissão).
+      if (!gameAlive()) return;
       try {
         state.input?.apply(msg.slot, msg.button, msg.value);
+        if (state.inputs <= 3 || state.inputs % 60 === 0) {
+          emit({
+            event: "progress",
+            stage: "input-applied",
+            detail: {
+              slot: mapped.slot,
+              button: mapped.button,
+              key: mapped.key,
+              value: mapped.value,
+              backend: state.input?.backend,
+            },
+          });
+        }
       } catch {
         /* ignore inject errors */
       }

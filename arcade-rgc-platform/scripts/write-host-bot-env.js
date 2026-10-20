@@ -91,8 +91,8 @@ const lines = [
   "HOST_BOT_VIDEO_DRIVER=gdi",
   "HOST_BOT_VERBOSE=1",
   "HOST_BOT_INPUT=auto",
-  "ARENA_INPUT_FOCUS=0",
-  "# Ficha = Y (P1) / H (P2). Auto 1+1 ao aceitar duelo. Sem F1–F12.",
+  "ARENA_INPUT_FOCUS=1",
+  "# Ficha Y auto 1+1 ANTES do ffmpeg. Controlos: keybd_event+foco suave. Sem F1–F12.",
   "",
 ];
 

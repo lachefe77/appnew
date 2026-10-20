@@ -146,7 +146,8 @@ function createWindowsInjector(hwnd, env = process.env) {
       env: {
         ...env,
         ...(hwnd ? { ARENA_HWND: String(hwnd) } : {}),
-        ARENA_INPUT_FOCUS: "0",
+        // 1 = foco suave no RA para DirectInput ver as teclas (sem F1–F12)
+        ARENA_INPUT_FOCUS: String(env.ARENA_INPUT_FOCUS || "1"),
       },
     },
   );
@@ -171,7 +172,7 @@ function createWindowsInjector(hwnd, env = process.env) {
   }
 
   return {
-    backend: "win-hwnd+coin-y",
+    backend: "win-keybd-y",
     hwnd: hwnd || null,
     apply(slot, button, value) {
       if (!hwnd) return;
