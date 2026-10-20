@@ -140,10 +140,18 @@ export function defaultRetroArchLabConfig(env = process.env) {
     'video_fullscreen = "false"',
     'video_windowed_fullscreen = "false"',
     'video_threaded = "false"',
-    // Som local na janela RetroArch (WebRTC ainda é só vídeo no lab).
+    // Sem vsync + sem audio_sync = jogo a 10x+. Travar ~60 FPS.
+    'video_vsync = "true"',
+    'video_swap_interval = "1"',
+    'video_max_swapchain_images = "3"',
     'audio_enable = "true"',
     'audio_mute_enable = "false"',
-    'audio_sync = "false"',
+    'audio_sync = "true"',
+    'audio_latency = "64"',
+    'fastforward_ratio = "1.0"',
+    'fastforward_frameskip = "false"',
+    'input_toggle_fast_forward = "nul"',
+    'input_hold_fast_forward = "nul"',
     'fps_show = "false"',
     'config_save_on_exit = "false"',
     'quit_on_close_content = "false"',
@@ -155,7 +163,6 @@ export function defaultRetroArchLabConfig(env = process.env) {
     'input_autodetect_enable = "false"',
     'input_max_users = "2"',
     'input_auto_game_focus = "off"',
-    // Sem forçar input_driver (raw/dinput variam por build). PostMessage no HWND.
     ...retroArchKeyboardLines(1),
     ...retroArchKeyboardLines(2),
     "",
