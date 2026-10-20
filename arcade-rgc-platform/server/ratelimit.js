@@ -1,15 +1,27 @@
 /**
  * ARENA ARCADE — Rate Limiting
- * HTTP: 60 req/min por IP
- * WS input: 180/s; signal: 600/min; command: 180/min por conexão
- * WS userId: 20 ações sensíveis/min por userId
+ * HTTP: 120 req/min por IP
+ * WS input (partida): 600/s — não bloquear teclas/gamepad em duelo
+ * WS signal: 900/min; command: 300/min por conexão
+ * WS userId: 40 ações sensíveis/min (exceto input de partida)
  */
 
-const httpWindows = new Map(); // ip     -> { count, resetAt }
-const wsWindows = new Map(); // ws     -> { count, resetAt }
-const userWindows = new Map(); // userId -> { count, resetAt }
+const httpWindows = new Map();
+const wsWindows = new Map();
+const userWindows = new Map();
 
-const HTTP_LIMIT_PER_MIN = 60;
+const HTTP_LIMIT_PER_MIN = 120;
+
+/** Tipos que nunca contam no bucket de comando/user (tráfego de partida). */
+const MATCH_TRAFFIC = new Set([
+  "PLAYER_INPUT",
+  "NETPLAY_FRAME",
+  "MATCH_SIGNAL",
+  "INPUT_ACK",
+  "PING",
+  "PONG",
+  "LATENCY_SAMPLE",
+]);
 
 const SENSITIVE_TYPES = new Set([
   "WITHDRAW_PIX",
@@ -21,9 +33,9 @@ const SENSITIVE_TYPES = new Set([
   "FIND_MATCH",
   "CREATE_ROOM_INVITE",
   "REMATCH_OFFER",
+  "SPECTATE_JOIN",
 ]);
 
-// ── HTTP ──────────────────────────────────────────────────────────────────────
 export function httpRateLimit(req, res, next) {
   const ip = req.socket.remoteAddress || "unknown";
   const now = Date.now();
@@ -44,14 +56,25 @@ export function httpRateLimit(req, res, next) {
   next();
 }
 
-// ── WS per-connection ─────────────────────────────────────────────────────────
 export function wsRateLimit(ws, type) {
+  if (MATCH_TRAFFIC.has(type)) {
+    // Bucket dedicado generoso — duelo em 60 fps + gamepad polling.
+    const now = Date.now();
+    let buckets = wsWindows.get(ws);
+    if (!buckets) {
+      buckets = new Map();
+      wsWindows.set(ws, buckets);
+    }
+    let w = buckets.get("input");
+    if (!w || now > w.resetAt) {
+      w = { count: 0, resetAt: now + 1000 };
+      buckets.set("input", w);
+    }
+    w.count++;
+    return w.count <= 600;
+  }
   const now = Date.now();
-  const category = ["PLAYER_INPUT", "NETPLAY_FRAME"].includes(type)
-    ? "input"
-    : type === "MATCH_SIGNAL"
-      ? "signal"
-      : "command";
+  const category = type === "MATCH_SIGNAL" ? "signal" : "command";
   let buckets = wsWindows.get(ws);
   if (!buckets) {
     buckets = new Map();
@@ -59,18 +82,16 @@ export function wsRateLimit(ws, type) {
   }
   let w = buckets.get(category);
   if (!w || now > w.resetAt) {
-    w = { count: 0, resetAt: now + (category === "input" ? 1000 : 60000) };
+    w = { count: 0, resetAt: now + 60000 };
     buckets.set(category, w);
   }
   w.count++;
-  return (
-    w.count <= (category === "input" ? 180 : category === "signal" ? 600 : 180)
-  );
+  return w.count <= (category === "signal" ? 900 : 300);
 }
 
-// ── WS per-userId (sensitive actions) ────────────────────────────────────────
 export function wsUserRateLimit(userId, messageType) {
   if (!userId || !SENSITIVE_TYPES.has(messageType)) return true;
+  if (MATCH_TRAFFIC.has(messageType)) return true;
   const now = Date.now();
   let w = userWindows.get(userId);
   if (!w || now > w.resetAt) {
@@ -78,14 +99,13 @@ export function wsUserRateLimit(userId, messageType) {
     userWindows.set(userId, w);
   }
   w.count++;
-  return w.count <= 20; // 20 sensitive actions/min per userId
+  return w.count <= 40;
 }
 
 export function wsCleanup(ws) {
   wsWindows.delete(ws);
 }
 
-// Cleanup stale entries every 5 min
 setInterval(() => {
   const now = Date.now();
   for (const [k, v] of httpWindows) {

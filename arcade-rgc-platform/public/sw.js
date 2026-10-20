@@ -1,13 +1,17 @@
-const CACHE_NAME = "arena-arcade-v13-interface";
+const CACHE_NAME = "arena-arcade-v14-plano29";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
   "/toast.js",
+  "/plano-ui.js",
   "/fbneo-loader.js",
   "/platform.css",
   "/portal.js",
   "/controller-settings.js",
   "/manifest.json",
+  "/termos.html",
+  "/privacidade.html",
+  "/icons/icon-192.png",
 ];
 
 self.addEventListener("install", (event) => {

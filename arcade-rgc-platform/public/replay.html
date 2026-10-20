@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Replay — Arena Arcade</title>
+  <style>
+    body { margin:0; background:#070708; color:#e8eef7; font:15px/1.4 ui-monospace,monospace; }
+    main { max-width:900px; margin:24px auto; padding:0 16px; }
+    a { color:#00e5ff; }
+    pre { background:#121214; border:1px solid #2a2a2e; padding:12px; overflow:auto; max-height:70vh; }
+  </style>
+</head>
+<body>
+  <main>
+    <p><a href="/">← Lobby</a> · <a href="/reviews.html">Revisões</a></p>
+    <h1>Replay / journal</h1>
+    <p>Informe o matchId: <input id="mid" style="width:280px;padding:8px;background:#1c1c20;border:1px solid #333;color:#fff" />
+      <button id="go">Carregar</button></p>
+    <pre id="out">Aguardando…</pre>
+  </main>
+  <script>
+    const q = new URLSearchParams(location.search).get("matchId");
+    if (q) mid.value = q;
+    async function load() {
+      const id = mid.value.trim();
+      if (!id) return;
+      const r = await fetch("/api/replays/" + encodeURIComponent(id));
+      const b = await r.json().catch(() => ({}));
+      out.textContent = r.ok ? JSON.stringify(b.replay, null, 2) : (b.error || "Falha");
+    }
+    go.onclick = load;
+    if (q) load();
+  </script>
+</body>
+</html>

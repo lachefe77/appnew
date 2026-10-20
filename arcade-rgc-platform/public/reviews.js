@@ -62,9 +62,24 @@ async function load() {
           `Decisão: ${review.decision} • ${review.decision_reason}`,
           card,
         );
+      if (review.evidence_path || review.evidence_kind || review.evidence) {
+        const ev = review.evidence || {};
+        element(
+          "p",
+          `Evidência: ${review.evidence_kind || ev.kind || "anexo"} · ${review.evidence_path || ev.relativePath || "—"}`,
+          card,
+        );
+        const replayLink = document.createElement("a");
+        replayLink.href =
+          "/replay.html?matchId=" + encodeURIComponent(review.match_id);
+        replayLink.textContent = "Abrir journal / replay";
+        replayLink.style.display = "inline-block";
+        replayLink.style.margin = "6px 0";
+        card.append(replayLink);
+      }
       const eventsButton = element(
         "button",
-        "Consultar registro e regras",
+        "Consultar registro, regras e evidências",
         card,
       );
       const events = element("pre", "", card);

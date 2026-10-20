@@ -261,7 +261,7 @@ export class FBNeoLoader {
       button("NITIDEZ", () => {
         this.video.classList.toggle("pixel-video");
       });
-      button("SOM (RA)", () => {
+      button("ATIVAR SOM", () => {
         this.video.muted = false;
         this.video.play().catch(() => {});
         this.status(

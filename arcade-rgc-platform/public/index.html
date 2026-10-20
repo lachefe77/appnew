@@ -4,12 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#e10600">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <title>ARENA ARCADE — Fliperama Online e Duelos 1x1</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Barlow+Condensed:wght@500;700;800&family=IBM+Plex+Mono:wght@400;600&family=Press+Start+2P&family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <!-- Toast notification system (must load before any JS) -->
   <script src="/toast.js"></script>
+  <script src="/plano-ui.js"></script>
   <!-- Audio engine (sets window.ArcadeAudio) -->
   <script src="/audio.js"></script>
   <script type="module" src="/theme-apply.js"></script>
@@ -362,8 +365,17 @@
     }
 
     @media (max-width: 480px) {
-      .nav-links { display: none; }
+      .nav-links { display: flex; overflow-x: auto; max-width: 55vw; gap: 2px; }
+      .nav-btn { padding: 8px 10px; font-size: 0.72rem; white-space: nowrap; }
       .nav-brand { font-size: 1rem; }
+      .lobby-touch-bar {
+        display: flex !important; position: sticky; bottom: 0; z-index: 90;
+        gap: 8px; padding: 10px; background: rgba(7,7,8,.95); border-top: 1px solid var(--border-color);
+      }
+      .lobby-touch-bar button {
+        flex: 1; min-height: 48px; font-weight: 800; border: 1px solid var(--border-color);
+        background: var(--bg-card); color: var(--text-main); font-family: inherit;
+      }
       .vault-grid { grid-template-columns: 1fr; }
       .vt-hero-inner { padding: 28px 12px 22px; }
       .vt-char-grid { grid-template-columns: repeat(2, 1fr); }
@@ -408,8 +420,12 @@
       <button class="nav-btn active" id="btnNavVitrine" onclick="switchView('vitrine')">Descobrir</button>
       <button class="nav-btn" id="btnNavLobby" onclick="switchView('lobby')">Salas de jogo</button>
       <a class="nav-btn" href="/torneios.html" style="text-decoration:none;">Torneios</a>
+      <a class="nav-btn" href="/freeroll.html" style="text-decoration:none;">Freeroll</a>
+      <a class="nav-btn" href="/clas.html" style="text-decoration:none;">Clãs</a>
+      <a class="nav-btn" href="/ranking.html" style="text-decoration:none;">Temporada</a>
       <a class="nav-btn" href="/reviews.html" style="text-decoration:none;">Revisões</a>
-      <button class="nav-btn" id="btnNavAdmin" onclick="switchView('admin')" style="display:none;">👑 Painel Admin (Cofre & Dossiê)</button>
+      <a class="nav-btn" href="/admin.html" id="btnNavAdminPage" style="text-decoration:none;display:none;">Admin</a>
+      <button class="nav-btn" id="btnNavAdmin" onclick="switchView('admin')" style="display:none;">Painel</button>
     </div>
 
     <div class="nav-actions">
@@ -460,7 +476,7 @@
           </section>
           <section class="portal-section" id="modos"><div class="portal-section-head"><div><span class="portal-eyebrow">DUAS FORMAS DE ENTRAR</span><h2>O seu ritmo de jogo</h2></div></div><div class="portal-modes"><article><span class="portal-mode-index">01 / AMISTOSO</span><h3>Jogue pelo encontro.</h3><p>Treine, experimente um novo time ou desafie um amigo sem reservar créditos. Um dos jogadores hospeda a emulação local.</p><button class="portal-text-button" onclick="switchView('lobby')">Encontrar uma sala gratuita →</button></article><article><span class="portal-mode-index">02 / DESAFIO COM CRÉDITOS DE TESTE</span><h3>Dispute com regras claras.</h3><p>A execução acontece no servidor. O resultado do confronto completo é coletado pela sessão oficial e registrado na plataforma.</p><a class="portal-text-button" href="/reviews.html">Entenda e acompanhe as revisões →</a></article></div></section>
           <section class="portal-onboarding" id="primeira-partida"><div><span class="portal-eyebrow">SUA PRIMEIRA PARTIDA</span><h2>Menos espera.<br>Mais jogo.</h2><button class="portal-primary" onclick="openAuthModal('register')">Criar minha conta ↗</button></div><ol><li><b>01</b><div><h3>Prepare seus comandos</h3><p>Setas para mover, Z/X/A/S para os quatro golpes e Enter para Start. Ou configure seu joystick.</p></div></li><li><b>02</b><div><h3>Encontre seu adversário</h3><p>Entre na mesma sala que seu amigo e envie um desafio. Os dois precisam aceitar as regras.</p></div></li><li><b>03</b><div><h3>Espere a conexão e jogue</h3><p>Acompanhe as etapas na tela. Na execução oficial, as fichas já vêm preparadas: pressione Start nos dois lados.</p></div></li></ol></section>
-          <footer class="portal-footer"><span><b>ARENA ARCADE</b> · Encontre seu próximo rival.</span><span>Beta de desenvolvimento · Sem pagamentos reais nesta versão</span></footer>
+          <footer class="portal-footer"><span><b>ARENA ARCADE</b> · Encontre seu próximo rival.</span><span>Beta · <a href="/termos.html" style="color:inherit;">Termos</a> · <a href="/privacidade.html" style="color:inherit;">LGPD</a> · Sem PIX real nesta versão</span></footer>
         </main>
       </div>
     </section>
@@ -565,6 +581,9 @@
                   <option value="5">Melhor de 5</option>
                 </select>
               </label>
+              <p style="color:var(--text-muted);font-size:0.65rem;line-height:1.35;margin:0;">
+                Bo3/Bo5: vence quem ganhar a maioria dos jogos (2 de 3 ou 3 de 5). Stake e modo herdam na revanche.
+              </p>
               <div style="display:flex; gap:6px; flex-wrap:wrap;">
                 <button class="btn-auth-main" style="flex:1; padding:6px; font-size:0.7rem;" onclick="findMatch()">Achar partida</button>
                 <button class="btn-auth-main" style="flex:1; padding:6px; font-size:0.7rem; background:#333;" onclick="cancelFindMatch()">Cancelar fila</button>
@@ -575,12 +594,28 @@
                 <button class="btn-auth-main" style="padding:6px 8px; font-size:0.7rem;" onclick="joinViaCode()">Entrar</button>
               </div>
               <div id="queueStatus" style="color:var(--neon-gold); font-size:0.7rem; min-height:1em;"></div>
+              <div id="queueEtaBar" style="display:none;height:4px;background:#222;border-radius:2px;overflow:hidden;">
+                <div id="queueEtaFill" style="height:100%;width:0;background:var(--neon-cyan);transition:width .4s;"></div>
+              </div>
+              <div id="liveSpectateList" style="font-size:0.68rem;color:var(--text-muted);"></div>
               <div id="scoreboardHud" style="display:none; background:var(--bg-dark); border:1px solid var(--border-color); border-radius:4px; padding:6px; font-family:var(--font-mono); font-size:0.68rem;"></div>
-              <a href="/theme-gallery.html" style="color:var(--neon-cyan); font-size:0.7rem;">Escolher tema visual (20 opções)</a>
-              <a href="/admin.html" style="color:var(--text-muted); font-size:0.7rem;">Painel operacional</a>
+              <span id="financeModeBadge" style="color:var(--text-muted);font-size:0.65rem;"></span>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:0.7rem;">
+                <a href="/theme-gallery.html" style="color:var(--neon-cyan);">Tema visual</a>
+                <a href="/replay.html" style="color:var(--text-muted);">Replays</a>
+                <a href="/termos.html" style="color:var(--text-muted);">Termos</a>
+                <a href="/privacidade.html" style="color:var(--text-muted);">LGPD</a>
+                <button type="button" onclick="window.ArenaPlano?.redeemCoupon()" style="background:none;border:0;color:var(--neon-gold);cursor:pointer;font:inherit;padding:0;">Cupom</button>
+                <button type="button" onclick="window.ArenaPlano?.showTutorial(0)" style="background:none;border:0;color:var(--neon-cyan);cursor:pointer;font:inherit;padding:0;">Tutorial</button>
+              </div>
             </div>
           </div>
           <div id="rosterList" style="flex:1; overflow-y:auto; padding:8px;"></div>
+          <div class="lobby-touch-bar" style="display:none;">
+            <button type="button" onclick="findMatch()">Fila</button>
+            <button type="button" onclick="ackReadyCheck()">Ready</button>
+            <button type="button" onclick="toggleFullscreen()">Tela cheia</button>
+          </div>
         </div>
       </div>
     </section>
@@ -785,6 +820,7 @@
         <div id="loginBlock" style="display:flex; flex-direction:column; gap:10px;">
           <input type="email" id="loginEmail" placeholder="seu@email.com" style="height:38px; background:var(--bg-dark); border:1px solid var(--border-color); padding:0 12px; color:#fff; border-radius:4px;">
           <input type="password" id="loginPassword" placeholder="Sua senha" style="height:38px; background:var(--bg-dark); border:1px solid var(--border-color); padding:0 12px; color:#fff; border-radius:4px;">
+          <a href="/recuperar-senha.html" style="color:var(--neon-cyan);font-size:0.75rem;">Esqueci a senha</a>
           <button class="btn-cta" onclick="submitLogin()">ENTRAR</button>
         </div>
 
@@ -1112,6 +1148,13 @@
           break;
 
         case 'AUTH_SUCCESS':
+          try {
+            if (roleAtLeastClient?.(msg.user?.role, 'ADMIN') || ['ADMIN','MASTER','MODERATOR'].includes(msg.user?.role)) {
+              const a = document.getElementById('btnNavAdminPage');
+              if (a) a.style.display = '';
+            }
+            setTimeout(() => window.ArenaPlano?.startTutorialIfNeeded(), 600);
+          } catch {}
           app.user = msg.user;
           app.sessionToken = msg.sessionToken || msg.token;
           if (app.sessionToken) localStorage.setItem('arenaToken', app.sessionToken);
@@ -1224,12 +1267,40 @@
           break;
         case 'SCOREBOARD_UPDATE':
           renderScoreboard(msg); break;
-        case 'HOSTED_QUEUED':
-          document.getElementById('queueStatus').textContent = msg.message || (`Fila hosted #${msg.position}`);
-          window.toast?.info('Fila', msg.message || 'Aguardando sessão oficial'); break;
+        case 'HOSTED_QUEUED': {
+          const pos = msg.placeInQueue || msg.position || '?';
+          const eta = msg.etaSeconds != null ? msg.etaSeconds : '?';
+          document.getElementById('queueStatus').textContent =
+            msg.message || `Fila hosted · posição ${pos} · ETA ~${eta}s`;
+          const bar = document.getElementById('queueEtaBar');
+          const fill = document.getElementById('queueEtaFill');
+          if (bar && fill) {
+            bar.style.display = 'block';
+            const pct = Math.max(8, 100 - Math.min(92, Number(pos) * 18));
+            fill.style.width = pct + '%';
+          }
+          window.toast?.info('Fila', msg.message || 'Aguardando sessão oficial');
+          break;
+        }
         case 'HOSTED_DEQUEUED':
           document.getElementById('queueStatus').textContent = 'Sessão liberada — preparando partida';
+          const qBar = document.getElementById('queueEtaBar');
+          if (qBar) qBar.style.display = 'none';
           window.toast?.success('Fila', msg.message || 'Sua vez'); break;
+        case 'SPECTATE_STARTED':
+          app.spectating = msg.matchId;
+          window.toast?.info('Espectador', 'Modo leitura — sem envio de input');
+          document.getElementById('arenaModal').style.display = 'flex';
+          break;
+        case 'SPECTATE_LEFT':
+          app.spectating = null;
+          break;
+        case 'CHAT_HISTORY':
+          (msg.messages || []).forEach((m) => {
+            /* histórico opcional no console do lobby */
+            console.debug('[chat]', m.username, m.body);
+          });
+          break;
         case 'ROOM_INVITE_CREATED':
           document.getElementById('inviteCodeInput').value = msg.code || '';
           window.toast?.success('Convite', 'Código ' + (msg.code || '') + ' copiado no campo');
@@ -1338,17 +1409,21 @@
         case 'READY_CHECK_START':
         case 'READY_CHECK_UPDATE':
         case 'READY_CHECK_COUNTDOWN':
-        case 'READY_CHECK_DONE': {
+        case 'READY_CHECK_DONE':
+        case 'READY_CHECK_TIMEOUT': {
           const rc = document.getElementById('readyCheckOverlay');
           if (rc) {
-            rc.style.display = msg.type === 'READY_CHECK_DONE' ? 'none' : 'flex';
+            rc.style.display = (msg.type === 'READY_CHECK_DONE' || msg.type === 'READY_CHECK_TIMEOUT') ? 'none' : 'flex';
             const label = rc.querySelector('[data-ready-label]');
             if (label) {
-              if (msg.type === 'READY_CHECK_COUNTDOWN') label.textContent = 'Começa em ' + msg.remaining + '…';
+              if (msg.type === 'READY_CHECK_COUNTDOWN') label.textContent = 'Começa em ' + msg.remaining + 's — confirme Ready';
               else if (msg.type === 'READY_CHECK_UPDATE') label.textContent = 'Prontos: ' + msg.acks + '/' + msg.need;
-              else label.textContent = 'Confirme que está pronto';
+              else if (msg.type === 'READY_CHECK_TIMEOUT') label.textContent = 'Tempo esgotado no ready-check';
+              else label.textContent = 'Confirme que está pronto (timeout se ninguém confirmar)';
             }
           }
+          if (msg.type === 'READY_CHECK_TIMEOUT')
+            window.toast?.warn('Ready-check', msg.message || 'Tempo esgotado');
           break;
         }
 
@@ -1413,6 +1488,11 @@
 
         case 'ERROR_NOTICE':
           renderRoster();
+          if (msg.code === 429 || /muitas ações/i.test(msg.message || '')) {
+            // Anti-spam silencioso em tráfego de partida — não inundar toast.
+            console.warn('[rate-limit]', msg.message);
+            break;
+          }
           if (typeof window.toast !== 'undefined') window.toast.error('Erro', msg.message);
           else alert(msg.message);
           break;
@@ -1420,10 +1500,6 @@
         case 'KYC_STATUS_UPDATED':
           if (app.user) app.user.kycStatus = msg.kycStatus;renderHeader();
           if (typeof window.toast !== 'undefined') window.toast.info('KYC', msg.message);
-          break;
-
-        case 'SPECTATE_STARTED':
-          appendChat({ timestamp: new Date().toLocaleTimeString('pt-BR'), device: 'SISTEMA', username: '👁 Espectador', text: `Assistindo: ${msg.playerA} vs ${msg.playerB}` });
           break;
 
         case 'AUTH_ERROR':
@@ -1595,15 +1671,33 @@
       wsSend({ type: 'SEND_CHALLENGE', targetUserId: id, mode, stakeCents, seriesBestOf, includeInviteCode: true });
     }
 
-    function findMatch() {
+    async function findMatch() {
       if(!app.user?.email){openAuthModal();return;}
       const mode = document.getElementById('modeSelector')?.value || 'APOSTADO';
       const stakeCents = mode === 'APOSTADO' ? parseInt(document.getElementById('stakeSelector')?.value || '500', 10) : 0;
       const seriesBestOf = parseInt(document.getElementById('seriesSelector')?.value || '3', 10);
-      wsSend({ type: 'FIND_MATCH', mode, stakeCents, seriesBestOf });
+      const payload = await (window.ArenaPlano?.findMatchPayload({ type: 'FIND_MATCH', mode, stakeCents, seriesBestOf })
+        || Promise.resolve({ type: 'FIND_MATCH', mode, stakeCents, seriesBestOf }));
+      wsSend(payload);
       const q = document.getElementById('queueStatus');
-      if (q) q.textContent = 'Na fila — aguardando oponente compatível…';
+      if (q) q.textContent = `Na fila — RTT ${payload.rttMs ?? '—'}ms · região ${payload.region || '—'}…`;
     }
+    async function refreshLiveSpectate() {
+      const el = document.getElementById('liveSpectateList');
+      if (!el) return;
+      try {
+        const r = await fetch('/api/matches/live');
+        const d = await r.json();
+        const list = d.matches || [];
+        if (!list.length) { el.textContent = 'Nenhuma partida ao vivo para assistir.'; return; }
+        el.innerHTML = list.map(m =>
+          `<button type="button" style="display:block;width:100%;text-align:left;margin:3px 0;background:#1c1c20;border:1px solid #333;color:#ddd;padding:6px;cursor:pointer;font:inherit;"
+            onclick="window.ArenaPlano?.spectate('${m.matchId}')">👁 ${m.playerA} vs ${m.playerB} · ${m.mode}</button>`
+        ).join('');
+      } catch { el.textContent = ''; }
+    }
+    setInterval(refreshLiveSpectate, 12000);
+    setTimeout(refreshLiveSpectate, 2000);
     function cancelFindMatch() {
       wsSend({ type: 'CANCEL_FIND_MATCH' });
       const q = document.getElementById('queueStatus');

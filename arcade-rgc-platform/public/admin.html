@@ -115,6 +115,7 @@ const TABS = [
   { id: "rooms", label: "Salas", perm: "mod.rooms" },
   { id: "live", label: "Live / Stream", perm: "admin.panel" },
   { id: "theme", label: "Tema visual", perm: "admin.panel" },
+  { id: "security", label: "MFA / Beta / Cupons", perm: "admin.panel" },
 ];
 
 const ROLE_ORDER = ["MASTER","ADMIN","MODERATOR","SUPPORT","VIP","USER","GUEST"];
@@ -266,6 +267,109 @@ function render() {
   if (state.tab === "rooms") renderRooms(c);
   if (state.tab === "live") renderLive(c);
   if (state.tab === "theme") void renderTheme(c);
+  if (state.tab === "security") void renderSecurity(c);
+}
+
+async function renderSecurity(c) {
+  c.append(
+    card(
+      6,
+      `<div class="metric">MFA admin (TOTP + QR)</div>
+      <p class="muted">Gera secret e QR para autenticador. Com MFA_ENFORCE=1, ações sensíveis pedem código.</p>
+      <button class="btn" id="btnMfaSetup">Gerar MFA / QR</button>
+      <div id="mfaBox" class="muted" style="margin-top:10px"></div>`,
+    ),
+    card(
+      6,
+      `<div class="metric">Beta allowlist</div>
+      <p class="muted">Com BETA_CLOSED=1, só e-mails na lista (ou convite) registram.</p>
+      <div class="row"><input id="betaEmail" placeholder="email@exemplo.com" /><button class="btn" id="btnBetaAdd">Allow</button></div>
+      <pre id="betaList" style="margin-top:10px;font-size:.75rem;white-space:pre-wrap;"></pre>`,
+    ),
+    card(
+      6,
+      `<div class="metric">Cupons</div>
+      <div class="row">
+        <input id="couponCode" placeholder="CODIGO" />
+        <input id="couponAmt" type="number" placeholder="centavos" style="width:110px" />
+        <input id="couponMax" type="number" placeholder="max uses" style="width:90px" value="50" />
+        <button class="btn" id="btnCoupon">Criar</button>
+      </div>
+      <pre id="couponList" style="margin-top:10px;font-size:.75rem;"></pre>`,
+    ),
+    card(
+      6,
+      `<div class="metric">Backup off-box</div>
+      <p class="muted">Dispara snapshot local + cópia remota (BACKUP_REMOTE_DIR). Agende com BACKUP_INTERVAL_MS.</p>
+      <button class="btn" id="btnBackup">Rodar backup agora</button>
+      <pre id="backupOut" style="margin-top:10px;font-size:.75rem;"></pre>`,
+    ),
+  );
+  document.getElementById("btnMfaSetup").onclick = async () => {
+    try {
+      const b = await api("/api/admin/mfa/setup", {});
+      document.getElementById("mfaBox").innerHTML =
+        `<p>Secret: <code>${b.secret}</code></p>` +
+        (b.qrUrl
+          ? `<img alt="QR MFA" src="${b.qrUrl}" width="200" height="200" style="background:#fff;padding:8px" />`
+          : "") +
+        `<p class="muted">${b.message || ""}</p>`;
+    } catch (e) {
+      document.getElementById("mfaBox").textContent = e.message;
+    }
+  };
+  const refreshBeta = async () => {
+    try {
+      const b = await api("/api/admin/beta-allowlist");
+      document.getElementById("betaList").textContent = JSON.stringify(b, null, 2);
+    } catch (e) {
+      document.getElementById("betaList").textContent = e.message;
+    }
+  };
+  document.getElementById("btnBetaAdd").onclick = async () => {
+    try {
+      await api("/api/admin/beta-allowlist", {
+        email: document.getElementById("betaEmail").value,
+      });
+      refreshBeta();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+  refreshBeta();
+  const refreshCoupons = async () => {
+    try {
+      const b = await api("/api/admin/coupons");
+      document.getElementById("couponList").textContent = JSON.stringify(
+        b.coupons || b,
+        null,
+        2,
+      );
+    } catch (e) {
+      document.getElementById("couponList").textContent = e.message;
+    }
+  };
+  document.getElementById("btnCoupon").onclick = async () => {
+    try {
+      await api("/api/admin/coupon", {
+        code: document.getElementById("couponCode").value,
+        amountCents: Number(document.getElementById("couponAmt").value),
+        maxUses: Number(document.getElementById("couponMax").value) || 50,
+      });
+      refreshCoupons();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+  refreshCoupons();
+  document.getElementById("btnBackup").onclick = async () => {
+    try {
+      const b = await api("/api/ops/backup", {});
+      document.getElementById("backupOut").textContent = JSON.stringify(b, null, 2);
+    } catch (e) {
+      document.getElementById("backupOut").textContent = e.message;
+    }
+  };
 }
 
 function card(span, html) {

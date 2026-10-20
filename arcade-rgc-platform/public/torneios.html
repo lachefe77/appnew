@@ -446,13 +446,62 @@
       return html;
     }
 
-    function registerTournament(tid) {
-      alert('Inscrições de torneio ainda não estão habilitadas. Use as salas de duelo KOF 2002.');
-      return;
-      // legado demo abaixo (desativado)
+    async function registerTournament(tid) {
       const token = localStorage.getItem('arenaToken');
       if (!token) { alert('Faça login no lobby para se inscrever.'); return; }
-      alert('Inscrição enviada! Aguarde confirmação do admin.');
+      try {
+        const r = await fetch('/api/tournaments/register', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tournamentId: tid }),
+        });
+        const b = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(b.error || 'Falha na inscrição');
+        alert(`Inscrito! ${b.tournament.players.length}/${b.tournament.maxPlayers} jogadores.`);
+        loadLiveTournaments();
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    async function loadLiveTournaments() {
+      try {
+        const r = await fetch('/api/tournaments');
+        const list = await r.json();
+        if (!Array.isArray(list) || !list.length) return;
+        // Mescla API real no catálogo demo para UI.
+        list.forEach((t) => {
+          const existing = DEMO_TOURNAMENTS.find((x) => x.id === t.id);
+          const row = {
+            id: t.id,
+            name: t.title,
+            game: t.gameCode || 'KOF 2002',
+            format: 'Single Elim',
+            status: t.status === 'OPEN' ? 'PENDING' : t.status === 'LOCKED' ? 'LIVE' : t.status,
+            participants: (t.players || []).length,
+            maxParticipants: t.maxPlayers,
+            prizePool: t.buyInCents * t.maxPlayers,
+            color: t.buyInCents ? '#00e5ff' : '#39ff14',
+            bracket: t.bracket?.length
+              ? {
+                  rounds: t.bracket.map((round, i) => ({
+                    name: i === 0 ? 'R1' : 'R' + (i + 1),
+                    matches: round.map((m) => ({
+                      p1: m.a ? { name: m.a, seed: 1 } : null,
+                      p2: m.b ? { name: m.b, seed: 2 } : null,
+                      winner: m.winnerId === m.a ? 0 : m.winnerId === m.b ? 1 : null,
+                      score: [0, 0],
+                    })),
+                  })),
+                }
+              : null,
+          };
+          if (existing) Object.assign(existing, row);
+          else DEMO_TOURNAMENTS.push(row);
+        });
+        renderActiveTournaments();
+        renderOpenTournaments();
+      } catch {}
     }
 
     // ── Tabs ──────────────────────────────────────────────────────
@@ -470,6 +519,7 @@
 
     renderActiveTournaments();
     renderOpenTournaments();
+    loadLiveTournaments();
   </script>
 </body>
 </html>

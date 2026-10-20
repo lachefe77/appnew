@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node --test tests/critical-flow.test.js tests/rom-check.test.js tests/hosted.test.js tests/controls.test.js tests/controller-settings.test.js tests/snapshot.test.js tests/hardening.test.js tests/match-product.test.js tests/theme-settings.test.js tests/sistema-1a9.test.js tests/sistema-10a30.test.js tests/host-bot.test.js",
+    "test": "node --test tests/critical-flow.test.js tests/rom-check.test.js tests/hosted.test.js tests/controls.test.js tests/controller-settings.test.js tests/snapshot.test.js tests/hardening.test.js tests/match-product.test.js tests/theme-settings.test.js tests/sistema-1a9.test.js tests/sistema-10a30.test.js tests/host-bot.test.js tests/plano-29.test.js",
     "test:host-bot": "node --test tests/host-bot.test.js",
     "db:backup": "node scripts/database-backup.js backup",
     "db:verify": "node scripts/database-backup.js verify",

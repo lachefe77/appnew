@@ -93,6 +93,16 @@ import {
   computeCommandToImageMs,
   latencyRollingStats,
 } from "./command-latency.js";
+import {
+  PlanoClans,
+  PlanoPasswordReset,
+  PlanoDisputes,
+  PlanoBeta,
+  PlanoChat,
+  PlanoCharacters,
+} from "./sistema-plano.js";
+import { getActiveSeason } from "./seasons.js";
+import { runOffboxBackup } from "../scripts/offbox-backup.js";
 
 const scrypt = promisify(crypto.scrypt),
   uuid = () => crypto.randomUUID();
@@ -271,6 +281,8 @@ export function startPlatform({
     [...matches.values()].some((m) => [m.a, m.b].includes(userId)) ||
     [...challenges.values()].some((ch) => [ch.from, ch.to].includes(userId)) ||
     [...foundMatches.values()].some((f) => [f.a, f.b].includes(userId));
+  // Cap multi-sessão: HOSTED_MAX_SESSIONS (via resolveHostedMaxSessions) + /api/ops/hosted-cap
+  // Engines: host-bot-process-per-session | playwright-browser-per-session
   const hostedCap = () => resolveHostedMaxSessions(process.env, hostedEngine);
   const hostedActiveCount = () =>
     [...matches.values()].filter(
@@ -498,6 +510,13 @@ export function startPlatform({
     try {
       replayEngine.finishRecording(m.id, winner);
     } catch {}
+    try {
+      clanSystem.recordMatchResult(
+        winner,
+        winner === m.a ? m.b : m.a,
+        m.stake || 0,
+      );
+    } catch {}
     both(m, {
       type: "MATCH_ENDED",
       matchId: m.id,
@@ -645,6 +664,15 @@ export function startPlatform({
   }
   function review(m, actor, reason) {
     if (!matches.has(m.id) || m.phase === "REVIEW" || m.reviewLock) return;
+    try {
+      if (actor && actor !== "SYSTEM") PlanoDisputes.assertCanDispute(actor);
+    } catch (e) {
+      both(m, {
+        type: "SYSTEM_MESSAGE",
+        text: e.message || "Limite de disputas atingido.",
+      });
+      return;
+    }
     // Trava imediata em memória para bloquear onResult/settle concorrentes
     // antes da transação SQLite concluir.
     m.reviewLock = true;
@@ -1354,6 +1382,108 @@ export function startPlatform({
             });
           }
         }
+        if (p === "/api/season" && req.method === "GET") {
+          const season = getActiveSeason();
+          return json(res, 200, {
+            season,
+            leaderboard: db
+              .prepare(
+                "SELECT id,username,elo,wins,losses FROM users WHERE is_banned=0 ORDER BY elo DESC LIMIT 50",
+              )
+              .all(),
+          });
+        }
+        if (p === "/api/clans/me" && req.method === "GET") {
+          const u = httpAccount(req);
+          return json(res, 200, { clan: PlanoClans.ofUser(u.id) || null });
+        }
+        if (p === "/api/tournaments/register" && req.method === "POST") {
+          const u = httpAccount(req);
+          const d = await body(req);
+          const t = tournaments.registerPlayer(
+            text(d.tournamentId, 64),
+            u.id,
+            u.username,
+          );
+          if (t.buyInCents > 0) {
+            if (!simulation)
+              throw fail("Buy-in de torneio só com créditos fictícios.", 409);
+            try {
+              finance.adjust(
+                u.id,
+                t.buyInCents,
+                "tour:" + t.id + ":" + u.id,
+                "Buy-in torneio " + t.title,
+              );
+            } catch (e) {
+              throw fail(e.message || "Saldo insuficiente para o buy-in.", 400);
+            }
+            walletUpdate(u.id);
+          }
+          return json(res, 200, { ok: true, tournament: t });
+        }
+        if (p === "/api/auth/forgot" && req.method === "POST") {
+          const d = await body(req);
+          const email = text(d.email, 254).toLowerCase();
+          const u = Users.get(email);
+          // Sempre 200 para não enumerar contas.
+          if (!u)
+            return json(res, 200, {
+              ok: true,
+              message: "Se o e-mail existir, enviaremos instruções.",
+            });
+          const { token, expiresAt } = PlanoPasswordReset.create(u.id);
+          const payload = {
+            ok: true,
+            message: "Token de recuperação gerado (lab: devolvido na resposta).",
+            expiresAt,
+          };
+          if (simulation || process.env.NODE_ENV === "development")
+            payload.resetToken = token;
+          return json(res, 200, payload);
+        }
+        if (p === "/api/auth/reset" && req.method === "POST") {
+          const d = await body(req);
+          const password = String(d.password || "");
+          if (password.length < 8)
+            throw fail("Senha mínima de oito caracteres.");
+          const userId = PlanoPasswordReset.consume(
+            text(d.token, 128),
+            await hashPassword(password),
+          );
+          return json(res, 200, { ok: true, userId });
+        }
+        if (p === "/api/beta/status" && req.method === "GET") {
+          return json(res, 200, {
+            closed: !PlanoBeta.isOpen(),
+            allowlistCount: PlanoBeta.list().length,
+          });
+        }
+        if (p === "/api/finance/mode" && req.method === "GET") {
+          return json(res, 200, {
+            simulation,
+            realPix: false,
+            kycRequiredForWithdraw: true,
+            label: simulation
+              ? "Créditos fictícios (lab) — PIX real desligado"
+              : "PIX real desligado neste ambiente",
+          });
+        }
+        if (p === "/api/ops/backup" && req.method === "POST") {
+          const admin = httpAccount(req);
+          if (!roleAtLeast(admin.role, "ADMIN")) throw fail("Acesso negado.", 403);
+          assertAdminIpAllowed(req);
+          const result = await runOffboxBackup();
+          return json(res, 200, { ok: true, result });
+        }
+        if (p === "/api/replays/" || p.startsWith("/api/replays/")) {
+          const mid = p.replace(/^\/api\/replays\/?/, "");
+          if (mid && req.method === "GET") {
+            const replay = replayEngine.getReplay(mid);
+            if (!replay) throw fail("Replay não encontrado.", 404);
+            return json(res, 200, { replay });
+          }
+        }
         if (p === "/api/freeroll" && req.method === "GET") {
           const list = [...freerolls.values()].map((f) => ({
             id: f.id,
@@ -1407,11 +1537,30 @@ export function startPlatform({
           assertAdminIpAllowed(req);
           const secret = generateTotpSecret();
           AdminMfaStore.enable(admin.id, secret);
+          const otpauth = `otpauth://totp/ArenaArcade:${encodeURIComponent(admin.email || admin.id)}?secret=${secret}&issuer=ArenaArcade&algorithm=SHA1&digits=6&period=30`;
+          const qrUrl =
+            "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" +
+            encodeURIComponent(otpauth);
           return json(res, 200, {
             ok: true,
             secret,
-            message: "Guarde o secret TOTP. MFA_ENFORCE=1 exige código.",
+            otpauth,
+            qrUrl,
+            message:
+              "Escaneie o QR no autenticador. MFA_ENFORCE=1 exige código nas ações sensíveis.",
           });
+        }
+        if (p === "/api/admin/beta-allowlist" && req.method === "POST") {
+          const admin = httpAccount(req);
+          if (!roleAtLeast(admin.role, "ADMIN")) throw fail("Acesso negado.", 403);
+          const d = await body(req);
+          PlanoBeta.allow(text(d.email, 254).toLowerCase());
+          return json(res, 200, { ok: true, list: PlanoBeta.list() });
+        }
+        if (p === "/api/admin/beta-allowlist" && req.method === "GET") {
+          const admin = httpAccount(req);
+          if (!roleAtLeast(admin.role, "ADMIN")) throw fail("Acesso negado.", 403);
+          return json(res, 200, { closed: !PlanoBeta.isOpen(), list: PlanoBeta.list() });
         }
         if (p === "/api/ops/warm-pool" && req.method === "GET") {
           return json(res, 200, { warmPool: warmPool.stats() });
@@ -2114,6 +2263,19 @@ export function startPlatform({
                     );
                   if (password.length < 8)
                     throw fail("Senha mínima de oito caracteres.");
+                  if (!PlanoBeta.isAllowed(email)) {
+                    const invite = text(d.inviteCode || d.betaCode || "", 16);
+                    if (!invite || !InviteCodes.get(invite.toUpperCase()))
+                      throw fail(
+                        "Beta fechado: use um convite válido ou entre na allowlist.",
+                        403,
+                      );
+                    try {
+                      InviteCodes.redeem(invite.toUpperCase());
+                    } catch {
+                      throw fail("Convite inválido ou esgotado.", 403);
+                    }
+                  }
                   if (
                     Users.get(email) ||
                     db
@@ -2263,17 +2425,113 @@ export function startPlatform({
             }
             if (d.type === "SEND_CHAT") {
               if (!c.roomId) throw fail("Entre em uma sala.");
+              const rawText = text(d.text, 300);
+              if (PlanoChat.isMuted(c.roomId, u.id))
+                throw fail("Você está silenciado nesta sala.");
+              // Mod: /mute @nick minutos
+              if (rawText.startsWith("/mute ") && can(u, "mod.chat")) {
+                const parts = rawText.split(/\s+/);
+                const nick = (parts[1] || "").replace(/^@/, "");
+                const mins = Math.min(120, Math.max(1, Number(parts[2]) || 10));
+                const target = [...clients.values()].find(
+                  (x) =>
+                    x.roomId === c.roomId &&
+                    Users.getById(x.userId)?.username === nick,
+                );
+                if (!target?.userId) throw fail("Jogador não encontrado na sala.");
+                PlanoChat.mute(c.roomId, target.userId, mins);
+                broadcast(
+                  {
+                    type: "CHAT_MESSAGE",
+                    senderId: "SYSTEM",
+                    username: "MOD",
+                    device: "SYS",
+                    text: `${nick} silenciado por ${mins} min.`,
+                    timestamp: new Date().toLocaleTimeString("pt-BR"),
+                  },
+                  c.roomId,
+                );
+                return;
+              }
+              if (rawText.startsWith("/")) {
+                // Comandos desconhecidos não vão para o chat público.
+                send(ws, {
+                  type: "SYSTEM_MESSAGE",
+                  text: "Comandos: /mute @nick [min] (moderadores).",
+                });
+                return;
+              }
+              PlanoChat.append(c.roomId, u.id, u.username, rawText);
               broadcast(
                 {
                   type: "CHAT_MESSAGE",
                   senderId: u.id,
                   username: u.username,
                   device: c.device || "PC",
-                  text: text(d.text, 300),
+                  text: rawText,
                   timestamp: new Date().toLocaleTimeString("pt-BR"),
                 },
                 c.roomId,
               );
+              return;
+            }
+            if (d.type === "CHAT_HISTORY") {
+              if (!c.roomId) throw fail("Entre em uma sala.");
+              send(ws, {
+                type: "CHAT_HISTORY",
+                roomId: c.roomId,
+                messages: PlanoChat.history(c.roomId, 50),
+              });
+              return;
+            }
+            if (d.type === "SELECT_CHARACTER") {
+              if (!c.matchId) throw fail("Sem partida ativa.");
+              const charId = text(d.charId || d.character || "", 32);
+              if (!charId) throw fail("Personagem inválido.");
+              PlanoCharacters.set(c.matchId, u.id, charId);
+              const m = matches.get(c.matchId);
+              if (m) {
+                const peer = u.id === m.a ? m.b : m.a;
+                send(connection(peer)?.[0], {
+                  type: "OPPONENT_CHAR_CONFIRMED",
+                  matchId: m.id,
+                  charId,
+                  userId: u.id,
+                });
+                const picks = PlanoCharacters.list(m.id);
+                if (picks.length >= 2) {
+                  both(m, {
+                    type: "CHAR_SELECT_DONE",
+                    matchId: m.id,
+                    picks,
+                  });
+                }
+              }
+              send(ws, {
+                type: "CHAR_SELECT_ACK",
+                matchId: c.matchId,
+                charId,
+              });
+              return;
+            }
+            if (d.type === "CREATE_CLAN") {
+              const clan = clanSystem.createClan(
+                d.tag,
+                d.name,
+                d.description || "",
+                u.id,
+              );
+              send(ws, { type: "CLAN_UPDATED", clan });
+              return;
+            }
+            if (d.type === "JOIN_CLAN") {
+              const clan = clanSystem.joinClan(d.tag, u.id);
+              send(ws, { type: "CLAN_UPDATED", clan });
+              return;
+            }
+            if (d.type === "LEAVE_CLAN") {
+              clanSystem.leaveClan(u.id);
+              send(ws, { type: "CLAN_UPDATED", clan: null });
               return;
             }
             if (d.type === "DEPOSIT_PIX") {
@@ -3037,6 +3295,16 @@ export function startPlatform({
     }
   }, 1000);
   reviewSweep.unref();
+  const backupEveryMs = Number(process.env.BACKUP_INTERVAL_MS) || 0;
+  let backupTimer = null;
+  if (backupEveryMs > 0) {
+    backupTimer = setInterval(() => {
+      runOffboxBackup().catch((e) =>
+        console.error("[BACKUP]", e.message || e),
+      );
+    }, backupEveryMs);
+    backupTimer.unref();
+  }
   for (const result of expireReviews()) publishReviewDecision(result);
   (async () => {
     const email = process.env.ADMIN_EMAIL || "admin@arena.gg";
@@ -3069,6 +3337,7 @@ export function startPlatform({
       closing = true;
       clearInterval(heartbeat);
       clearInterval(reviewSweep);
+      if (backupTimer) clearInterval(backupTimer);
       for (const ch of challenges.values()) clearTimeout(ch.timer);
       hostedWaitQueue.length = 0;
       for (const m of [...matches.values()])
