@@ -555,7 +555,7 @@ async function renderTheme(c) {
     </div>
   `));
 
-  let selectedId = active?.id || "neogeo-cabinet";
+  let selectedId = active?.id || "vinyl-redline";
   const syncHex = () => {
     c.querySelectorAll("[data-color]").forEach(inp => {
       const hex = c.querySelector(`[data-hex="${inp.dataset.color}"]`);

@@ -279,8 +279,53 @@
   .tr { display: grid; grid-template-columns: 1.2fr 1fr .8fr .7fr; gap: 6px; padding: 8px; background: var(--t-panel); border: 1px solid var(--t-line); }
   .tr.head { color: var(--t-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: .7rem; }
 
+  /* Lobby chat (3 colunas) */
+  .lobby3 {
+    flex: 1; display: grid; grid-template-columns: 200px 1fr 210px; min-height: 520px;
+    border-top: 1px solid var(--t-line);
+  }
+  .lobby3-col { display: flex; flex-direction: column; min-height: 0; background: var(--t-panel); }
+  .lobby3-col + .lobby3-col { border-left: 1px solid var(--t-line); }
+  .lobby3-head {
+    padding: 10px 12px; border-bottom: 1px solid var(--t-line);
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    font-size: .78rem; font-weight: 700;
+  }
+  .lobby3-scroll { flex: 1; overflow: auto; padding: 8px; }
+  .room-item {
+    padding: 8px; margin-bottom: 6px; border: 1px solid var(--t-line); background: var(--t-elev);
+    font-size: .78rem;
+  }
+  .room-item.on { border-color: var(--t-accent); box-shadow: inset 3px 0 0 var(--t-accent); }
+  .chat-toolbar {
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 10px;
+    border-bottom: 1px solid var(--t-line); background: var(--t-bg); font-size: .7rem;
+  }
+  .chat-toolbar button {
+    border: 1px solid var(--t-line); background: var(--t-elev); color: var(--t-text);
+    padding: 4px 8px; font: 700 .68rem var(--t-ui), sans-serif; cursor: default;
+  }
+  .chat-msg {
+    margin: 0 0 8px; padding: 8px 10px; font-size: .8rem; line-height: 1.35;
+    background: var(--t-elev); border-left: 3px solid var(--t-line);
+  }
+  .chat-msg.sys { border-left-color: var(--t-accent); background: color-mix(in srgb, var(--t-accent) 10%, var(--t-elev)); }
+  .chat-msg .who { font-weight: 800; color: var(--t-accent2); margin-right: 6px; }
+  .chat-msg .when { color: var(--t-muted); font-size: .68rem; font-family: var(--t-mono), monospace; }
+  .chat-input-row {
+    display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--t-line); background: var(--t-panel);
+  }
+  .chat-input-row input {
+    flex: 1; height: 36px; background: var(--t-bg); border: 1px solid var(--t-line);
+    color: var(--t-text); padding: 0 10px; font: inherit;
+  }
+  .chat-input-row button {
+    border: 0; background: var(--t-accent); color: #0a0a0a; font: 800 .75rem var(--t-ui), sans-serif;
+    letter-spacing: .08em; padding: 0 12px; text-transform: uppercase;
+  }
+
   @media (max-width: 720px) {
-    .grid2, .admin-shell, .strip { grid-template-columns: 1fr; }
+    .grid2, .admin-shell, .strip, .lobby3 { grid-template-columns: 1fr; }
     .fighters { padding-left: 10%; opacity: .55; }
     .fighter { width: 56px; height: 180px; }
   }
@@ -336,7 +381,8 @@ const SURFACES = [
   { id: "login", label: "Login", path: "/entrar" },
   { id: "register", label: "Registro", path: "/cadastro" },
   { id: "vitrine", label: "Vitrine", path: "/" },
-  { id: "sala", label: "Sala / Room", path: "/sala/kof-se" },
+  { id: "chat", label: "Sala de chat", path: "/lobby" },
+  { id: "sala", label: "Fila / Match", path: "/sala/kof-se" },
   { id: "criar", label: "Criar sala", path: "/sala/nova" },
   { id: "clas", label: "Clãs", path: "/clas" },
   { id: "admin", label: "Admin", path: "/admin" },
@@ -385,7 +431,7 @@ function nav(theme, active) {
     el("div", { class: "pv-logo" }, "ARENA ARCADE"),
     el("div", { class: "pv-links" }, [
       el("span", { class: active === "vitrine" ? "on" : "" }, "Descobrir"),
-      el("span", { class: active === "sala" || active === "criar" ? "on" : "" }, "Salas"),
+      el("span", { class: active === "chat" || active === "sala" || active === "criar" ? "on" : "" }, "Salas"),
       el("span", { class: active === "clas" ? "on" : "" }, "Clãs"),
       el("span", { class: active === "perfil" ? "on" : "" }, "Perfil"),
       el("span", { class: "pill" }, "KOF 2002"),
@@ -464,6 +510,143 @@ function paintVitrine(theme) {
   ]);
   main.append(hero, strip);
   return main;
+}
+
+function paintChat(theme) {
+  const msg = (cls, when, who, text) =>
+    el("div", { class: "chat-msg" + (cls ? " " + cls : "") }, [
+      el("span", { class: "when" }, when + " "),
+      who ? el("span", { class: "who" }, who) : null,
+      document.createTextNode(text),
+    ].filter(Boolean));
+  const field = (label, value) =>
+    el("div", { class: "form-row", style: { marginBottom: "6px" } }, [
+      el("label", { style: { color: "var(--t-muted)", fontSize: ".7rem", fontWeight: 700 } }, label),
+      el("select", { disabled: "disabled" }, [el("option", {}, value)]),
+    ]);
+
+  return el("div", { class: "pv-main", style: { display: "flex", flexDirection: "column" } }, [
+    el("div", { class: "lobby3" }, [
+      // esquerda: perfil + salas regionais
+      el("div", { class: "lobby3-col" }, [
+        el("div", {
+          style: {
+            padding: "12px", borderBottom: "1px solid var(--t-line)",
+            display: "flex", gap: "10px", alignItems: "center",
+            background: "linear-gradient(180deg, color-mix(in srgb, var(--t-accent) 18%, var(--t-panel)), var(--t-panel))",
+          },
+        }, [
+          el("div", {
+            class: "av",
+            style: { width: "40px", height: "40px", border: "2px solid var(--t-accent2)", background: "var(--t-elev)" },
+          }, "AK"),
+          el("div", {}, [
+            el("div", { style: { fontWeight: 800 } }, "Akira_77"),
+            el("div", { style: { fontSize: ".68rem", fontFamily: "var(--t-mono)", color: "var(--t-accent2)" } }, "VERIFICADO"),
+          ]),
+        ]),
+        el("div", { class: "lobby3-head" }, [
+          el("span", {}, "SALAS REGIONAIS"),
+          el("span", { class: "pill", style: { borderColor: "var(--t-ok)", color: "var(--t-ok)" } }, "+ CRIAR SALA"),
+        ]),
+        el("div", { style: { padding: "6px 10px 8px" } }, [
+          el("select", {
+            disabled: "disabled",
+            style: {
+              width: "100%", height: "32px", background: "var(--t-bg)", border: "1px solid var(--t-line)",
+              color: "var(--t-text)", fontSize: ".72rem", padding: "0 6px",
+            },
+          }, [
+            el("option", {}, "Todas as regiões (Brasil)"),
+            el("option", {}, "Sudeste (SP, RJ, MG, ES)"),
+            el("option", {}, "Nordeste"),
+            el("option", {}, "VIP & High Stakes"),
+          ]),
+        ]),
+        el("div", { class: "lobby3-scroll" }, [
+          el("div", { class: "room-item on" }, [
+            el("div", { style: { fontWeight: 800 } }, "KOF Sudeste"),
+            el("div", { style: { color: "var(--t-muted)", fontSize: ".7rem" } }, "12 online · rake 10%"),
+          ]),
+          el("div", { class: "room-item" }, [
+            el("div", { style: { fontWeight: 800 } }, "KOF Nordeste"),
+            el("div", { style: { color: "var(--t-muted)", fontSize: ".7rem" } }, "4 online · amistoso"),
+          ]),
+          el("div", { class: "room-item" }, [
+            el("div", { style: { fontWeight: 800 } }, "VIP High Stake"),
+            el("div", { style: { color: "var(--t-muted)", fontSize: ".7rem" } }, "2 online · R$20+"),
+          ]),
+        ]),
+      ]),
+      // centro: chat da sala
+      el("div", { class: "lobby3-col", style: { background: "var(--t-bg)" } }, [
+        el("div", { class: "lobby3-head", style: { background: "var(--t-panel)" } }, [
+          el("div", {}, [
+            el("b", {}, "The King of Fighters 2002"),
+            el("span", { style: { color: "var(--t-accent2)", marginLeft: "8px", fontSize: ".72rem" } }, "[RAKE DA CASA: 10%]"),
+          ]),
+          el("span", { style: { color: "var(--t-muted)", fontFamily: "var(--t-mono)", fontSize: ".72rem" } }, [
+            "Ping: ",
+            el("b", { style: { color: "var(--t-ok)" } }, "4ms"),
+            " · 12 online",
+          ]),
+        ]),
+        el("div", { class: "chat-toolbar" }, [
+          el("span", { style: { color: "var(--t-muted)", fontWeight: 700 } }, "COMANDOS:"),
+          el("button", { type: "button" }, "/ping"),
+          el("button", { type: "button" }, "/regras"),
+          el("button", { type: "button" }, "/clans"),
+          el("button", { type: "button", style: { borderColor: "var(--t-accent2)", color: "var(--t-accent2)" } }, "DESAFIO GLOBAL"),
+        ]),
+        el("div", { class: "lobby3-scroll" }, [
+          msg("sys", "20:41", null, "Bem-vindo à Arena Arcade. Digite /ajuda para comandos. Y=ficha · Enter=START."),
+          msg("", "20:42", "Akira_77", "alguém Bo3 R$5 SE?"),
+          msg("", "20:42", "Nova_Pulse", "aceito — mando challenge"),
+          msg("sys", "20:43", "MOD", "YuriMain silenciado 10 min (/mute)."),
+          msg("", "20:43", "RedCabinet", "espectando o próximo X1"),
+          msg("", "20:44", "ArenaBot", "Fila hosted posição 2 · ETA ~25s"),
+        ]),
+        el("div", { class: "chat-input-row" }, [
+          el("input", { value: "Envie uma mensagem na sala… (/ajuda, /ping, /regras)", readonly: "readonly" }),
+          el("button", { type: "button" }, "Enviar"),
+        ]),
+      ]),
+      // direita: controles + roster
+      el("div", { class: "lobby3-col" }, [
+        el("div", { class: "lobby3-head" }, [
+          el("span", {}, "LUTADORES NA SALA"),
+          el("span", { class: "pill", style: { background: "var(--t-accent)", color: "#111", borderColor: "var(--t-accent)" } }, "12"),
+        ]),
+        el("div", { style: { padding: "10px", borderBottom: "1px solid var(--t-line)" } }, [
+          field("Modo", "Créditos de teste (hosted)"),
+          field("Stake", "R$ 5,00 (Padrão)"),
+          field("Série", "Melhor de 3"),
+          el("div", { style: { display: "flex", gap: "6px", marginTop: "4px" } }, [
+            el("button", { class: "auth-cta", type: "button", style: { flex: "1", height: "34px", fontSize: ".68rem" } }, "ACHAR PARTIDA"),
+            el("button", {
+              type: "button",
+              style: {
+                flex: "1", height: "34px", fontSize: ".68rem", fontWeight: 700,
+                border: "1px solid var(--t-line)", background: "var(--t-elev)", color: "var(--t-text)",
+              },
+            }, "CANCELAR FILA"),
+          ]),
+          el("div", {
+            style: {
+              marginTop: "8px", color: "var(--t-accent2)", fontSize: ".68rem",
+              fontFamily: "var(--t-mono)",
+            },
+          }, "Fila hosted #2 · ETA ~25s"),
+        ]),
+        el("div", { class: "lobby3-scroll" }, [
+          row("AK", "Akira_77", "ELO 1542 · livre"),
+          row("NP", "Nova_Pulse", "ELO 1488 · na fila"),
+          row("RC", "RedCabinet", "ELO 1610 · spectate"),
+          row("YM", "YuriMain_BR", "ELO 1390 · mute"),
+        ]),
+      ]),
+    ]),
+  ]);
 }
 
 function paintSala(theme) {
@@ -596,6 +779,7 @@ function paintPreview(theme) {
   if (surface === "login") body = paintAuth(theme, "login");
   else if (surface === "register") body = paintAuth(theme, "register");
   else if (surface === "vitrine") body = paintVitrine(theme);
+  else if (surface === "chat") body = paintChat(theme);
   else if (surface === "sala") body = paintSala(theme);
   else if (surface === "criar") body = paintCriar(theme);
   else if (surface === "clas") body = paintClas(theme);

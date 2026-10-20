@@ -92,10 +92,11 @@ export async function bootTheme(preferredId) {
       preferredId ||
       localStorage.getItem(KEY) ||
       catalog.defaultTheme ||
-      "neogeo-cabinet";
+      "vinyl-redline";
     const theme =
       catalog.themes.find((t) => t.id === id) ||
-      catalog.themes.find((t) => t.id === "neogeo-cabinet") ||
+      catalog.themes.find((t) => t.id === "vinyl-redline") ||
+      catalog.themes.find((t) => t.id === catalog.defaultTheme) ||
       catalog.themes[0];
     applyTheme(theme);
     return { catalog, theme, source: "local" };
@@ -130,7 +131,7 @@ export { COLOR_KEYS };
 
 if (!window.__arenaThemeBooted) {
   window.__arenaThemeBooted = true;
-  bootTheme("neogeo-cabinet").catch(() => {});
+  bootTheme("vinyl-redline").catch(() => {});
   window.ArenaTheme = {
     bootTheme,
     setTheme,

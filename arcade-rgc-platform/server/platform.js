@@ -2262,7 +2262,7 @@ export function startPlatform({
             if (req.method === "POST") {
               const d = await body(req);
               const theme = setActiveTheme({
-                id: text(d.id || d.themeId || "neogeo-cabinet", 64),
+                id: text(d.id || d.themeId || "vinyl-redline", 64),
                 colors: d.colors && typeof d.colors === "object" ? d.colors : {},
               });
               AuditLog.record({

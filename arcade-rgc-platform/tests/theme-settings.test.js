@@ -12,14 +12,21 @@ test("catálogo tem 25 temas com ids estáveis", () => {
     fs.readFileSync(path.join(root, "public/themes/themes.json"), "utf8"),
   );
   assert.equal(catalog.themes.length, 25);
-  assert.ok(catalog.themes.some((t) => t.id === "neogeo-cabinet"));
+  assert.equal(catalog.defaultTheme, "vinyl-redline");
+  assert.ok(catalog.themes.some((t) => t.id === "vinyl-redline"));
   assert.ok(catalog.themes.some((t) => t.id === "crt-phosphor"));
   for (const t of catalog.themes) {
     assert.ok(t.name && t.pitch && t.colors?.accent && t.fonts?.display, t.id);
   }
+  const gallery = fs.readFileSync(
+    path.join(root, "public/theme-gallery.html"),
+    "utf8",
+  );
+  assert.match(gallery, /Sala de chat/);
+  assert.match(gallery, /paintChat/);
 });
 
-test("tema padrão Neo Geo e override de cores", async () => {
+test("tema padrão Vinyl Redline e override de cores", async () => {
   const dir = fs.mkdtempSync(path.join(root, "work/theme-"));
   const child = spawn(
     process.execPath,
@@ -30,13 +37,13 @@ test("tema padrão Neo Geo e override de cores", async () => {
       process.env.DOTENV_CONFIG_PATH = ${JSON.stringify(path.join(dir, "no.env"))};
       const m = await import(${JSON.stringify(path.join(root, "server/theme-settings.js"))});
       const a = m.ensureDefaultTheme();
-      if (a.id !== "neogeo-cabinet") throw new Error("default " + a.id);
-      if (a.colors.accent !== "#e10600") throw new Error("accent");
+      if (a.id !== "vinyl-redline") throw new Error("default " + a.id);
+      if (a.colors.accent !== "#e31c25") throw new Error("accent " + a.colors.accent);
       const b = m.setActiveTheme({ id: "crt-phosphor", colors: { accent: "#112233" } });
       if (b.id !== "crt-phosphor") throw new Error("id");
       if (b.colors.accent !== "#112233") throw new Error("custom");
-      const c = m.setActiveTheme({ id: "neogeo-cabinet", colors: {} });
-      if (c.id !== "neogeo-cabinet") throw new Error("back");
+      const c = m.setActiveTheme({ id: "vinyl-redline", colors: {} });
+      if (c.id !== "vinyl-redline") throw new Error("back");
       console.log("ok");
       `,
     ],
