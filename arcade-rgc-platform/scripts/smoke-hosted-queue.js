@@ -12,7 +12,8 @@ import { fileURLToPath } from "node:url";
 import { WebSocket } from "ws";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const dir = fs.mkdtempSync(path.join(root, "work/queue-smoke-"));
+fs.mkdirSync(path.join(root, "work"), { recursive: true });
+const dir = fs.mkdtempSync(path.join(root, "work", "queue-smoke-"));
 const port = 18000 + Math.floor(Math.random() * 1000);
 const dbPath = path.join(dir, "arena.db");
 const base = `http://127.0.0.1:${port}`;
