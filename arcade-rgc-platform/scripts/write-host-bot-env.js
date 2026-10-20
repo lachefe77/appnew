@@ -91,7 +91,8 @@ const lines = [
   "HOST_BOT_VIDEO_DRIVER=gdi",
   "HOST_BOT_VERBOSE=1",
   "HOST_BOT_INPUT=auto",
-  "# Captura = crop DWM; input = PostMessage (NUNCA SetForegroundWindow com gdigrab)",
+  "ARENA_INPUT_FOCUS=1",
+  "# Input: keybd_event + foco suave (throttle). Captura: desktop-crop DWM.",
   "",
 ];
 

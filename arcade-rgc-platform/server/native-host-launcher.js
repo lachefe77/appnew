@@ -140,7 +140,10 @@ export function defaultRetroArchLabConfig(env = process.env) {
     'video_fullscreen = "false"',
     'video_windowed_fullscreen = "false"',
     'video_threaded = "false"',
-    'audio_enable = "false"',
+    // Som local na janela RetroArch (WebRTC ainda é só vídeo no lab).
+    'audio_enable = "true"',
+    'audio_mute_enable = "false"',
+    'audio_sync = "false"',
     'fps_show = "false"',
     'config_save_on_exit = "false"',
     'quit_on_close_content = "false"',

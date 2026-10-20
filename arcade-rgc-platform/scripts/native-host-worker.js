@@ -502,16 +502,22 @@ async function handle(msg) {
         },
       });
       emitSample();
-      // Fichas sem roubar foco (SetForegroundWindow + gdigrab = RA fecha).
+      // Batch de fichas (1 foco + Y/H×2) — estável com gdigrab.
       if (state.input && state.game?.ok) {
         state.pendingCredits = true;
         const seed = async () => {
-          await new Promise((r) => setTimeout(r, 2500));
+          await new Promise((r) => setTimeout(r, 2000));
           if (!gameAlive()) return;
           await injectCabinetCredits(state.input, {
             pulses: 2,
-            gapMs: 250,
-            holdMs: 160,
+            holdMs: 170,
+          });
+          await new Promise((r) => setTimeout(r, 500));
+          if (!gameAlive()) return;
+          // Segunda leva leve se attract engolir o 1.º
+          await injectCabinetCredits(state.input, {
+            pulses: 1,
+            holdMs: 170,
           });
         };
         seed()
@@ -528,7 +534,7 @@ async function handle(msg) {
               event: "progress",
               stage: "cabinet-credits",
               detail: {
-                pulses: "2+2",
+                pulses: "2+2+1",
                 keys: "Y/H",
                 backend: state.input?.backend,
                 alive: true,

@@ -108,12 +108,23 @@ export class FBNeoLoader {
       toolbar.append(b);
       return b;
     };
-    const coinButton = button("FICHA (Y)", () => this.pulse(2));
+    const coinButton = button("FICHA (Y)", () => {
+      this.focused = true;
+      this.pulse(2);
+      this.status(
+        `P${this.slot}: ficha enviada (Y). No RetroArch o CREDIT deve subir.`,
+      );
+    });
     coinButton.disabled = false;
     coinButton.title = this.hosted
-      ? "Inserir ficha no gabinete (tecla Y). O servidor também prepara fichas ao iniciar."
-      : "Inserir ficha no amistoso (tecla Y)";
-    button("START", () => this.pulse(3));
+      ? "Inserir ficha (Y). Servidor também mete fichas ao iniciar."
+      : "Inserir ficha (Y)";
+    const startButton = button("START", () => {
+      this.focused = true;
+      this.pulse(3);
+      this.status(`P${this.slot}: START enviado. Ambos devem pressionar START.`);
+    });
+    startButton.title = "Enter / START — os dois jogadores precisam pressionar";
     button("CONTROLES", () => {
       this.releaseAll();
       openControls();
@@ -232,16 +243,29 @@ export class FBNeoLoader {
       this.video = document.createElement("video");
       this.video.autoplay = true;
       this.video.playsInline = true;
+      // WebRTC lab = vídeo; som sai da janela RetroArch (audio_enable=true).
       this.video.muted = true;
+      this.video.tabIndex = 0;
       this.video.style.cssText =
-        "width:100%;flex:1;min-height:300px;max-height:65vh;object-fit:contain;background:black";
+        "width:100%;flex:1;min-height:300px;max-height:65vh;object-fit:contain;background:black;outline:none";
+      this.video.title = "Clique aqui e use o teclado (Y=ficha, Enter=START, setas, Z/X/A/S)";
+      this.video.addEventListener("click", () => {
+        this.focused = true;
+        this.video.focus();
+        this.status(
+          `P${this.slot} foco no jogo. Y=ficha · Enter=START · setas · Z/X/A/S. Som na janela RetroArch.`,
+        );
+      });
       this.stageEl.append(this.video);
       button("NITIDEZ", () => {
         this.video.classList.toggle("pixel-video");
       });
-      button("ATIVAR SOM", () => {
+      button("SOM (RA)", () => {
         this.video.muted = false;
         this.video.play().catch(() => {});
+        this.status(
+          "Som do combate: na janela RetroArch (não mute o Windows). WebRTC é só vídeo neste lab.",
+        );
       });
       this.video.onloadeddata = () => {
         if (!this.ready) {
@@ -263,10 +287,10 @@ export class FBNeoLoader {
       const label = (action) =>
         keyLabel(Object.keys(keys).find((k) => keys[k] === action) || "—");
       help.textContent =
-        `Controles: ${[4, 5, 6, 7].map(label).join(" ")} = movimento • ${[0, 8, 1, 9].map(label).join(" ")} = quatro golpes • ${label(3)} = Start. Selecione o time dentro do KOF. ` +
+        `Controles: ${[4, 5, 6, 7].map(label).join(" ")} = movimento • ${[0, 8, 1, 9].map(label).join(" ")} = golpes • ${label(3)} = Start • ${label(2)} = Ficha. ` +
         (this.hosted
-          ? "Fichas preparadas pelo servidor. Resultado automático do confronto completo; créditos fictícios."
-          : `${label(2)} = ficha. Amistoso local: ambos confirmam VENCI/PERDI.`);
+          ? "Clique no vídeo antes de teclar. Som = janela RetroArch. Créditos fake na carteira."
+          : "Amistoso local: ambos confirmam VENCI/PERDI.");
     };
     updateHelp();
     help.style.cssText = "padding:7px;color:#a9bad4;font:12px system-ui";
