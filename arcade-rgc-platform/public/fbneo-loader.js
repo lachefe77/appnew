@@ -108,11 +108,11 @@ export class FBNeoLoader {
       toolbar.append(b);
       return b;
     };
-    const coinButton = button("FICHA", () => this.pulse(2));
-    coinButton.disabled = this.hosted;
+    const coinButton = button("FICHA (Y)", () => this.pulse(2));
+    coinButton.disabled = false;
     coinButton.title = this.hosted
-      ? "As fichas desta partida são preparadas pelo servidor."
-      : "Inserir ficha no amistoso";
+      ? "Inserir ficha no gabinete (tecla Y). O servidor também prepara fichas ao iniciar."
+      : "Inserir ficha no amistoso (tecla Y)";
     button("START", () => this.pulse(3));
     button("CONTROLES", () => {
       this.releaseAll();
@@ -399,7 +399,7 @@ export class FBNeoLoader {
       this.lossButton.disabled = false;
     }
     this.status(
-      `P${this.slot} conectado. ${this.hosted ? "Jogo no servidor. Fichas preparadas; pressione START." : "Insira ficha e pressione START."} Créditos de demonstração.`,
+      `P${this.slot} conectado. ${this.hosted ? "Jogo no servidor. Y ou FICHA = crédito; depois START." : "Y ou FICHA = crédito; depois START."} Créditos de demonstração.`,
     );
     this.frame?.contentWindow.arenaEmulator?.resume();
     this.maybeShowGame();
@@ -465,11 +465,9 @@ export class FBNeoLoader {
   input(button, value, source = `direct:${button}`) {
     if (!this.running || this.stopped || this.ws?.readyState !== WebSocket.OPEN)
       return;
-    // The cabinet prepares coins for hosted matches. Do not send reserved
-    // controls, including their releases, or consume an input sequence for them.
     const allowed = this.players?.rules?.allowedButtons;
-    if ((this.hosted && button === 2) || (allowed && !allowed.includes(button)))
-      return;
+    // Ficha (2) liberada no hosted — Neo Geo CREDIT via Y / botão FICHA.
+    if (allowed && !allowed.includes(button)) return;
     if (value) {
       if (this.inputSources.has(source)) return;
       this.inputSources.set(source, button);

@@ -478,20 +478,44 @@ async function handle(msg) {
         },
       });
       emitSample();
-      // Fichas no gabinete (cliente hosted não pode mandar button 2).
+      // 2 fichas P1 (Y) + 2 fichas P2 (H) — one-shot fiável.
       if (state.input && state.game?.ok) {
         state.pendingCredits = true;
-        injectCabinetCredits(state.input, { pulses: 5, gapMs: 180, holdMs: 140 })
+        const seed = async () => {
+          await new Promise((r) => setTimeout(r, 800));
+          await injectCabinetCredits(state.input, {
+            pulses: 2,
+            gapMs: 220,
+            holdMs: 180,
+          });
+          // Segunda leva se o attract ainda engolir o 1.º pulso
+          await new Promise((r) => setTimeout(r, 600));
+          await injectCabinetCredits(state.input, {
+            pulses: 1,
+            gapMs: 200,
+            holdMs: 180,
+          });
+        };
+        seed()
           .then(() => {
             state.pendingCredits = false;
             emit({
               event: "progress",
               stage: "cabinet-credits",
-              detail: { pulses: 5, backend: state.input?.backend },
+              detail: {
+                pulses: "2+2",
+                keys: "Y/H",
+                backend: state.input?.backend,
+              },
             });
           })
-          .catch(() => {
+          .catch((err) => {
             state.pendingCredits = false;
+            emit({
+              event: "progress",
+              stage: "cabinet-credits-fail",
+              detail: { error: String(err?.message || err) },
+            });
           });
       }
       return;

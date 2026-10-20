@@ -53,15 +53,15 @@ test("received video stats report interval loss and decoded FPS without changing
   assert.equal(sent.length, 0);
 });
 
-test("hosted coin press and release never leave the client or consume a sequence", () => {
+test("hosted coin (Y/FICHA) is sent so Neo Geo can take CREDIT", () => {
   const { loader, sent } = session();
-  loader.input(2, 1, "key:Digit5");
-  loader.input(2, 0, "key:Digit5");
-  loader.input(2, 1, "pad:2");
-  loader.input(2, 0, "pad:2");
-  assert.equal(sent.length, 0);
-  assert.equal(loader.inputSeq, 0);
-  assert.equal(loader.inputSources.size, 0);
+  loader.input(2, 1, "key:KeyY");
+  loader.input(2, 0, "key:KeyY");
+  assert.deepEqual(transitions(sent), [
+    [2, 1],
+    [2, 0],
+  ]);
+  assert.equal(loader.inputSeq, 2);
 });
 
 test("local friendly still permits coin and release", () => {

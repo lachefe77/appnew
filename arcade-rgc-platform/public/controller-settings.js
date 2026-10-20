@@ -8,7 +8,7 @@ export const ACTIONS = [
   [1, "Golpe 3"],
   [9, "Golpe 4"],
   [3, "Start"],
-  [2, "Ficha · somente amistoso"],
+  [2, "Ficha (Y)"],
 ];
 export const DEFAULT_KEYS = {
   ArrowUp: 4,
@@ -20,7 +20,7 @@ export const DEFAULT_KEYS = {
   KeyA: 1,
   KeyS: 9,
   Enter: 3,
-  Digit5: 2,
+  KeyY: 2,
 };
 export const DEFAULT_PAD = {
   0: 0,
@@ -34,7 +34,7 @@ export const DEFAULT_PAD = {
   14: 6,
   15: 7,
 };
-const KEY = "arena.controls.v1";
+const KEY = "arena.controls.v2"; // v2: Ficha = KeyY (antes Digit5)
 const validAction = (n) => ACTIONS.some(([b]) => b === n);
 const validCode = (code) =>
   /^(Key[A-Z]|Digit[0-9]|Arrow(Up|Down|Left|Right)|Enter|Space|Shift(Left|Right)|Control(Left|Right)|Numpad[0-9])$/.test(

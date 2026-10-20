@@ -64,9 +64,8 @@ export function makeRules({
     seriesBestOf,
     seriesWinsNeeded: seriesWinsNeeded(seriesBestOf),
     rageQuit,
-    allowedButtons: hosted
-      ? allowedButtons.filter((button) => button !== 2)
-      : allowedButtons,
+    // Ficha (2) permitida: Neo Geo precisa de CREDIT; Y/FICHA no cliente + seed no host.
+    allowedButtons,
     cancellation: "refund-before-running-review-after-running",
     reviewTimeout: "refund-without-verdict",
     disconnectAfterRunning:
