@@ -152,8 +152,7 @@ export function defaultRetroArchLabConfig(env = process.env) {
     'input_autodetect_enable = "false"',
     'input_max_users = "2"',
     'input_auto_game_focus = "off"',
-    // GDI + mensagens de janela (PostMessage) — sem SetForegroundWindow
-    'input_driver = "raw"',
+    // Sem forçar input_driver (raw/dinput variam por build). PostMessage no HWND.
     ...retroArchKeyboardLines(1),
     ...retroArchKeyboardLines(2),
     "",
