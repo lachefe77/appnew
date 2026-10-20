@@ -1,0 +1,226 @@
+{
+  "version": 1,
+  "defaultTheme": "neogeo-cabinet",
+  "themes": [
+    {
+      "id": "neogeo-cabinet",
+      "name": "Neo Geo Cabinet",
+      "pitch": "Gabinete arcade: preto profundo, carmesim de botão e amarelo de plaqueta.",
+      "fonts": { "display": "Oswald", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#070708", "panel": "#121214", "elev": "#1c1c20", "text": "#f3efe6",
+        "muted": "#9a958c", "accent": "#e10600", "accent2": "#f5c518", "line": "#2a2a2e",
+        "ok": "#3ddc97", "danger": "#ff5a5a"
+      }
+    },
+    {
+      "id": "steam-night-forge",
+      "name": "Night Forge",
+      "pitch": "Forja noturna tipo launcher: aço frio e ciano contido.",
+      "fonts": { "display": "Space Grotesk", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#0e141b", "panel": "#16202a", "elev": "#1e2b38", "text": "#e7eef6",
+        "muted": "#8aa0b5", "accent": "#66c0f4", "accent2": "#1b2838", "line": "#2a3a4a",
+        "ok": "#5bae6c", "danger": "#e05a5a"
+      }
+    },
+    {
+      "id": "epic-void-citadel",
+      "name": "Void Citadel",
+      "pitch": "Cidadela escura com lima elétrica.",
+      "fonts": { "display": "Syne", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#0b0d0c", "panel": "#141816", "elev": "#1c221e", "text": "#f2f5f0",
+        "muted": "#8d988f", "accent": "#b6ff3b", "accent2": "#2a3328", "line": "#2c352f",
+        "ok": "#8fd14f", "danger": "#ff6b4a"
+      }
+    },
+    {
+      "id": "garena-ember",
+      "name": "Garena Ember",
+      "pitch": "Cliente de guerra: navy e laranja de brasa.",
+      "fonts": { "display": "Archivo Black", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#0a1220", "panel": "#122038", "elev": "#1a2c4a", "text": "#f7f3ec",
+        "muted": "#93a4c0", "accent": "#ff7a18", "accent2": "#ffd39a", "line": "#243656",
+        "ok": "#4caf82", "danger": "#ff4d4d"
+      }
+    },
+    {
+      "id": "rgc-copper",
+      "name": "RGC Copper Ranked",
+      "pitch": "Ranked antigo: cobre oxidado e ouro de temporada.",
+      "fonts": { "display": "Oswald", "ui": "IBM Plex Mono", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#100e0c", "panel": "#1a1612", "elev": "#261f18", "text": "#f0e6d8",
+        "muted": "#a89984", "accent": "#c47a3a", "accent2": "#e0b45a", "line": "#3a3026",
+        "ok": "#7d9b5a", "danger": "#d65a45"
+      }
+    },
+    {
+      "id": "kof-blood-moon",
+      "name": "Blood Moon KOF",
+      "pitch": "Preto, vermelho arterial e osso.",
+      "fonts": { "display": "Oswald", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#090606", "panel": "#160c0c", "elev": "#241212", "text": "#f6ece8",
+        "muted": "#b09898", "accent": "#c4122f", "accent2": "#f0d7c8", "line": "#3a2020",
+        "ok": "#d4a017", "danger": "#ff2a2a"
+      }
+    },
+    {
+      "id": "sp-neon-alley",
+      "name": "São Paulo Neon Alley",
+      "pitch": "Asfalto, neon de fachada e teal de chuva.",
+      "fonts": { "display": "Syne", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#0b0c10", "panel": "#14161f", "elev": "#1d2030", "text": "#f5f2ff",
+        "muted": "#9aa0b8", "accent": "#ff2d95", "accent2": "#20d3c8", "line": "#2b3045",
+        "ok": "#2ee6a6", "danger": "#ff5e5e"
+      }
+    },
+    {
+      "id": "crt-phosphor",
+      "name": "CRT Phosphor",
+      "pitch": "Verde de tubo e preto absoluto.",
+      "fonts": { "display": "IBM Plex Mono", "ui": "IBM Plex Mono", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#020402", "panel": "#071107", "elev": "#0d1c0d", "text": "#b6ffb0",
+        "muted": "#5f8f5a", "accent": "#39ff14", "accent2": "#144d12", "line": "#1c331c",
+        "ok": "#39ff14", "danger": "#ff4242"
+      }
+    },
+    {
+      "id": "championship-navy",
+      "name": "Championship Navy",
+      "pitch": "Torneio: navy, ouro e branco.",
+      "fonts": { "display": "Oswald", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#07111f", "panel": "#0f1c33", "elev": "#17304f", "text": "#f7f8fb",
+        "muted": "#93a6c2", "accent": "#d4af37", "accent2": "#ffffff", "line": "#274063",
+        "ok": "#3ecf8e", "danger": "#e45757"
+      }
+    },
+    {
+      "id": "fight-club-concrete",
+      "name": "Fight Club Concrete",
+      "pitch": "Concreto, fita zebrada e ferrugem.",
+      "fonts": { "display": "Archivo Black", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#161513", "panel": "#22201c", "elev": "#2e2b26", "text": "#f2efe8",
+        "muted": "#a39e93", "accent": "#f0c400", "accent2": "#b54a2a", "line": "#3f3b34",
+        "ok": "#8fbf4a", "danger": "#ff5533"
+      }
+    },
+    {
+      "id": "ice-arena",
+      "name": "Ice Arena",
+      "pitch": "Gelo azul, branco frio e aço.",
+      "fonts": { "display": "Space Grotesk", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#0a141c", "panel": "#122230", "elev": "#1a3144", "text": "#eef7ff",
+        "muted": "#8fb0c6", "accent": "#7fd3ff", "accent2": "#d9ecf8", "line": "#27485e",
+        "ok": "#5ad0b0", "danger": "#ff6d7a"
+      }
+    },
+    {
+      "id": "desert-outlaw",
+      "name": "Desert Outlaw",
+      "pitch": "Areia, couro e sombra.",
+      "fonts": { "display": "Oswald", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#1a140e", "panel": "#271d14", "elev": "#35281c", "text": "#f6ead7",
+        "muted": "#b8a286", "accent": "#e39b3a", "accent2": "#8b5a2b", "line": "#4a3a28",
+        "ok": "#9cba5a", "danger": "#d94c3b"
+      }
+    },
+    {
+      "id": "circuit-board",
+      "name": "Circuit Board",
+      "pitch": "PCB: verde, prata e LED âmbar.",
+      "fonts": { "display": "IBM Plex Mono", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#06110a", "panel": "#0d1c12", "elev": "#142a1b", "text": "#e7f5ea",
+        "muted": "#7fa38a", "accent": "#ffb000", "accent2": "#9ad0aa", "line": "#234530",
+        "ok": "#52d68a", "danger": "#ff5c5c"
+      }
+    },
+    {
+      "id": "vinyl-90s",
+      "name": "Vinyl 90s Cabinet",
+      "pitch": "Vermelho laminado e bege de botão.",
+      "fonts": { "display": "Archivo Black", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#1b0d10", "panel": "#2a1218", "elev": "#3a1a22", "text": "#fff4e8",
+        "muted": "#c4a49a", "accent": "#e31c25", "accent2": "#e8d2b0", "line": "#52232d",
+        "ok": "#5cbc6a", "danger": "#ff4040"
+      }
+    },
+    {
+      "id": "obsidian-pro",
+      "name": "Matte Obsidian Pro",
+      "pitch": "Preto fosco e um fio ciano.",
+      "fonts": { "display": "Syne", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#050505", "panel": "#0f0f0f", "elev": "#171717", "text": "#f2f2f2",
+        "muted": "#8a8a8a", "accent": "#00e5ff", "accent2": "#222222", "line": "#2a2a2a",
+        "ok": "#2dd4a8", "danger": "#ff4d6d"
+      }
+    },
+    {
+      "id": "broadcast-ticker",
+      "name": "Broadcast Ticker",
+      "pitch": "Placar de TV: azul, vermelho e branco.",
+      "fonts": { "display": "Oswald", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#041528", "panel": "#0a2340", "elev": "#12345a", "text": "#ffffff",
+        "muted": "#9bb4d0", "accent": "#ff2a2a", "accent2": "#f5c518", "line": "#1e4a78",
+        "ok": "#2ecc71", "danger": "#ff2a2a"
+      }
+    },
+    {
+      "id": "pixel-concrete",
+      "name": "Pixel Concrete",
+      "pitch": "Brutalismo 1-bit com magenta seco.",
+      "fonts": { "display": "IBM Plex Mono", "ui": "IBM Plex Mono", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#1c1c1c", "panel": "#2a2a2a", "elev": "#363636", "text": "#f0f0f0",
+        "muted": "#9c9c9c", "accent": "#e11d8b", "accent2": "#cfcfcf", "line": "#484848",
+        "ok": "#b8ff57", "danger": "#ff4f4f"
+      }
+    },
+    {
+      "id": "lantern-district",
+      "name": "Lantern District",
+      "pitch": "Asfalto, âmbar de lanterna e noite índigo.",
+      "fonts": { "display": "Syne", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#0b0f1a", "panel": "#141a2b", "elev": "#1d2540", "text": "#f3e9d7",
+        "muted": "#9aa3bf", "accent": "#ffb347", "accent2": "#5b6cff", "line": "#2a3350",
+        "ok": "#6fd3a0", "danger": "#ff6b6b"
+      }
+    },
+    {
+      "id": "titanium-hangar",
+      "name": "Titanium Hangar",
+      "pitch": "Titânio, laranja de alerta e azul de baía.",
+      "fonts": { "display": "Oswald", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#12151a", "panel": "#1b2129", "elev": "#262e3a", "text": "#eef2f7",
+        "muted": "#97a3b5", "accent": "#ff6a00", "accent2": "#4aa3ff", "line": "#354052",
+        "ok": "#4fd18b", "danger": "#ff4b4b"
+      }
+    },
+    {
+      "id": "cerrado-horizon",
+      "name": "Cerrado Horizon",
+      "pitch": "Azul de fim de tarde e laranja de cerrado.",
+      "fonts": { "display": "Syne", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "colors": {
+        "bg": "#0c1630", "panel": "#152447", "elev": "#1e3260", "text": "#fff5e8",
+        "muted": "#a9b6d6", "accent": "#ff7a3c", "accent2": "#ffc27a", "line": "#2c4478",
+        "ok": "#61d395", "danger": "#ff5a5a"
+      }
+    }
+  ]
+}
