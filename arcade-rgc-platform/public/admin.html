@@ -76,7 +76,7 @@
     <input id="password" type="password" placeholder="Senha" />
     <button class="btn primary" id="btnLogin">Entrar</button>
     <p id="loginErr" class="danger"></p>
-    <p class="muted"><a href="/theme-gallery.html" style="color:var(--accent2)">Abrir galeria de 20 temas</a> · <a href="/" style="color:var(--muted)">Voltar à arena</a></p>
+    <p class="muted"><a href="/theme-gallery.html" style="color:var(--accent2)">Abrir catálogo de 25 temas</a> · <a href="/" style="color:var(--muted)">Voltar à arena</a></p>
   </div>
 
   <div id="app" class="shell hidden">
@@ -243,7 +243,7 @@ function render() {
     seasons: ["Season / ELO", "Ativar temporada e resetar ELO"],
     rooms: ["Salas", "KOF 2002 e rake da sala"],
     live: ["Live / Stream", "Capacidade hosted, fila e TURN"],
-    theme: ["Tema visual", "Escolha um dos 20 temas autorais"],
+    theme: ["Tema visual", "Escolha um dos 25 temas autorais"],
   };
   const [t, s] = titles[state.tab] || ["Ops", ""];
   document.getElementById("pageTitle").textContent = t;

@@ -3,364 +3,698 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Arena Arcade — Galeria de 20 Temas</title>
+<title>Arena Arcade — Catálogo de 25 Temas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow+Condensed:wght@500;700;800&family=IBM+Plex+Mono:wght@400;600&family=Oswald:wght@500;700&family=Space+Grotesk:wght@500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;600&family=Oswald:wght@500;600;700&family=Space+Grotesk:wght@500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --bg: #0a0b0d;
-    --panel: #12141a;
-    --text: #e8eaef;
-    --muted: #8b93a7;
-    --line: #262b36;
+    --shell-bg: #060708;
+    --shell-panel: #101214;
+    --shell-text: #ece8e1;
+    --shell-muted: #8e8a82;
+    --shell-line: #26282c;
+    --shell-accent: #e10600;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: "Space Grotesk", system-ui, sans-serif; }
-  .top {
-    position: sticky; top: 0; z-index: 40;
-    display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
-    padding: 16px 22px; background: rgba(10,11,13,.92); border-bottom: 1px solid var(--line);
-    backdrop-filter: blur(10px);
+  html, body {
+    margin: 0; min-height: 100%;
+    background: var(--shell-bg); color: var(--shell-text);
+    font-family: "Barlow Condensed", sans-serif;
   }
-  .brand { font-family: Syne, sans-serif; font-weight: 800; letter-spacing: .04em; font-size: 1.15rem; }
-  .brand span { color: #ff3b3b; }
-  .hint { color: var(--muted); font-size: .85rem; max-width: 520px; }
-  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-  button, .btn {
-    appearance: none; border: 1px solid var(--line); background: #1a1e27; color: var(--text);
-    padding: 9px 14px; border-radius: 4px; font: 700 .8rem Barlow Condensed, sans-serif;
-    letter-spacing: .06em; text-transform: uppercase; cursor: pointer; text-decoration: none;
+  body {
+    background:
+      radial-gradient(900px 480px at 8% -10%, rgba(225,6,0,.18), transparent 55%),
+      radial-gradient(700px 400px at 100% 0%, rgba(245,197,24,.08), transparent 50%),
+      var(--shell-bg);
   }
-  button.primary { background: #ff3b3b; border-color: #ff3b3b; color: #fff; }
-  button:disabled { opacity: .4; cursor: not-allowed; }
-  .grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 18px; padding: 22px;
+  .shell-top {
+    position: sticky; top: 0; z-index: 60;
+    display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end;
+    padding: 18px 22px 14px;
+    background: rgba(6,7,8,.92); border-bottom: 1px solid var(--shell-line);
+    backdrop-filter: blur(14px);
   }
-  .card {
-    border: 1px solid var(--line); background: var(--panel); border-radius: 6px; overflow: hidden;
-    display: flex; flex-direction: column; min-height: 100%;
+  .shell-brand {
+    font-family: Oswald, sans-serif; font-weight: 700; letter-spacing: .06em;
+    font-size: clamp(1.4rem, 3vw, 2rem); line-height: 1;
   }
-  .card.selected { outline: 2px solid #ff3b3b; outline-offset: 2px; }
-  .card-head {
-    padding: 14px 16px 10px; display: flex; justify-content: space-between; gap: 10px; align-items: start;
+  .shell-brand em { font-style: normal; color: var(--shell-accent); }
+  .shell-sub { margin: 6px 0 0; color: var(--shell-muted); font-size: .92rem; max-width: 62ch; line-height: 1.35; }
+  .shell-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    appearance: none; border: 1px solid var(--shell-line); background: #181a1e; color: var(--shell-text);
+    padding: 10px 14px; font: 700 .82rem Barlow Condensed, sans-serif;
+    letter-spacing: .07em; text-transform: uppercase; cursor: pointer; text-decoration: none;
   }
-  .card-head h2 { margin: 0; font: 800 1.05rem Syne, sans-serif; }
-  .card-head p { margin: 4px 0 0; color: var(--muted); font-size: .78rem; line-height: 1.35; }
-  .num {
-    font: 700 .75rem IBM Plex Mono, monospace; color: var(--muted);
-    border: 1px solid var(--line); padding: 4px 7px; border-radius: 3px; white-space: nowrap;
+  .btn.primary { background: var(--shell-accent); border-color: var(--shell-accent); color: #fff; }
+  .btn:disabled { opacity: .35; cursor: not-allowed; }
+  .layout {
+    display: grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 96px);
   }
-  .swatches { display: flex; height: 18px; }
-  .swatches i { flex: 1; display: block; }
-  .tabs { display: flex; gap: 4px; padding: 8px 10px 0; }
-  .tabs button {
-    flex: 1; padding: 7px 4px; background: transparent; border: 0; border-bottom: 2px solid transparent;
-    color: var(--muted); font-size: .72rem;
+  .rail {
+    border-right: 1px solid var(--shell-line); background: rgba(10,11,12,.85);
+    overflow: auto; max-height: calc(100vh - 96px); position: sticky; top: 96px;
   }
-  .tabs button.on { color: var(--text); border-bottom-color: currentColor; }
-  .stage {
-    margin: 10px; border-radius: 4px; overflow: hidden; min-height: 220px; position: relative;
-    border: 1px solid rgba(255,255,255,.06);
+  .rail h2 {
+    margin: 0; padding: 14px 14px 8px; font: 700 .72rem IBM Plex Mono, monospace;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--shell-muted);
   }
-  .stage-inner { position: absolute; inset: 0; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-  .navrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .logo { font-weight: 800; letter-spacing: .08em; text-transform: uppercase; font-size: .85rem; }
-  .pill { font-size: .65rem; padding: 3px 7px; border-radius: 2px; font-weight: 700; letter-spacing: .04em; }
+  .theme-item {
+    display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center;
+    width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--shell-line);
+    background: transparent; color: inherit; padding: 12px 14px; cursor: pointer;
+    font: inherit;
+  }
+  .theme-item:hover { background: rgba(255,255,255,.03); }
+  .theme-item.on { background: rgba(225,6,0,.12); box-shadow: inset 3px 0 0 var(--shell-accent); }
+  .theme-item .n { font: 600 .7rem IBM Plex Mono, monospace; color: var(--shell-muted); }
+  .theme-item .nm { font: 700 1rem Oswald, sans-serif; letter-spacing: .03em; }
+  .theme-item .fm { color: var(--shell-muted); font-size: .78rem; }
+  .swatch-row { display: flex; height: 10px; width: 54px; overflow: hidden; border: 1px solid var(--shell-line); }
+  .swatch-row i { flex: 1; }
+  .stage-wrap { padding: 18px 20px 40px; min-width: 0; }
+  .stage-head {
+    display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: end;
+    margin-bottom: 14px;
+  }
+  .stage-head h1 { margin: 0; font: 700 clamp(1.4rem, 2.5vw, 2rem) Oswald, sans-serif; letter-spacing: .04em; }
+  .stage-head p { margin: 4px 0 0; color: var(--shell-muted); max-width: 56ch; line-height: 1.35; }
+  .surfaces { display: flex; flex-wrap: wrap; gap: 6px; }
+  .surfaces button {
+    border: 1px solid var(--shell-line); background: #141618; color: var(--shell-muted);
+    padding: 8px 11px; cursor: pointer; font: 700 .75rem Barlow Condensed, sans-serif;
+    letter-spacing: .06em; text-transform: uppercase;
+  }
+  .surfaces button.on { color: #fff; border-color: var(--shell-accent); background: #1c1010; }
+  .preview-frame {
+    border: 1px solid var(--shell-line); min-height: 620px; position: relative; overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,.45);
+  }
+  .preview-chrome {
+    display: flex; gap: 6px; align-items: center; padding: 8px 12px;
+    background: rgba(0,0,0,.35); border-bottom: 1px solid rgba(255,255,255,.06);
+    font: 600 .72rem IBM Plex Mono, monospace; letter-spacing: .04em;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #444; }
+  .preview-body { position: relative; min-height: 580px; overflow: hidden; }
+  .meta-bar {
+    margin-top: 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  }
+  .meta-card {
+    border: 1px solid var(--shell-line); background: rgba(16,18,20,.9); padding: 12px;
+  }
+  .meta-card b { display: block; font: 700 .7rem IBM Plex Mono, monospace; color: var(--shell-muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
+  .meta-card span { font: 700 1rem Oswald, sans-serif; }
+  @media (max-width: 980px) {
+    .layout { grid-template-columns: 1fr; }
+    .rail { position: static; max-height: 240px; border-right: 0; border-bottom: 1px solid var(--shell-line); }
+    .meta-bar { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* —— Preview internals (theme-driven) —— */
+  .pv { position: absolute; inset: 0; display: flex; flex-direction: column; color: var(--t-text); font-family: var(--t-ui), sans-serif; }
+  .pv-nav {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 14px 18px; border-bottom: 1px solid var(--t-line); background: color-mix(in srgb, var(--t-panel) 92%, transparent);
+  }
+  .pv-logo {
+    font-family: var(--t-display), sans-serif; font-weight: 800; letter-spacing: .08em;
+    font-size: 1.15rem; color: var(--t-accent); text-transform: uppercase;
+  }
+  .pv-links { display: flex; gap: 10px; flex-wrap: wrap; font-size: .82rem; color: var(--t-muted); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .pv-links span.on { color: var(--t-text); }
+  .pv-main { flex: 1; position: relative; overflow: auto; }
+
+  /* atmospheres */
+  .atm-radial-cabinet { background: radial-gradient(1000px 500px at 20% -20%, color-mix(in srgb, var(--t-accent) 35%, transparent), transparent 55%), radial-gradient(800px 400px at 90% 10%, color-mix(in srgb, var(--t-accent2) 18%, transparent), transparent), var(--t-bg); }
+  .atm-grain-warm { background: radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--t-accent) 22%, transparent), transparent 45%), var(--t-bg); }
+  .atm-scan-navy { background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.12) 2px, rgba(0,0,0,.12) 3px), radial-gradient(900px 500px at 70% 0%, color-mix(in srgb, var(--t-accent) 20%, transparent), transparent), var(--t-bg); }
+  .atm-mesh-cool { background: linear-gradient(160deg, color-mix(in srgb, var(--t-elev) 80%, #000), var(--t-bg)), var(--t-bg); }
+  .atm-volt-grid { background: linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px) 0 0 / 28px 28px, linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px) 0 0 / 28px 28px, radial-gradient(700px 400px at 80% 20%, color-mix(in srgb, var(--t-accent) 25%, transparent), transparent), var(--t-bg); }
+  .atm-mesh-green { background: radial-gradient(600px 400px at 10% 80%, color-mix(in srgb, var(--t-accent) 18%, transparent), transparent), var(--t-bg); }
+  .atm-blood-vignette { background: radial-gradient(ellipse at center, var(--t-panel) 0%, var(--t-bg) 70%), var(--t-bg); }
+  .atm-scanline-green { background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.35) 3px, rgba(0,0,0,.35) 4px), var(--t-bg); }
+  .atm-broadcast-glow { background: radial-gradient(800px 300px at 50% 0%, color-mix(in srgb, var(--t-accent) 25%, transparent), transparent), var(--t-bg); }
+  .atm-concrete-noise { background: linear-gradient(180deg, var(--t-panel), var(--t-bg)); }
+  .atm-frost { background: radial-gradient(700px 500px at 80% 0%, color-mix(in srgb, var(--t-accent) 22%, transparent), transparent), var(--t-bg); }
+  .atm-heat-haze { background: radial-gradient(900px 400px at 50% 100%, color-mix(in srgb, var(--t-accent) 28%, transparent), transparent), var(--t-bg); }
+  .atm-pcb { background: linear-gradient(90deg, transparent 49%, color-mix(in srgb, var(--t-line) 80%, transparent) 50%, transparent 51%) 0 0 / 40px 40px, var(--t-bg); }
+  .atm-vinyl-shine { background: linear-gradient(120deg, color-mix(in srgb, var(--t-accent) 30%, transparent), transparent 40%), var(--t-bg); }
+  .atm-matte { background: var(--t-bg); }
+  .atm-ticker { background: linear-gradient(180deg, color-mix(in srgb, var(--t-elev) 90%, #000), var(--t-bg)); }
+  .atm-rain-amber { background: radial-gradient(600px 400px at 20% 30%, color-mix(in srgb, var(--t-accent) 20%, transparent), transparent), var(--t-bg); }
+  .atm-hangar { background: linear-gradient(180deg, var(--t-panel), var(--t-bg)); }
+  .atm-horizon { background: linear-gradient(180deg, color-mix(in srgb, var(--t-accent) 25%, var(--t-bg)) 0%, var(--t-bg) 45%); }
+  .atm-operator { background: repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,.02) 40px, rgba(255,255,255,.02) 41px), var(--t-bg); }
+  .atm-velvet-gold { background: radial-gradient(500px 300px at 50% 0%, color-mix(in srgb, var(--t-accent) 22%, transparent), transparent), var(--t-bg); }
+  .atm-canopy { background: radial-gradient(800px 500px at 0% 100%, color-mix(in srgb, var(--t-accent2) 35%, transparent), transparent), var(--t-bg); }
+  .atm-subway { background: linear-gradient(90deg, color-mix(in srgb, var(--t-accent2) 20%, transparent), transparent 40%), var(--t-bg); }
+  .atm-thermal { background: radial-gradient(circle at 70% 40%, color-mix(in srgb, var(--t-accent) 30%, transparent), transparent 50%), var(--t-bg); }
+  .atm-league { background: linear-gradient(160deg, var(--t-panel), var(--t-bg)); }
+
+  /* auth */
+  .auth-wrap { flex: 1; display: grid; place-items: center; padding: 28px 16px; }
+  .auth-card {
+    width: min(400px, 100%); padding: 28px 24px; background: color-mix(in srgb, var(--t-panel) 94%, transparent);
+    border: 1px solid var(--t-line); box-shadow: 0 24px 60px rgba(0,0,0,.45);
+  }
+  .auth-card h2 { margin: 0 0 6px; font: 800 1.6rem var(--t-display), sans-serif; letter-spacing: .04em; }
+  .auth-card .muted { color: var(--t-muted); font-size: .9rem; margin-bottom: 18px; line-height: 1.35; }
+  .field { display: grid; gap: 5px; margin-bottom: 12px; }
+  .field label { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--t-muted); font-weight: 700; }
+  .field input {
+    height: 42px; padding: 0 12px; background: var(--t-bg); border: 1px solid var(--t-line);
+    color: var(--t-text); font: inherit;
+  }
+  .auth-cta {
+    width: 100%; margin-top: 8px; height: 44px; border: 0; cursor: pointer;
+    background: var(--t-accent); color: #0a0a0a; font: 800 .9rem var(--t-ui), sans-serif;
+    letter-spacing: .1em; text-transform: uppercase;
+  }
+  .auth-alt { margin-top: 12px; font-size: .85rem; color: var(--t-muted); }
+  .auth-alt b { color: var(--t-accent2); }
+
+  /* vitrine hero */
   .hero {
-    flex: 1; display: grid; place-items: end start; padding: 14px; border-radius: 3px; position: relative; overflow: hidden;
+    position: relative; min-height: 420px; display: grid; align-content: end;
+    padding: 36px 28px 28px; overflow: hidden;
   }
-  .hero::after {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(100deg, rgba(0,0,0,.75) 10%, rgba(0,0,0,.15) 70%, transparent);
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(100deg, color-mix(in srgb, var(--t-bg) 92%, #000) 8%, transparent 58%),
+      linear-gradient(0deg, var(--t-bg) 5%, transparent 55%);
+    z-index: 1;
   }
-  .hero > * { position: relative; z-index: 1; }
-  .hero h3 { margin: 0; font-size: 1.25rem; line-height: 1.05; max-width: 12ch; }
-  .hero small { opacity: .85; font-size: .7rem; }
-  .cta { display: inline-block; margin-top: 8px; padding: 6px 10px; font: 700 .7rem Barlow Condensed, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
-  .rows { display: grid; gap: 6px; }
+  .fighters {
+    position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: flex-end;
+    gap: 8px; padding: 0 18px 0 35%; z-index: 0; pointer-events: none;
+  }
+  .fighter {
+    width: 86px; height: 260px; position: relative;
+    transform-origin: 50% 100%;
+    animation: idle 2.8s ease-in-out infinite;
+  }
+  .fighter:nth-child(2) { animation-delay: .35s; height: 280px; width: 92px; }
+  .fighter:nth-child(3) { animation-delay: .7s; height: 250px; }
+  .fighter:nth-child(4) { animation-delay: 1.05s; height: 270px; width: 90px; }
+  .fighter:nth-child(5) { animation-delay: 1.4s; height: 255px; }
+  @keyframes idle {
+    0%, 100% { transform: translateY(0) scaleY(1); }
+    50% { transform: translateY(-6px) scaleY(1.015); }
+  }
+  .fighter .body {
+    position: absolute; inset: 18% 18% 8%; border-radius: 40% 40% 18% 18% / 30% 30% 40% 40%;
+    background: linear-gradient(180deg, var(--f1), var(--f2));
+    box-shadow: 0 0 40px color-mix(in srgb, var(--f1) 45%, transparent);
+  }
+  .fighter .head {
+    position: absolute; top: 6%; left: 50%; width: 42%; aspect-ratio: 1; border-radius: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(160deg, var(--f1), var(--f2));
+    box-shadow: 0 0 20px color-mix(in srgb, var(--f1) 50%, transparent);
+  }
+  .fighter .tag {
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    font: 800 .62rem var(--t-display), sans-serif; letter-spacing: .08em; color: var(--t-text);
+    text-shadow: 0 2px 8px #000; white-space: nowrap;
+  }
+  .hero-copy { position: relative; z-index: 2; max-width: 34ch; }
+  .hero-copy .eyebrow {
+    font: 700 .75rem IBM Plex Mono, monospace; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--t-accent2); margin-bottom: 10px;
+  }
+  .hero-copy h2 {
+    margin: 0; font: 800 clamp(2rem, 4vw, 3.1rem) var(--t-display), sans-serif;
+    letter-spacing: .03em; line-height: .95; text-transform: uppercase;
+  }
+  .hero-copy p { margin: 12px 0 0; color: var(--t-muted); font-size: 1.02rem; line-height: 1.4; max-width: 36ch; }
+  .hero-ctas { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  .hero-ctas button {
+    border: 0; padding: 12px 18px; cursor: pointer; font: 800 .85rem var(--t-ui), sans-serif;
+    letter-spacing: .1em; text-transform: uppercase;
+  }
+  .hero-ctas .primary { background: var(--t-accent); color: #0a0a0a; }
+  .hero-ctas .ghost { background: transparent; color: var(--t-text); border: 1px solid var(--t-line); }
+
+  .strip {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+    border-top: 1px solid var(--t-line); background: var(--t-panel);
+  }
+  .strip article { padding: 16px 18px; border-right: 1px solid var(--t-line); }
+  .strip article:last-child { border-right: 0; }
+  .strip .idx { font: 700 .68rem IBM Plex Mono, monospace; color: var(--t-accent); letter-spacing: .1em; }
+  .strip h3 { margin: 6px 0 4px; font: 800 1.05rem var(--t-display), sans-serif; letter-spacing: .03em; }
+  .strip p { margin: 0; color: var(--t-muted); font-size: .88rem; line-height: 1.35; }
+
+  /* rooms / clans / admin shared */
+  .pane { padding: 16px 18px; display: grid; gap: 12px; }
+  .grid2 { display: grid; grid-template-columns: 1.1fr .9fr; gap: 12px; }
+  .box { background: var(--t-panel); border: 1px solid var(--t-line); padding: 14px; }
+  .box h3 { margin: 0 0 10px; font: 800 1rem var(--t-display), sans-serif; letter-spacing: .04em; }
   .row {
-    display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center;
-    padding: 7px 8px; border-radius: 3px; font-size: .72rem;
+    display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center;
+    padding: 9px 8px; border-bottom: 1px solid var(--t-line); font-size: .9rem;
   }
-  .avatar { width: 28px; height: 28px; border-radius: 2px; display: grid; place-items: center; font-weight: 800; font-size: .65rem; }
-  .meta { color: inherit; opacity: .7; font-size: .65rem; }
-  .statgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .stat { padding: 8px; border-radius: 3px; text-align: center; }
-  .stat b { display: block; font-size: 1rem; }
-  .stat span { font-size: .62rem; opacity: .75; text-transform: uppercase; letter-spacing: .05em; }
-  .sidebar { display: grid; grid-template-columns: 88px 1fr; gap: 8px; min-height: 180px; }
-  .side { padding: 8px; border-radius: 3px; display: flex; flex-direction: column; gap: 6px; font-size: .62rem; }
-  .side div { padding: 5px 6px; border-radius: 2px; }
-  .mainpane { padding: 8px; border-radius: 3px; display: flex; flex-direction: column; gap: 6px; }
-  .table { display: grid; gap: 4px; font-size: .65rem; }
-  .tr { display: grid; grid-template-columns: 1.2fr 1fr .7fr .7fr; gap: 4px; padding: 5px 6px; border-radius: 2px; }
-  .card-foot { padding: 10px 12px 14px; display: flex; gap: 8px; margin-top: auto; }
-  .card-foot button { flex: 1; }
-  .dock {
-    position: fixed; right: 16px; bottom: 16px; z-index: 50; width: min(380px, calc(100vw - 32px));
-    background: #151821; border: 1px solid var(--line); border-radius: 8px; padding: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45);
+  .av {
+    width: 36px; height: 36px; display: grid; place-items: center;
+    background: var(--t-elev); color: var(--t-accent); font-weight: 800; font-size: .72rem;
   }
-  .dock h3 { margin: 0 0 6px; font: 800 1rem Syne, sans-serif; }
-  .dock p { margin: 0 0 10px; color: var(--muted); font-size: .8rem; }
-  .dock .pal { display: flex; height: 28px; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
-  .dock .pal i { flex: 1; }
-  .hidden { display: none !important; }
+  .pill {
+    font: 700 .68rem var(--t-ui), sans-serif; letter-spacing: .06em; text-transform: uppercase;
+    padding: 4px 8px; background: var(--t-elev); border: 1px solid var(--t-line); color: var(--t-accent2);
+  }
+  .form-row { display: grid; gap: 6px; margin-bottom: 10px; }
+  .form-row select, .form-row input {
+    height: 40px; background: var(--t-bg); border: 1px solid var(--t-line); color: var(--t-text);
+    padding: 0 10px; font: inherit;
+  }
+  .admin-shell { display: grid; grid-template-columns: 160px 1fr; min-height: 520px; }
+  .admin-side { background: var(--t-panel); border-right: 1px solid var(--t-line); padding: 12px; display: grid; gap: 6px; align-content: start; }
+  .admin-side div { padding: 8px 10px; font-size: .8rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--t-muted); background: var(--t-elev); }
+  .admin-side div.on { background: var(--t-accent); color: #111; }
+  .admin-main { padding: 16px; }
+  .table { display: grid; gap: 4px; font-size: .82rem; }
+  .tr { display: grid; grid-template-columns: 1.2fr 1fr .8fr .7fr; gap: 6px; padding: 8px; background: var(--t-panel); border: 1px solid var(--t-line); }
+  .tr.head { color: var(--t-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; font-size: .7rem; }
+
   @media (max-width: 720px) {
-    .grid { grid-template-columns: 1fr; padding: 14px; }
-    .hint { max-width: none; }
+    .grid2, .admin-shell, .strip { grid-template-columns: 1fr; }
+    .fighters { padding-left: 10%; opacity: .55; }
+    .fighter { width: 56px; height: 180px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fighter { animation: none !important; }
   }
 </style>
 </head>
 <body>
-  <header class="top">
+  <header class="shell-top">
     <div>
-      <div class="brand">ARENA <span>ARCADE</span> · THEME LAB</div>
-      <div class="hint">20 identidades visuais autorais para vitrine, sala, perfil e admin. Inspiração distante: Steam, Epic, Garena e clientes ranked antigos — sem copiar layout. Clique em um tema para inspecionar e escolher.</div>
+      <div class="shell-brand">ARENA <em>ARCADE</em> · CATÁLOGO</div>
+      <p class="shell-sub">25 identidades autorais para fliperama online KOF 2002. Veja login, registro, vitrine, salas, clãs e admin no mesmo tema — escolha o base fixo da empresa.</p>
     </div>
-    <div class="actions">
-      <button type="button" id="btnClear">Limpar seleção</button>
-      <button type="button" class="primary" id="btnChoose" disabled>Confirmar tema</button>
+    <div class="shell-actions">
+      <a class="btn" href="/">Lobby</a>
+      <button type="button" class="btn" id="btnClear">Limpar</button>
+      <button type="button" class="btn primary" id="btnApply" disabled>Confirmar tema base</button>
     </div>
   </header>
 
-  <main class="grid" id="grid"></main>
+  <div class="layout">
+    <aside class="rail" id="rail">
+      <h2>25 temas</h2>
+    </aside>
+    <section class="stage-wrap">
+      <div class="stage-head">
+        <div>
+          <h1 id="title">—</h1>
+          <p id="pitch">—</p>
+        </div>
+        <div class="surfaces" id="surfaces"></div>
+      </div>
+      <div class="preview-frame">
+        <div class="preview-chrome">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span id="urlBar" style="margin-left:8px;color:#888">arena.arcade / …</span>
+        </div>
+        <div class="preview-body" id="preview"></div>
+      </div>
+      <div class="meta-bar">
+        <div class="meta-card"><b>Família</b><span id="metaFamily">—</span></div>
+        <div class="meta-card"><b>Mood</b><span id="metaMood">—</span></div>
+        <div class="meta-card"><b>Display</b><span id="metaFont">—</span></div>
+        <div class="meta-card"><b>ID</b><span id="metaId">—</span></div>
+      </div>
+    </section>
+  </div>
 
-  <aside class="dock hidden" id="dock">
-    <h3 id="dockTitle">—</h3>
-    <p id="dockDesc">—</p>
-    <div class="pal" id="dockPal"></div>
-    <div class="actions">
-      <button type="button" class="primary" id="btnConfirmDock">Usar este tema no produto</button>
-      <button type="button" id="btnCloseDock">Fechar</button>
-    </div>
-  </aside>
+<script type="module">
+const SURFACES = [
+  { id: "login", label: "Login", path: "/entrar" },
+  { id: "register", label: "Registro", path: "/cadastro" },
+  { id: "vitrine", label: "Vitrine", path: "/" },
+  { id: "sala", label: "Sala / Room", path: "/sala/kof-se" },
+  { id: "criar", label: "Criar sala", path: "/sala/nova" },
+  { id: "clas", label: "Clãs", path: "/clas" },
+  { id: "admin", label: "Admin", path: "/admin" },
+  { id: "perfil", label: "Perfil", path: "/perfil" },
+];
 
-<script>
-const THEMES = [];
-THEMES.push(
-  { id:"neogeo-cabinet", name:"Neo Geo Cabinet", pitch:"Gabinete arcade: preto profundo, carmesim de botão e amarelo de plaqueta.", fonts:{display:"Oswald",ui:"Barlow Condensed"}, c:{bg:"#070708",panel:"#121214",elev:"#1c1c20",text:"#f3efe6",muted:"#9a958c",accent:"#e10600",accent2:"#f5c518",line:"#2a2a2e",ok:"#3ddc97",danger:"#ff5a5a"} },
-  { id:"steam-night-forge", name:"Night Forge", pitch:"Forja noturna tipo launcher moderno: aço frio, cinza-azulado e ciano contido.", fonts:{display:"Space Grotesk",ui:"Space Grotesk"}, c:{bg:"#0e141b",panel:"#16202a",elev:"#1e2b38",text:"#e7eef6",muted:"#8aa0b5",accent:"#66c0f4",accent2:"#1b2838",line:"#2a3a4a",ok:"#5bae6c",danger:"#e05a5a"} },
-  { id:"epic-void-citadel", name:"Void Citadel", pitch:"Cidadela escura com acento lima elétrica — storefront agressivo, sem roxo.", fonts:{display:"Syne",ui:"Space Grotesk"}, c:{bg:"#0b0d0c",panel:"#141816",elev:"#1c221e",text:"#f2f5f0",muted:"#8d988f",accent:"#b6ff3b",accent2:"#2a3328",line:"#2c352f",ok:"#8fd14f",danger:"#ff6b4a"} },
-  { id:"garena-ember", name:"Garena Ember", pitch:"Cliente de guerra: navy denso, laranja de brasa e tipografia de combate.", fonts:{display:"Archivo Black",ui:"Barlow Condensed"}, c:{bg:"#0a1220",panel:"#122038",elev:"#1a2c4a",text:"#f7f3ec",muted:"#93a4c0",accent:"#ff7a18",accent2:"#ffd39a",line:"#243656",ok:"#4caf82",danger:"#ff4d4d"} },
-  { id:"rgc-copper", name:"RGC Copper Ranked", pitch:"Espírito do ranked antigo: cobre oxidado, ouro de temporada e HUD seco.", fonts:{display:"Oswald",ui:"IBM Plex Mono"}, c:{bg:"#100e0c",panel:"#1a1612",elev:"#261f18",text:"#f0e6d8",muted:"#a89984",accent:"#c47a3a",accent2:"#e0b45a",line:"#3a3026",ok:"#7d9b5a",danger:"#d65a45"} },
-  { id:"kof-blood-moon", name:"Blood Moon KOF", pitch:"Lua de sangue sobre o ringue: preto, vermelho arterial e osso.", fonts:{display:"Oswald",ui:"Barlow Condensed"}, c:{bg:"#090606",panel:"#160c0c",elev:"#241212",text:"#f6ece8",muted:"#b09898",accent:"#c4122f",accent2:"#f0d7c8",line:"#3a2020",ok:"#d4a017",danger:"#ff2a2a"} },
-  { id:"sp-neon-alley", name:"São Paulo Neon Alley", pitch:"Beco paulistano: asfalto molhado, neon rosa-choque de fachada e teal de chuva.", fonts:{display:"Syne",ui:"Space Grotesk"}, c:{bg:"#0b0c10",panel:"#14161f",elev:"#1d2030",text:"#f5f2ff",muted:"#9aa0b8",accent:"#ff2d95",accent2:"#20d3c8",line:"#2b3045",ok:"#2ee6a6",danger:"#ff5e5e"} },
-  { id:"crt-phosphor", name:"CRT Phosphor", pitch:"Monitor fosforescente: verde de tubo, scanline e preto absoluto.", fonts:{display:"IBM Plex Mono",ui:"IBM Plex Mono"}, c:{bg:"#020402",panel:"#071107",elev:"#0d1c0d",text:"#b6ffb0",muted:"#5f8f5a",accent:"#39ff14",accent2:"#144d12",line:"#1c331c",ok:"#39ff14",danger:"#ff4242"} },
-  { id:"championship-navy", name:"Championship Navy", pitch:"Transmissão de torneio: navy de terno, ouro de medalha e branco limpo.", fonts:{display:"Oswald",ui:"Barlow Condensed"}, c:{bg:"#07111f",panel:"#0f1c33",elev:"#17304f",text:"#f7f8fb",muted:"#93a6c2",accent:"#d4af37",accent2:"#ffffff",line:"#274063",ok:"#3ecf8e",danger:"#e45757"} },
-  { id:"fight-club-concrete", name:"Fight Club Concrete", pitch:"Porão de luta: concreto, fita zebrada e ferrugem.", fonts:{display:"Archivo Black",ui:"Barlow Condensed"}, c:{bg:"#161513",panel:"#22201c",elev:"#2e2b26",text:"#f2efe8",muted:"#a39e93",accent:"#f0c400",accent2:"#b54a2a",line:"#3f3b34",ok:"#8fbf4a",danger:"#ff5533"} },
-  { id:"ice-arena", name:"Ice Arena", pitch:"Arena gelada: gelo azul, branco frio e aço.", fonts:{display:"Space Grotesk",ui:"Space Grotesk"}, c:{bg:"#0a141c",panel:"#122230",elev:"#1a3144",text:"#eef7ff",muted:"#8fb0c6",accent:"#7fd3ff",accent2:"#d9ecf8",line:"#27485e",ok:"#5ad0b0",danger:"#ff6d7a"} },
-  { id:"desert-outlaw", name:"Desert Outlaw", pitch:"Arena sob sol duro: areia, couro e sombra.", fonts:{display:"Oswald",ui:"Barlow Condensed"}, c:{bg:"#1a140e",panel:"#271d14",elev:"#35281c",text:"#f6ead7",muted:"#b8a286",accent:"#e39b3a",accent2:"#8b5a2b",line:"#4a3a28",ok:"#9cba5a",danger:"#d94c3b"} },
-  { id:"circuit-board", name:"Circuit Board", pitch:"PCB vivo: verde de placa, prata de solda e LED âmbar.", fonts:{display:"IBM Plex Mono",ui:"Space Grotesk"}, c:{bg:"#06110a",panel:"#0d1c12",elev:"#142a1b",text:"#e7f5ea",muted:"#7fa38a",accent:"#ffb000",accent2:"#9ad0aa",line:"#234530",ok:"#52d68a",danger:"#ff5c5c"} },
-  { id:"vinyl-90s", name:"Vinyl 90s Cabinet", pitch:"Plástico de fliperama 90s: vermelho laminado e bege de botão.", fonts:{display:"Archivo Black",ui:"Barlow Condensed"}, c:{bg:"#1b0d10",panel:"#2a1218",elev:"#3a1a22",text:"#fff4e8",muted:"#c4a49a",accent:"#e31c25",accent2:"#e8d2b0",line:"#52232d",ok:"#5cbc6a",danger:"#ff4040"} },
-  { id:"obsidian-pro", name:"Matte Obsidian Pro", pitch:"Minimalismo hardcore: preto fosco e um fio ciano.", fonts:{display:"Syne",ui:"Space Grotesk"}, c:{bg:"#050505",panel:"#0f0f0f",elev:"#171717",text:"#f2f2f2",muted:"#8a8a8a",accent:"#00e5ff",accent2:"#222222",line:"#2a2a2a",ok:"#2dd4a8",danger:"#ff4d6d"} },
-  { id:"broadcast-ticker", name:"Broadcast Ticker", pitch:"Placar de TV esportiva: azul de estúdio, vermelho de urgência, branco.", fonts:{display:"Oswald",ui:"Barlow Condensed"}, c:{bg:"#041528",panel:"#0a2340",elev:"#12345a",text:"#ffffff",muted:"#9bb4d0",accent:"#ff2a2a",accent2:"#f5c518",line:"#1e4a78",ok:"#2ecc71",danger:"#ff2a2a"} },
-  { id:"pixel-concrete", name:"Pixel Concrete", pitch:"Brutalismo 1-bit: cinza estrutural e acento magenta seco.", fonts:{display:"IBM Plex Mono",ui:"IBM Plex Mono"}, c:{bg:"#1c1c1c",panel:"#2a2a2a",elev:"#363636",text:"#f0f0f0",muted:"#9c9c9c",accent:"#e11d8b",accent2:"#cfcfcf",line:"#484848",ok:"#b8ff57",danger:"#ff4f4f"} },
-  { id:"lantern-district", name:"Lantern District", pitch:"Distrito sob chuva: asfalto, âmbar de lanterna e noite índigo.", fonts:{display:"Syne",ui:"Space Grotesk"}, c:{bg:"#0b0f1a",panel:"#141a2b",elev:"#1d2540",text:"#f3e9d7",muted:"#9aa3bf",accent:"#ffb347",accent2:"#5b6cff",line:"#2a3350",ok:"#6fd3a0",danger:"#ff6b6b"} },
-  { id:"titanium-hangar", name:"Titanium Hangar", pitch:"Hangar militar: titânio, laranja de alerta e azul de baía.", fonts:{display:"Oswald",ui:"Space Grotesk"}, c:{bg:"#12151a",panel:"#1b2129",elev:"#262e3a",text:"#eef2f7",muted:"#97a3b5",accent:"#ff6a00",accent2:"#4aa3ff",line:"#354052",ok:"#4fd18b",danger:"#ff4b4b"} },
-  { id:"cerrado-horizon", name:"Cerrado Horizon", pitch:"Horizonte brasileiro: azul de fim de tarde e laranja de cerrado.", fonts:{display:"Syne",ui:"Barlow Condensed"}, c:{bg:"#0c1630",panel:"#152447",elev:"#1e3260",text:"#fff5e8",muted:"#a9b6d6",accent:"#ff7a3c",accent2:"#ffc27a",line:"#2c4478",ok:"#61d395",danger:"#ff5a5a"} }
-);
+const FIGHTERS = [
+  { name: "YURI", f1: "#ff4fa3", f2: "#7a1048" },
+  { name: "MAI", f1: "#ff2a2a", f2: "#7a1010" },
+  { name: "LEONA", f1: "#3b6cff", f2: "#101a4a" },
+  { name: "VANESSA", f1: "#ff7a3c", f2: "#6a2a10" },
+  { name: "K'", f1: "#ff4d00", f2: "#3a1400" },
+];
 
-const VIEWS = ["vitrine", "sala", "perfil", "admin"];
-let selected = null;
-const viewState = Object.fromEntries(THEMES.map(t => [t.id, "vitrine"]));
+let catalog = null;
+let selectedId = null;
+let surface = "vitrine";
 
-function el(tag, attrs={}, kids=[]) {
+const atmClass = (key) => "atm-" + (key || "matte");
+
+function el(tag, attrs = {}, kids = []) {
   const n = document.createElement(tag);
-  for (const [k,v] of Object.entries(attrs)) {
+  for (const [k, v] of Object.entries(attrs)) {
     if (k === "class") n.className = v;
     else if (k === "style" && typeof v === "object") Object.assign(n.style, v);
     else if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2).toLowerCase(), v);
-    else n.setAttribute(k, v);
+    else if (v != null) n.setAttribute(k, v);
   }
   for (const c of [].concat(kids)) if (c != null) n.append(c.nodeType ? c : document.createTextNode(c));
   return n;
 }
 
-function paintStage(theme, view) {
-  const c = theme.c;
-  const stage = el("div", { class: "stage", style: { background: c.bg, color: c.text, fontFamily: theme.fonts.ui + ", sans-serif" } });
-  const inner = el("div", { class: "stage-inner" });
-
-  if (view === "vitrine") {
-    inner.append(
-      el("div", { class: "navrow" }, [
-        el("div", { class: "logo", style: { fontFamily: theme.fonts.display + ", sans-serif", color: c.accent } }, "ARENA ARCADE"),
-        el("div", { class: "pill", style: { background: c.elev, color: c.accent2 || c.text, border: "1px solid " + c.line } }, "KOF 2002 ONLINE")
-      ]),
-      el("div", { class: "hero", style: { background: `linear-gradient(135deg, ${c.elev}, ${c.panel} 40%, ${c.accent}55)` } }, [
-        el("div", {}, [
-          el("small", {}, "DUELA · APOSTA · DOMINA"),
-          el("h3", { style: { fontFamily: theme.fonts.display + ", sans-serif" } }, "King of Fighters 2002"),
-          el("div", { class: "cta", style: { background: c.accent, color: "#0a0a0a" } }, "ENTRAR NA ARENA")
-        ])
-      ]),
-      el("div", { class: "rows" }, [
-        row(c, "SE", "Sala Sudeste", "12 online · stake R$5"),
-        row(c, "NE", "Sala Nordeste", "4 online · grátis")
-      ])
-    );
-  }
-
-  if (view === "sala") {
-    inner.append(
-      el("div", { class: "navrow" }, [
-        el("div", { class: "logo", style: { fontFamily: theme.fonts.display + ", sans-serif" } }, "SALA · KOF SE"),
-        el("div", { class: "pill", style: { background: c.accent, color: "#111" } }, "FILA #2")
-      ]),
-      el("div", { class: "statgrid" }, [
-        stat(c, "P1", "Você"),
-        stat(c, "vs", "BO3"),
-        stat(c, "P2", "Aguardando")
-      ]),
-      el("div", { class: "rows" }, [
-        row(c, "01", "Player_Alpha", "ELO 1420 · VIP"),
-        row(c, "02", "Player_Beta", "ELO 1388 · na fila"),
-        row(c, "03", "Player_Gamma", "ELO 1510 · espectando")
-      ]),
-      el("div", { class: "cta", style: { background: c.elev, color: c.text, border: "1px solid " + c.line, alignSelf: "start" } }, "CÓDIGO CONVITE · KOF-7X2Q")
-    );
-  }
-
-  if (view === "perfil") {
-    inner.append(
-      el("div", { class: "navrow" }, [
-        el("div", { class: "logo", style: { fontFamily: theme.fonts.display + ", sans-serif" } }, "PERFIL"),
-        el("div", { class: "pill", style: { background: c.ok, color: "#06210f" } }, "RANKED")
-      ]),
-      el("div", { class: "row", style: { background: c.panel, border: "1px solid " + c.line } }, [
-        el("div", { class: "avatar", style: { background: c.accent, color: "#111" } }, "AK"),
-        el("div", {}, [el("div", {}, "Akira_77"), el("div", { class: "meta" }, "Estilo: Agressor · Season 01")]),
-        el("div", { style: { color: c.accent2 || c.accent, fontWeight: 800 } }, "1542")
-      ]),
-      el("div", { class: "statgrid" }, [
-        stat(c, "128", "Vitórias"),
-        stat(c, "74", "Derrotas"),
-        stat(c, "63%", "WR")
-      ]),
-      el("div", { class: "rows" }, [
-        row(c, "W", "vs Nova_Pulse", "+18 ELO · BO5"),
-        row(c, "L", "vs RedCabinet", "-12 ELO · rage-quit rival")
-      ])
-    );
-  }
-
-  if (view === "admin") {
-    inner.append(
-      el("div", { class: "sidebar" }, [
-        el("div", { class: "side", style: { background: c.panel, border: "1px solid " + c.line } }, [
-          el("div", { style: { background: c.accent, color: "#111", fontWeight: 800 } }, "MASTER"),
-          el("div", { style: { background: c.elev } }, "Overview"),
-          el("div", { style: { background: c.elev } }, "Auditoria"),
-          el("div", { style: { background: c.elev } }, "Saques"),
-          el("div", { style: { background: c.elev } }, "Season")
-        ]),
-        el("div", { class: "mainpane", style: { background: c.elev, border: "1px solid " + c.line } }, [
-          el("div", { style: { fontFamily: theme.fonts.display + ", sans-serif", fontWeight: 800 } }, "PAINEL OPERACIONAL"),
-          el("div", { class: "table" }, [
-            tr(c, true, "Usuário", "Ação", "Sala", "Quando"),
-            tr(c, false, "akira_77", "JOIN_ROOM", "KOF-SE", "12:01"),
-            tr(c, false, "nova", "MATCH_WIN", "KOF-SE", "12:14"),
-            tr(c, false, "mod_01", "REVIEW", "—", "12:20")
-          ])
-        ])
-      ])
-    );
-  }
-
-  stage.append(inner);
-  return stage;
+function applyVars(node, theme) {
+  const c = theme.colors;
+  const map = {
+    "--t-bg": c.bg, "--t-panel": c.panel, "--t-elev": c.elev, "--t-text": c.text,
+    "--t-muted": c.muted, "--t-accent": c.accent, "--t-accent2": c.accent2, "--t-line": c.line,
+    "--t-ok": c.ok, "--t-danger": c.danger,
+    "--t-display": theme.fonts.display, "--t-ui": theme.fonts.ui, "--t-mono": theme.fonts.mono,
+  };
+  for (const [k, v] of Object.entries(map)) node.style.setProperty(k, v);
 }
 
-function row(c, a, title, meta) {
-  return el("div", { class: "row", style: { background: c.panel, border: "1px solid " + c.line } }, [
-    el("div", { class: "avatar", style: { background: c.elev, color: c.accent } }, a),
-    el("div", {}, [el("div", {}, title), el("div", { class: "meta" }, meta)]),
-    el("div", { style: { color: c.accent, fontWeight: 700, fontSize: ".65rem" } }, "•")
+function nav(theme, active) {
+  return el("div", { class: "pv-nav" }, [
+    el("div", { class: "pv-logo" }, "ARENA ARCADE"),
+    el("div", { class: "pv-links" }, [
+      el("span", { class: active === "vitrine" ? "on" : "" }, "Descobrir"),
+      el("span", { class: active === "sala" || active === "criar" ? "on" : "" }, "Salas"),
+      el("span", { class: active === "clas" ? "on" : "" }, "Clãs"),
+      el("span", { class: active === "perfil" ? "on" : "" }, "Perfil"),
+      el("span", { class: "pill" }, "KOF 2002"),
+    ]),
   ]);
 }
-function stat(c, v, l) {
-  return el("div", { class: "stat", style: { background: c.panel, border: "1px solid " + c.line } }, [
-    el("b", { style: { color: c.accent } }, v), el("span", {}, l)
-  ]);
-}
-function tr(c, head, ...cells) {
-  return el("div", { class: "tr", style: { background: head ? c.panel : "transparent", color: head ? c.muted : c.text, fontWeight: head ? 700 : 500 } }, cells.map(x => el("div", {}, x)));
+
+function paintAuth(theme, mode) {
+  const wrap = el("div", { class: "pv-main auth-wrap" });
+  wrap.append(el("div", { class: "auth-card" }, [
+    el("h2", {}, mode === "login" ? "Entrar na Arena" : "Criar conta"),
+    el("div", { class: "muted" }, mode === "login"
+      ? "Mesma conta nos dois browsers. Créditos de lab — sem PIX real nesta fase."
+      : "Nick único, e-mail e senha (8+). Em beta fechado, use convite se pedido."),
+    el("div", { class: "field" }, [
+      el("label", {}, mode === "register" ? "Nick" : "E-mail"),
+      el("input", { placeholder: mode === "register" ? "SeuNick_KOF" : "voce@email.com", value: mode === "register" ? "" : "demo@arena.gg" }),
+    ]),
+    mode === "register" ? el("div", { class: "field" }, [
+      el("label", {}, "E-mail"),
+      el("input", { placeholder: "voce@email.com" }),
+    ]) : null,
+    el("div", { class: "field" }, [
+      el("label", {}, "Senha"),
+      el("input", { type: "password", value: "••••••••" }),
+    ]),
+    el("button", { class: "auth-cta", type: "button" }, mode === "login" ? "ENTRAR" : "CADASTRAR"),
+    el("div", { class: "auth-alt" }, mode === "login"
+      ? ["Esqueceu a senha · ", el("b", {}, "Criar conta")]
+      : ["Já tem conta? ", el("b", {}, "Entrar")]),
+  ].filter(Boolean)));
+  return wrap;
 }
 
-function render() {
-  const grid = document.getElementById("grid");
-  grid.innerHTML = "";
-  THEMES.forEach((theme, i) => {
-    const view = viewState[theme.id];
-    const card = el("article", { class: "card" + (selected === theme.id ? " selected" : ""), "data-id": theme.id });
-    const head = el("div", { class: "card-head" }, [
+function paintVitrine(theme) {
+  const main = el("div", { class: "pv-main" });
+  const hero = el("div", { class: "hero" });
+  const fighters = el("div", { class: "fighters" });
+  for (const f of FIGHTERS) {
+    const card = el("div", { class: "fighter", style: { "--f1": f.f1, "--f2": f.f2 } }, [
+      el("div", { class: "head" }),
+      el("div", { class: "body" }),
+      el("div", { class: "tag" }, f.name),
+    ]);
+    fighters.append(card);
+  }
+  hero.append(
+    fighters,
+    el("div", { class: "hero-bg" }),
+    el("div", { class: "hero-copy" }, [
+      el("div", { class: "eyebrow" }, "FLIPERAMA ONLINE · KOF 2002"),
+      el("h2", {}, "ARENA ARCADE"),
+      el("p", {}, "Duelos 1x1 com regras claras: amistoso pra treinar ou desafio com créditos de teste no servidor. Ready-check, série Bo3/Bo5, review e revanche — o salão moderno do King of Fighters."),
+      el("div", { class: "hero-ctas" }, [
+        el("button", { class: "primary", type: "button" }, "Entrar na sala"),
+        el("button", { class: "ghost", type: "button" }, "Ver torneios"),
+      ]),
+    ]),
+  );
+  const strip = el("div", { class: "strip" }, [
+    el("article", {}, [
+      el("div", { class: "idx" }, "01"),
+      el("h3", {}, "Sala regional"),
+      el("p", {}, "Entre no lobby KOF, veja quem está online e desafie com stake ou amistoso."),
+    ]),
+    el("article", {}, [
+      el("div", { class: "idx" }, "02"),
+      el("h3", {}, "Hosted oficial"),
+      el("p", {}, "No modo com créditos, a execução roda no host — resultado e ficha sob autoridade do servidor."),
+    ]),
+    el("article", {}, [
+      el("div", { class: "idx" }, "03"),
+      el("h3", {}, "Fair play"),
+      el("p", {}, "Ready-check, reconexão, review com evidência e limite anti-rage. Diversão primeiro."),
+    ]),
+  ]);
+  main.append(hero, strip);
+  return main;
+}
+
+function paintSala(theme) {
+  return el("div", { class: "pv-main pane" }, [
+    el("div", { style: { display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" } }, [
       el("div", {}, [
-        el("h2", {}, theme.name),
-        el("p", {}, theme.pitch)
+        el("div", { style: { fontFamily: "var(--t-display)", fontWeight: 800, fontSize: "1.3rem" } }, "SALA · KOF SUDESTE"),
+        el("div", { style: { color: "var(--t-muted)", fontSize: ".85rem" } }, "12 online · região Sudeste · RTT médio 38ms"),
       ]),
-      el("div", { class: "num" }, String(i + 1).padStart(2, "0"))
-    ]);
-    const sw = el("div", { class: "swatches" }, [theme.c.bg, theme.c.panel, theme.c.elev, theme.c.accent, theme.c.accent2, theme.c.ok].map(color => el("i", { style: { background: color } })));
-    const tabs = el("div", { class: "tabs" }, VIEWS.map(v => el("button", {
+      el("div", { class: "pill" }, "FILA HOSTED #2 · ETA ~25s"),
+    ]),
+    el("div", { class: "grid2" }, [
+      el("div", { class: "box" }, [
+        el("h3", {}, "Roster"),
+        row("AK", "Akira_77", "ELO 1542 · VIP"),
+        row("NP", "Nova_Pulse", "ELO 1488 · na fila"),
+        row("RC", "RedCabinet", "ELO 1610 · espectando"),
+        row("YL", "YuriMain_BR", "ELO 1390 · livre"),
+      ]),
+      el("div", { class: "box" }, [
+        el("h3", {}, "Achar partida"),
+        el("div", { class: "form-row" }, [
+          el("label", { style: { color: "var(--t-muted)", fontSize: ".75rem", fontWeight: 700 } }, "Modo"),
+          el("select", {}, [el("option", {}, "Créditos de teste (hosted)"), el("option", {}, "Amistoso")]),
+        ]),
+        el("div", { class: "form-row" }, [
+          el("label", { style: { color: "var(--t-muted)", fontSize: ".75rem", fontWeight: 700 } }, "Série"),
+          el("select", {}, [el("option", {}, "Melhor de 3"), el("option", {}, "Melhor de 5"), el("option", {}, "Melhor de 1")]),
+        ]),
+        el("button", { class: "auth-cta", type: "button" }, "ACHAR PARTIDA"),
+        el("div", { style: { marginTop: "10px", color: "var(--t-muted)", fontSize: ".8rem", lineHeight: 1.35 } },
+          "Bo3/Bo5: vence a maioria. Stake herda na revanche. Y = ficha · Enter = START."),
+      ]),
+    ]),
+  ]);
+}
+
+function paintCriar(theme) {
+  return el("div", { class: "pv-main pane" }, [
+    el("div", { class: "box", style: { maxWidth: "520px" } }, [
+      el("h3", {}, "Criar / configurar sala"),
+      el("div", { class: "form-row" }, [el("label", { style: { color: "var(--t-muted)", fontSize: ".75rem", fontWeight: 700 } }, "Nome"), el("input", { value: "Corujão KOF SE" })]),
+      el("div", { class: "form-row" }, [el("label", { style: { color: "var(--t-muted)", fontSize: ".75rem", fontWeight: 700 } }, "Jogo"), el("select", {}, [el("option", {}, "KOF 2002")])]),
+      el("div", { class: "form-row" }, [el("label", { style: { color: "var(--t-muted)", fontSize: ".75rem", fontWeight: 700 } }, "Região"), el("select", {}, [el("option", {}, "Sudeste"), el("option", {}, "Nordeste"), el("option", {}, "Sul")])]),
+      el("div", { class: "form-row" }, [el("label", { style: { color: "var(--t-muted)", fontSize: ".75rem", fontWeight: 700 } }, "Código convite"), el("input", { value: "KOF-7X2Q", readonly: "readonly" })]),
+      el("button", { class: "auth-cta", type: "button" }, "PUBLICAR SALA"),
+    ]),
+  ]);
+}
+
+function paintClas(theme) {
+  return el("div", { class: "pv-main pane" }, [
+    el("div", { style: { fontFamily: "var(--t-display)", fontWeight: 800, fontSize: "1.3rem" } }, "CLÃS · RANKING"),
+    el("div", { class: "grid2" }, [
+      el("div", { class: "box" }, [
+        el("h3", {}, "Leaderboard"),
+        row("ORO", "Orochi Bloodline", "14850 pts · tesouraria R$ 245"),
+        row("NEO", "NeoGeo Masters BR", "11200 pts · 14 membros"),
+        row("KOF", "KOF Syndicate", "8940 pts · nv 3"),
+      ]),
+      el("div", { class: "box" }, [
+        el("h3", {}, "Seu clã"),
+        el("div", { style: { color: "var(--t-muted)", fontSize: ".9rem", lineHeight: 1.4, marginBottom: "12px" } },
+          "Pontos sobem no settlement real. Líder convida, expulsa e transfere cargo. Tesouraria recebe fatia do stake."),
+        el("button", { class: "auth-cta", type: "button" }, "CRIAR CLÃ"),
+      ]),
+    ]),
+  ]);
+}
+
+function paintAdmin(theme) {
+  return el("div", { class: "pv-main admin-shell" }, [
+    el("div", { class: "admin-side" }, [
+      el("div", { class: "on" }, "Overview"),
+      el("div", {}, "Usuários"),
+      el("div", {}, "Revisões"),
+      el("div", {}, "Season"),
+      el("div", {}, "MFA / Beta"),
+      el("div", {}, "Tema"),
+    ]),
+    el("div", { class: "admin-main" }, [
+      el("div", { style: { fontFamily: "var(--t-display)", fontWeight: 800, fontSize: "1.25rem", marginBottom: "12px" } }, "PAINEL OPERACIONAL"),
+      el("div", { class: "table" }, [
+        el("div", { class: "tr head" }, ["Usuário", "Ação", "Sala", "Quando"].map((x) => el("div", {}, x))),
+        el("div", { class: "tr" }, ["akira_77", "JOIN_ROOM", "KOF-SE", "12:01"].map((x) => el("div", {}, x))),
+        el("div", { class: "tr" }, ["nova_pulse", "MATCH_WIN", "KOF-SE", "12:14"].map((x) => el("div", {}, x))),
+        el("div", { class: "tr" }, ["mod_01", "REVIEW_OPEN", "—", "12:20"].map((x) => el("div", {}, x))),
+        el("div", { class: "tr" }, ["system", "BACKUP_OK", "ops", "12:30"].map((x) => el("div", {}, x))),
+      ]),
+      el("div", { style: { marginTop: "14px", color: "var(--t-muted)", fontSize: ".85rem" } },
+        "PIX real off · créditos fictícios · MFA TOTP nas ações sensíveis."),
+    ]),
+  ]);
+}
+
+function paintPerfil(theme) {
+  return el("div", { class: "pv-main pane" }, [
+    el("div", { class: "box" }, [
+      el("div", { class: "row", style: { border: 0 } }, [
+        el("div", { class: "av", style: { background: "var(--t-accent)", color: "#111" } }, "AK"),
+        el("div", {}, [
+          el("div", { style: { fontFamily: "var(--t-display)", fontWeight: 800, fontSize: "1.2rem" } }, "Akira_77"),
+          el("div", { style: { color: "var(--t-muted)", fontSize: ".85rem" } }, "Season ativa · estilo Agressor · Yuri / Leona"),
+        ]),
+        el("div", { style: { color: "var(--t-accent2)", fontWeight: 800, fontSize: "1.4rem", fontFamily: "var(--t-mono)" } }, "1542"),
+      ]),
+    ]),
+    el("div", { class: "grid2" }, [
+      el("div", { class: "box" }, [el("h3", {}, "Histórico"), row("W", "vs Nova_Pulse", "+18 · BO5"), row("L", "vs RedCabinet", "-12 · BO3"), row("W", "vs YuriMain_BR", "+14 · BO3")]),
+      el("div", { class: "box" }, [el("h3", {}, "Carteira lab"), row("R$", "Disponível", "2.000,00"), row("R$", "Reservado", "0,00"), row("R$", "Em disputa", "0,00")]),
+    ]),
+  ]);
+}
+
+function row(a, title, meta) {
+  return el("div", { class: "row" }, [
+    el("div", { class: "av" }, a),
+    el("div", {}, [el("div", {}, title), el("div", { style: { color: "var(--t-muted)", fontSize: ".78rem" } }, meta)]),
+    el("div", { style: { color: "var(--t-accent)", fontWeight: 800 } }, "•"),
+  ]);
+}
+
+function paintPreview(theme) {
+  const root = document.getElementById("preview");
+  root.innerHTML = "";
+  const pv = el("div", { class: "pv " + atmClass(theme.atmosphere) });
+  applyVars(pv, theme);
+  if (!["login", "register"].includes(surface)) pv.append(nav(theme, surface));
+  let body;
+  if (surface === "login") body = paintAuth(theme, "login");
+  else if (surface === "register") body = paintAuth(theme, "register");
+  else if (surface === "vitrine") body = paintVitrine(theme);
+  else if (surface === "sala") body = paintSala(theme);
+  else if (surface === "criar") body = paintCriar(theme);
+  else if (surface === "clas") body = paintClas(theme);
+  else if (surface === "admin") body = paintAdmin(theme);
+  else body = paintPerfil(theme);
+  pv.append(body);
+  root.append(pv);
+  document.getElementById("urlBar").textContent = "arena.arcade" + (SURFACES.find((s) => s.id === surface)?.path || "");
+}
+
+function selectTheme(id) {
+  selectedId = id;
+  const theme = catalog.themes.find((t) => t.id === id);
+  if (!theme) return;
+  document.getElementById("title").textContent = theme.name;
+  document.getElementById("pitch").textContent = theme.pitch;
+  document.getElementById("metaFamily").textContent = theme.family || "—";
+  document.getElementById("metaMood").textContent = theme.mood || "—";
+  document.getElementById("metaFont").textContent = theme.fonts.display + " / " + theme.fonts.ui;
+  document.getElementById("metaId").textContent = theme.id;
+  document.getElementById("btnApply").disabled = false;
+  localStorage.setItem("arena.theme.preview", id);
+  renderRail();
+  paintPreview(theme);
+}
+
+function renderRail() {
+  const rail = document.getElementById("rail");
+  rail.querySelectorAll(".theme-item").forEach((n) => n.remove());
+  catalog.themes.forEach((t, i) => {
+    const item = el("button", {
       type: "button",
-      class: view === v ? "on" : "",
-      style: { color: view === v ? theme.c.accent : undefined },
-      onClick: (e) => { e.stopPropagation(); viewState[theme.id] = v; render(); openDock(theme); }
-    }, v)));
-    const foot = el("div", { class: "card-foot" }, [
-      el("button", { type: "button", onClick: (e) => { e.stopPropagation(); selectTheme(theme); } }, "Selecionar"),
-      el("button", { type: "button", class: "primary", style: { background: theme.c.accent, borderColor: theme.c.accent, color: "#111" }, onClick: (e) => { e.stopPropagation(); selectTheme(theme); confirmTheme(); } }, "Usar este")
+      class: "theme-item" + (selectedId === t.id ? " on" : ""),
+      onClick: () => selectTheme(t.id),
+    }, [
+      el("div", { class: "n" }, String(i + 1).padStart(2, "0")),
+      el("div", {}, [el("div", { class: "nm" }, t.name), el("div", { class: "fm" }, t.family || "")]),
+      el("div", { class: "swatch-row" }, [t.colors.bg, t.colors.panel, t.colors.accent, t.colors.accent2].map((c) => el("i", { style: { background: c } }))),
     ]);
-    card.append(head, sw, tabs, paintStage(theme, view), foot);
-    card.addEventListener("click", () => selectTheme(theme));
-    grid.append(card);
+    rail.append(item);
   });
 }
 
-function selectTheme(theme) {
-  selected = theme.id;
-  openDock(theme);
-  render();
-  document.getElementById("btnChoose").disabled = false;
-  localStorage.setItem("arena.theme.preview", theme.id);
+function renderSurfaces() {
+  const box = document.getElementById("surfaces");
+  box.innerHTML = "";
+  for (const s of SURFACES) {
+    box.append(el("button", {
+      type: "button",
+      class: surface === s.id ? "on" : "",
+      onClick: () => {
+        surface = s.id;
+        renderSurfaces();
+        const theme = catalog.themes.find((t) => t.id === selectedId);
+        if (theme) paintPreview(theme);
+      },
+    }, s.label));
+  }
 }
 
-function openDock(theme) {
-  const dock = document.getElementById("dock");
-  dock.classList.remove("hidden");
-  document.getElementById("dockTitle").textContent = theme.name;
-  document.getElementById("dockDesc").textContent = theme.pitch + " · fontes " + theme.fonts.display + " / " + theme.fonts.ui;
-  const pal = document.getElementById("dockPal");
-  pal.innerHTML = "";
-  [theme.c.bg, theme.c.panel, theme.c.elev, theme.c.accent, theme.c.accent2, theme.c.ok, theme.c.danger].forEach(color => {
-    pal.append(el("i", { style: { background: color }, title: color }));
-  });
+async function applyTheme() {
+  if (!selectedId) return;
+  localStorage.setItem("arena.theme", selectedId);
+  const token = localStorage.getItem("arenaToken");
+  let serverOk = false;
+  if (token) {
+    try {
+      const r = await fetch("/api/admin/theme", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedId }),
+      });
+      serverOk = r.ok;
+    } catch {}
+  }
+  const theme = catalog.themes.find((t) => t.id === selectedId);
+  alert(
+    "Tema base escolhido: " + theme.name + "\nID: " + selectedId +
+    (serverOk
+      ? "\n\nAplicado no servidor (admin). Clientes recebem THEME_UPDATED."
+      : "\n\nSalvo neste browser. Faça login admin e confirme de novo para gravar no servidor — ou diga no chat o ID que prefere."),
+  );
 }
 
-function confirmTheme() {
-  if (!selected) return;
-  localStorage.setItem("arena.theme", selected);
-  const theme = THEMES.find(t => t.id === selected);
-  alert("Tema escolhido: " + theme.name + "\\n\\nID salvo: " + selected + "\\n\\nNa próxima etapa o produto aplica este tema (CSS variables). Diga no chat qual número/ID você quer oficial.");
+const res = await fetch("/themes/themes.json", { cache: "no-store" });
+catalog = await res.json();
+if (!catalog.themes || catalog.themes.length < 25) {
+  document.getElementById("pitch").textContent = "Catálogo incompleto (" + (catalog.themes?.length || 0) + ").";
 }
+renderSurfaces();
+renderRail();
+const saved = localStorage.getItem("arena.theme") || localStorage.getItem("arena.theme.preview") || catalog.defaultTheme;
+selectTheme(catalog.themes.some((t) => t.id === saved) ? saved : catalog.themes[0].id);
 
 document.getElementById("btnClear").onclick = () => {
-  selected = null;
   localStorage.removeItem("arena.theme.preview");
-  document.getElementById("btnChoose").disabled = true;
-  document.getElementById("dock").classList.add("hidden");
-  render();
+  selectTheme(catalog.defaultTheme);
 };
-document.getElementById("btnChoose").onclick = confirmTheme;
-document.getElementById("btnConfirmDock").onclick = confirmTheme;
-document.getElementById("btnCloseDock").onclick = () => document.getElementById("dock").classList.add("hidden");
-
-const saved = localStorage.getItem("arena.theme") || localStorage.getItem("arena.theme.preview");
-if (saved && THEMES.some(t => t.id === saved)) selected = saved;
-render();
-if (selected) openDock(THEMES.find(t => t.id === selected));
+document.getElementById("btnApply").onclick = applyTheme;
 </script>
 </body>
 </html>

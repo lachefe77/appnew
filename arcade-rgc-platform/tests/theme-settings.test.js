@@ -7,6 +7,18 @@ import { spawn } from "node:child_process";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
+test("catálogo tem 25 temas com ids estáveis", () => {
+  const catalog = JSON.parse(
+    fs.readFileSync(path.join(root, "public/themes/themes.json"), "utf8"),
+  );
+  assert.equal(catalog.themes.length, 25);
+  assert.ok(catalog.themes.some((t) => t.id === "neogeo-cabinet"));
+  assert.ok(catalog.themes.some((t) => t.id === "crt-phosphor"));
+  for (const t of catalog.themes) {
+    assert.ok(t.name && t.pitch && t.colors?.accent && t.fonts?.display, t.id);
+  }
+});
+
 test("tema padrão Neo Geo e override de cores", async () => {
   const dir = fs.mkdtempSync(path.join(root, "work/theme-"));
   const child = spawn(

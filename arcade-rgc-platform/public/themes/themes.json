@@ -1,12 +1,17 @@
 {
-  "version": 1,
+  "version": 2,
   "defaultTheme": "neogeo-cabinet",
+  "catalogTitle": "Arena Arcade — Identidade Visual",
+  "catalogNote": "25 sistemas cromáticos autorais para fliperama online KOF 2002. Inspiração distante de clientes ranked clássicos e launchers — sem clonar layouts de concorrentes.",
   "themes": [
     {
       "id": "neogeo-cabinet",
       "name": "Neo Geo Cabinet",
-      "pitch": "Gabinete arcade: preto profundo, carmesim de botão e amarelo de plaqueta.",
+      "family": "Arcade legado",
+      "pitch": "Gabinete de salão: preto de chassi, carmesim de botão e amarelo de plaqueta. O DNA do fliperama.",
+      "mood": "Autoridade · legado · duelo",
       "fonts": { "display": "Oswald", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "atmosphere": "radial-cabinet",
       "colors": {
         "bg": "#070708", "panel": "#121214", "elev": "#1c1c20", "text": "#f3efe6",
         "muted": "#9a958c", "accent": "#e10600", "accent2": "#f5c518", "line": "#2a2a2e",
@@ -14,54 +19,83 @@
       }
     },
     {
-      "id": "steam-night-forge",
-      "name": "Night Forge",
-      "pitch": "Forja noturna tipo launcher: aço frio e ciano contido.",
-      "fonts": { "display": "Space Grotesk", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
-      "colors": {
-        "bg": "#0e141b", "panel": "#16202a", "elev": "#1e2b38", "text": "#e7eef6",
-        "muted": "#8aa0b5", "accent": "#66c0f4", "accent2": "#1b2838", "line": "#2a3a4a",
-        "ok": "#5bae6c", "danger": "#e05a5a"
-      }
-    },
-    {
-      "id": "epic-void-citadel",
-      "name": "Void Citadel",
-      "pitch": "Cidadela escura com lima elétrica.",
-      "fonts": { "display": "Syne", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
-      "colors": {
-        "bg": "#0b0d0c", "panel": "#141816", "elev": "#1c221e", "text": "#f2f5f0",
-        "muted": "#8d988f", "accent": "#b6ff3b", "accent2": "#2a3328", "line": "#2c352f",
-        "ok": "#8fd14f", "danger": "#ff6b4a"
-      }
-    },
-    {
-      "id": "garena-ember",
-      "name": "Garena Ember",
-      "pitch": "Cliente de guerra: navy e laranja de brasa.",
-      "fonts": { "display": "Archivo Black", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
-      "colors": {
-        "bg": "#0a1220", "panel": "#122038", "elev": "#1a2c4a", "text": "#f7f3ec",
-        "muted": "#93a4c0", "accent": "#ff7a18", "accent2": "#ffd39a", "line": "#243656",
-        "ok": "#4caf82", "danger": "#ff4d4d"
-      }
-    },
-    {
-      "id": "rgc-copper",
-      "name": "RGC Copper Ranked",
-      "pitch": "Ranked antigo: cobre oxidado e ouro de temporada.",
+      "id": "ranked-copper-wire",
+      "name": "Copper Wire Ranked",
+      "family": "Cliente ranked",
+      "pitch": "Espírito de season antiga: cobre de fio, ouro de temporada e HUD seco — sem nostalgia barata.",
+      "mood": "Competitivo · ritual · ladder",
       "fonts": { "display": "Oswald", "ui": "IBM Plex Mono", "mono": "IBM Plex Mono" },
+      "atmosphere": "grain-warm",
       "colors": {
-        "bg": "#100e0c", "panel": "#1a1612", "elev": "#261f18", "text": "#f0e6d8",
-        "muted": "#a89984", "accent": "#c47a3a", "accent2": "#e0b45a", "line": "#3a3026",
+        "bg": "#0f0c0a", "panel": "#1a1510", "elev": "#261e16", "text": "#f2e8d9",
+        "muted": "#a89882", "accent": "#c8793a", "accent2": "#e0b45a", "line": "#3a3024",
         "ok": "#7d9b5a", "danger": "#d65a45"
       }
     },
     {
+      "id": "ember-war-room",
+      "name": "Ember War Room",
+      "family": "Sala de guerra",
+      "pitch": "Navy de operação e laranja de brasa. Cliente de combate, tipografia grossa, zero enfeite.",
+      "mood": "Guerra · foco · clutch",
+      "fonts": { "display": "Archivo Black", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "atmosphere": "scan-navy",
+      "colors": {
+        "bg": "#08101c", "panel": "#101c32", "elev": "#182848", "text": "#f7f3ec",
+        "muted": "#8fa3c0", "accent": "#ff7a18", "accent2": "#ffd09a", "line": "#243656",
+        "ok": "#4caf82", "danger": "#ff4d4d"
+      }
+    },
+    {
+      "id": "dockyard-steel",
+      "name": "Dockyard Steel",
+      "family": "Launcher industrial",
+      "pitch": "Aço de doca e ciano contido. Biblioteca de jogos sem brilho plástico — só densidade.",
+      "mood": "Sócio · biblioteca · confiança",
+      "fonts": { "display": "Space Grotesk", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "atmosphere": "mesh-cool",
+      "colors": {
+        "bg": "#0c1218", "panel": "#152028", "elev": "#1d2b36", "text": "#e7eef6",
+        "muted": "#879eb3", "accent": "#5eb8e8", "accent2": "#243444", "line": "#2a3a48",
+        "ok": "#5bae6c", "danger": "#e05a5a"
+      }
+    },
+    {
+      "id": "storefront-volt",
+      "name": "Storefront Volt",
+      "family": "Vitrine elétrica",
+      "pitch": "Preto de loja e lima de voltagem. Vitrine agressiva que vende a partida, não o UI kit.",
+      "mood": "Lançamento · punch · moderno",
+      "fonts": { "display": "Syne", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "atmosphere": "volt-grid",
+      "colors": {
+        "bg": "#090b0a", "panel": "#121614", "elev": "#1a211c", "text": "#f1f5ee",
+        "muted": "#8a958c", "accent": "#b6ff3b", "accent2": "#2a3328", "line": "#2a342e",
+        "ok": "#8fd14f", "danger": "#ff6b4a"
+      }
+    },
+    {
+      "id": "tunnel-mesh",
+      "name": "Tunnel Mesh",
+      "family": "Rede peer",
+      "pitch": "Verde de túnel e cinza de cabo. Sensação de sala LAN privada — conexão antes do show.",
+      "mood": "Peer · LAN · direto",
+      "fonts": { "display": "IBM Plex Mono", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "atmosphere": "mesh-green",
+      "colors": {
+        "bg": "#0a0e0c", "panel": "#121a16", "elev": "#1a2620", "text": "#e8f2ec",
+        "muted": "#7f9688", "accent": "#3ecf8e", "accent2": "#c8e6d4", "line": "#2a3a32",
+        "ok": "#3ecf8e", "danger": "#e85a5a"
+      }
+    },
+    {
       "id": "kof-blood-moon",
-      "name": "Blood Moon KOF",
-      "pitch": "Preto, vermelho arterial e osso.",
+      "name": "Blood Moon Ring",
+      "family": "KOF",
+      "pitch": "Ringue sob lua de sangue: preto, vermelho arterial e osso. Feito para KOF 2002.",
+      "mood": "Brutal · iconic · fight",
       "fonts": { "display": "Oswald", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "atmosphere": "blood-vignette",
       "colors": {
         "bg": "#090606", "panel": "#160c0c", "elev": "#241212", "text": "#f6ece8",
         "muted": "#b09898", "accent": "#c4122f", "accent2": "#f0d7c8", "line": "#3a2020",
@@ -69,21 +103,13 @@
       }
     },
     {
-      "id": "sp-neon-alley",
-      "name": "São Paulo Neon Alley",
-      "pitch": "Asfalto, neon de fachada e teal de chuva.",
-      "fonts": { "display": "Syne", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
-      "colors": {
-        "bg": "#0b0c10", "panel": "#14161f", "elev": "#1d2030", "text": "#f5f2ff",
-        "muted": "#9aa0b8", "accent": "#ff2d95", "accent2": "#20d3c8", "line": "#2b3045",
-        "ok": "#2ee6a6", "danger": "#ff5e5e"
-      }
-    },
-    {
       "id": "crt-phosphor",
       "name": "CRT Phosphor",
-      "pitch": "Verde de tubo e preto absoluto.",
+      "family": "Tube",
+      "pitch": "Monitor de tubo: verde fosforescente, scanline e preto absoluto. Lab e alma de arcade.",
+      "mood": "Retro · lab · puro",
       "fonts": { "display": "IBM Plex Mono", "ui": "IBM Plex Mono", "mono": "IBM Plex Mono" },
+      "atmosphere": "scanline-green",
       "colors": {
         "bg": "#020402", "panel": "#071107", "elev": "#0d1c0d", "text": "#b6ffb0",
         "muted": "#5f8f5a", "accent": "#39ff14", "accent2": "#144d12", "line": "#1c331c",
@@ -93,32 +119,41 @@
     {
       "id": "championship-navy",
       "name": "Championship Navy",
-      "pitch": "Torneio: navy, ouro e branco.",
+      "family": "Broadcast",
+      "pitch": "Transmissão de torneio: navy de estúdio, ouro de medalha, branco de placar.",
+      "mood": "Oficial · torneio · TV",
       "fonts": { "display": "Oswald", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "atmosphere": "broadcast-glow",
       "colors": {
-        "bg": "#07111f", "panel": "#0f1c33", "elev": "#17304f", "text": "#f7f8fb",
+        "bg": "#06101c", "panel": "#0e1a30", "elev": "#162c4a", "text": "#f7f8fb",
         "muted": "#93a6c2", "accent": "#d4af37", "accent2": "#ffffff", "line": "#274063",
         "ok": "#3ecf8e", "danger": "#e45757"
       }
     },
     {
-      "id": "fight-club-concrete",
-      "name": "Fight Club Concrete",
-      "pitch": "Concreto, fita zebrada e ferrugem.",
+      "id": "fight-concrete",
+      "name": "Fight Concrete",
+      "family": "Porão",
+      "pitch": "Concreto, fita de alerta e ferrugem. Arena suja onde o ELO importa mais que o glow.",
+      "mood": "Underground · cru · pesado",
       "fonts": { "display": "Archivo Black", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "atmosphere": "concrete-noise",
       "colors": {
-        "bg": "#161513", "panel": "#22201c", "elev": "#2e2b26", "text": "#f2efe8",
+        "bg": "#141311", "panel": "#201e1a", "elev": "#2c2924", "text": "#f2efe8",
         "muted": "#a39e93", "accent": "#f0c400", "accent2": "#b54a2a", "line": "#3f3b34",
         "ok": "#8fbf4a", "danger": "#ff5533"
       }
     },
     {
-      "id": "ice-arena",
-      "name": "Ice Arena",
-      "pitch": "Gelo azul, branco frio e aço.",
+      "id": "ice-rail",
+      "name": "Ice Rail",
+      "family": "Arena fria",
+      "pitch": "Trilho de gelo e aço. Clareza cirúrgica para ler fila, RTT e stake sem ruído.",
+      "mood": "Frio · preciso · limpo",
       "fonts": { "display": "Space Grotesk", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "atmosphere": "frost",
       "colors": {
-        "bg": "#0a141c", "panel": "#122230", "elev": "#1a3144", "text": "#eef7ff",
+        "bg": "#08141c", "panel": "#102230", "elev": "#183144", "text": "#eef7ff",
         "muted": "#8fb0c6", "accent": "#7fd3ff", "accent2": "#d9ecf8", "line": "#27485e",
         "ok": "#5ad0b0", "danger": "#ff6d7a"
       }
@@ -126,41 +161,53 @@
     {
       "id": "desert-outlaw",
       "name": "Desert Outlaw",
-      "pitch": "Areia, couro e sombra.",
+      "family": "Sol duro",
+      "pitch": "Areia, couro e sombra de meio-dia. Duelo sob calor — tipografia que corta.",
+      "mood": "Hostil · open · western-arcade",
       "fonts": { "display": "Oswald", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "atmosphere": "heat-haze",
       "colors": {
-        "bg": "#1a140e", "panel": "#271d14", "elev": "#35281c", "text": "#f6ead7",
+        "bg": "#18120c", "panel": "#241c14", "elev": "#32261a", "text": "#f6ead7",
         "muted": "#b8a286", "accent": "#e39b3a", "accent2": "#8b5a2b", "line": "#4a3a28",
         "ok": "#9cba5a", "danger": "#d94c3b"
       }
     },
     {
-      "id": "circuit-board",
-      "name": "Circuit Board",
-      "pitch": "PCB: verde, prata e LED âmbar.",
+      "id": "circuit-amber",
+      "name": "Circuit Amber",
+      "family": "PCB",
+      "pitch": "Verde de placa, prata de solda e LED âmbar. O fliperama como máquina, não como app.",
+      "mood": "Tech · host · engenharia",
       "fonts": { "display": "IBM Plex Mono", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "atmosphere": "pcb",
       "colors": {
-        "bg": "#06110a", "panel": "#0d1c12", "elev": "#142a1b", "text": "#e7f5ea",
+        "bg": "#05100a", "panel": "#0c1a12", "elev": "#13281a", "text": "#e7f5ea",
         "muted": "#7fa38a", "accent": "#ffb000", "accent2": "#9ad0aa", "line": "#234530",
         "ok": "#52d68a", "danger": "#ff5c5c"
       }
     },
     {
-      "id": "vinyl-90s",
-      "name": "Vinyl 90s Cabinet",
-      "pitch": "Vermelho laminado e bege de botão.",
+      "id": "vinyl-redline",
+      "name": "Vinyl Redline",
+      "family": "90s cabinet",
+      "pitch": "Laminado vermelho de fliperama 90s e bege de botão. Nostalgia de salão, não de meme.",
+      "mood": "Nostalgia · salão · físico",
       "fonts": { "display": "Archivo Black", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "atmosphere": "vinyl-shine",
       "colors": {
-        "bg": "#1b0d10", "panel": "#2a1218", "elev": "#3a1a22", "text": "#fff4e8",
+        "bg": "#180c10", "panel": "#261218", "elev": "#361a22", "text": "#fff4e8",
         "muted": "#c4a49a", "accent": "#e31c25", "accent2": "#e8d2b0", "line": "#52232d",
         "ok": "#5cbc6a", "danger": "#ff4040"
       }
     },
     {
-      "id": "obsidian-pro",
-      "name": "Matte Obsidian Pro",
-      "pitch": "Preto fosco e um fio ciano.",
+      "id": "obsidian-signal",
+      "name": "Obsidian Signal",
+      "family": "Pro matte",
+      "pitch": "Preto fosco e um fio de sinal ciano. Minimalismo hardcore para operação séria.",
+      "mood": "Pro · silêncio · elite",
       "fonts": { "display": "Syne", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "atmosphere": "matte",
       "colors": {
         "bg": "#050505", "panel": "#0f0f0f", "elev": "#171717", "text": "#f2f2f2",
         "muted": "#8a8a8a", "accent": "#00e5ff", "accent2": "#222222", "line": "#2a2a2a",
@@ -168,34 +215,29 @@
       }
     },
     {
-      "id": "broadcast-ticker",
-      "name": "Broadcast Ticker",
-      "pitch": "Placar de TV: azul, vermelho e branco.",
+      "id": "broadcast-urgency",
+      "name": "Broadcast Urgency",
+      "family": "Ticker",
+      "pitch": "Azul de estúdio e vermelho de urgência. Placar que parece transmissão ao vivo.",
+      "mood": "Live · urgência · score",
       "fonts": { "display": "Oswald", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "atmosphere": "ticker",
       "colors": {
-        "bg": "#041528", "panel": "#0a2340", "elev": "#12345a", "text": "#ffffff",
+        "bg": "#031224", "panel": "#082038", "elev": "#103454", "text": "#ffffff",
         "muted": "#9bb4d0", "accent": "#ff2a2a", "accent2": "#f5c518", "line": "#1e4a78",
         "ok": "#2ecc71", "danger": "#ff2a2a"
       }
     },
     {
-      "id": "pixel-concrete",
-      "name": "Pixel Concrete",
-      "pitch": "Brutalismo 1-bit com magenta seco.",
-      "fonts": { "display": "IBM Plex Mono", "ui": "IBM Plex Mono", "mono": "IBM Plex Mono" },
-      "colors": {
-        "bg": "#1c1c1c", "panel": "#2a2a2a", "elev": "#363636", "text": "#f0f0f0",
-        "muted": "#9c9c9c", "accent": "#e11d8b", "accent2": "#cfcfcf", "line": "#484848",
-        "ok": "#b8ff57", "danger": "#ff4f4f"
-      }
-    },
-    {
       "id": "lantern-district",
       "name": "Lantern District",
-      "pitch": "Asfalto, âmbar de lanterna e noite índigo.",
+      "family": "Noite molhada",
+      "pitch": "Asfalto, âmbar de lanterna e índigo de chuva. Atmosfera de cidade após o corujão.",
+      "mood": "Noturno · chuva · corujão",
       "fonts": { "display": "Syne", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "atmosphere": "rain-amber",
       "colors": {
-        "bg": "#0b0f1a", "panel": "#141a2b", "elev": "#1d2540", "text": "#f3e9d7",
+        "bg": "#0a0e18", "panel": "#12182a", "elev": "#1b2440", "text": "#f3e9d7",
         "muted": "#9aa3bf", "accent": "#ffb347", "accent2": "#5b6cff", "line": "#2a3350",
         "ok": "#6fd3a0", "danger": "#ff6b6b"
       }
@@ -203,10 +245,13 @@
     {
       "id": "titanium-hangar",
       "name": "Titanium Hangar",
-      "pitch": "Titânio, laranja de alerta e azul de baía.",
+      "family": "Ops militar",
+      "pitch": "Hangar: titânio, laranja de alerta e azul de baía. Capacidade e fila com cara de frota.",
+      "mood": "Ops · frota · escala",
       "fonts": { "display": "Oswald", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "atmosphere": "hangar",
       "colors": {
-        "bg": "#12151a", "panel": "#1b2129", "elev": "#262e3a", "text": "#eef2f7",
+        "bg": "#10141a", "panel": "#1a2129", "elev": "#252e3a", "text": "#eef2f7",
         "muted": "#97a3b5", "accent": "#ff6a00", "accent2": "#4aa3ff", "line": "#354052",
         "ok": "#4fd18b", "danger": "#ff4b4b"
       }
@@ -214,12 +259,99 @@
     {
       "id": "cerrado-horizon",
       "name": "Cerrado Horizon",
-      "pitch": "Azul de fim de tarde e laranja de cerrado.",
+      "family": "Brasil",
+      "pitch": "Fim de tarde no cerrado: azul profundo e laranja de horizonte. Identidade BR sem clichê verde-amarelo.",
+      "mood": "BR · horizonte · calor",
       "fonts": { "display": "Syne", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "atmosphere": "horizon",
       "colors": {
-        "bg": "#0c1630", "panel": "#152447", "elev": "#1e3260", "text": "#fff5e8",
+        "bg": "#0a142c", "panel": "#132244", "elev": "#1c325e", "text": "#fff5e8",
         "muted": "#a9b6d6", "accent": "#ff7a3c", "accent2": "#ffc27a", "line": "#2c4478",
         "ok": "#61d395", "danger": "#ff5a5a"
+      }
+    },
+    {
+      "id": "midnight-operator",
+      "name": "Midnight Operator",
+      "family": "SOC",
+      "pitch": "Console de operador: azul-petróleo, âmbar de cursor e tipografia mono. Admin e lobby no mesmo idioma.",
+      "mood": "Operação · 24/7 · rigor",
+      "fonts": { "display": "IBM Plex Mono", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "atmosphere": "operator",
+      "colors": {
+        "bg": "#060c12", "panel": "#0e1822", "elev": "#162432", "text": "#dce8f2",
+        "muted": "#7e93a8", "accent": "#f0a202", "accent2": "#3d8bfd", "line": "#243848",
+        "ok": "#3ecf8e", "danger": "#ff5a5a"
+      }
+    },
+    {
+      "id": "gold-ticket",
+      "name": "Gold Ticket",
+      "family": "VIP",
+      "pitch": "Ingresso dourado sobre veludo quase-preto. Sensação de sala reservada e stake alto.",
+      "mood": "VIP · stake · exclusivo",
+      "fonts": { "display": "Oswald", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "atmosphere": "velvet-gold",
+      "colors": {
+        "bg": "#0c0a08", "panel": "#18140f", "elev": "#241e16", "text": "#f8f0dc",
+        "muted": "#b0a080", "accent": "#d4af37", "accent2": "#8b6914", "line": "#3a3224",
+        "ok": "#7cbc5a", "danger": "#c94a4a"
+      }
+    },
+    {
+      "id": "rainforest-cabinet",
+      "name": "Rainforest Cabinet",
+      "family": "Brasil profundo",
+      "pitch": "Verde-musgo de mata e ouro de seiva. Fliperama tropical sem parecer tema de Carnaval genérico.",
+      "mood": "Orgânico · denso · BR",
+      "fonts": { "display": "Syne", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "atmosphere": "canopy",
+      "colors": {
+        "bg": "#07110c", "panel": "#0f1c14", "elev": "#172a1c", "text": "#e8f5e9",
+        "muted": "#7fa089", "accent": "#c9a227", "accent2": "#2d6a4f", "line": "#264032",
+        "ok": "#52b788", "danger": "#e76f51"
+      }
+    },
+    {
+      "id": "subway-token",
+      "name": "Subway Token",
+      "family": "Metrô",
+      "pitch": "Azul de estação, laranja de token e metal de catraca. Fila e sala com ritmo de horário de pico.",
+      "mood": "Urbano · fila · ritmo",
+      "fonts": { "display": "Oswald", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "atmosphere": "subway",
+      "colors": {
+        "bg": "#0a1018", "panel": "#141c28", "elev": "#1e2a3a", "text": "#eef2f8",
+        "muted": "#8fa0b8", "accent": "#ff8c1a", "accent2": "#4a90d9", "line": "#2e3c50",
+        "ok": "#4caf82", "danger": "#e74c3c"
+      }
+    },
+    {
+      "id": "infrared-ops",
+      "name": "Infrared Ops",
+      "family": "Térmico",
+      "pitch": "Preto térmico e vermelho infravermelho. Review, disputa e evidência com cara de forense.",
+      "mood": "Forense · review · tensão",
+      "fonts": { "display": "IBM Plex Mono", "ui": "Barlow Condensed", "mono": "IBM Plex Mono" },
+      "atmosphere": "thermal",
+      "colors": {
+        "bg": "#0a0606", "panel": "#160c0c", "elev": "#221010", "text": "#f5e8e8",
+        "muted": "#a88888", "accent": "#ff3b1f", "accent2": "#ff9f1c", "line": "#3a2020",
+        "ok": "#2ec4b6", "danger": "#ff3b1f"
+      }
+    },
+    {
+      "id": "graphite-league",
+      "name": "Graphite League",
+      "family": "Liga",
+      "pitch": "Grafite de ranking e azul de liga. Sóbrio o bastante para empresa; vivo o bastante para KOF.",
+      "mood": "Corporativo-gamer · liga · respeito",
+      "fonts": { "display": "Space Grotesk", "ui": "Space Grotesk", "mono": "IBM Plex Mono" },
+      "atmosphere": "league",
+      "colors": {
+        "bg": "#0e1116", "panel": "#171c24", "elev": "#222933", "text": "#e9eef5",
+        "muted": "#8b96a8", "accent": "#3d8bfd", "accent2": "#a8b4c4", "line": "#303848",
+        "ok": "#3ecf8e", "danger": "#e45757"
       }
     }
   ]
