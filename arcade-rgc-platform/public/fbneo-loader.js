@@ -536,8 +536,19 @@ export class FBNeoLoader {
     setTimeout(() => this.input(button, 0, source), 100);
   }
   _bindKeys(target) {
+    // F1–F12 nunca devem chegar ao Chrome (Help / novas abas).
+    const isFunctionKey = (code) => /^F([1-9]|1[0-2])$/.test(code);
     const down = (e) => {
       if (isConfiguring()) return;
+      if (
+        this.running &&
+        (isFunctionKey(e.code) || e.key === "F1" || /^F\d+$/.test(e.key || ""))
+      ) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        // F1/F2 no browser NÃO são ficha — ficha é Y / botão. Ignora.
+        return;
+      }
       const b = getSettings().keyboard[e.code];
       if (
         b === undefined ||
@@ -551,6 +562,11 @@ export class FBNeoLoader {
     };
     const up = (e) => {
       if (isConfiguring()) return;
+      if (this.running && isFunctionKey(e.code)) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return;
+      }
       const b = getSettings().keyboard[e.code];
       if (b !== undefined) {
         e.preventDefault();

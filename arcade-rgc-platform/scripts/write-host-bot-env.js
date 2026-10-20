@@ -91,8 +91,8 @@ const lines = [
   "HOST_BOT_VIDEO_DRIVER=gdi",
   "HOST_BOT_VERBOSE=1",
   "HOST_BOT_INPUT=auto",
-  "ARENA_INPUT_FOCUS=1",
-  "# Input: keybd_event + foco suave (throttle). Captura: desktop-crop DWM.",
+  "ARENA_INPUT_FOCUS=0",
+  "# Input: só PostMessage no HWND do RetroArch (nunca keybd_event → não abre abas no Chrome)",
   "",
 ];
 

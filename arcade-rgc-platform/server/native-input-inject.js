@@ -1,7 +1,7 @@
 /**
  * Injeta teclas no RetroArch/FBNeo (Fase 4c).
- * Windows: PowerShell keybd_event + foco suave (throttle) + PostMessage.
- * Batch de fichas num único comando (menos thrash → RA não fecha).
+ * Windows: APENAS PostMessage/SendMessage no HWND.
+ * keybd_event está proibido — vazava F1/F2 para o Chrome (Help/abas).
  */
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -65,7 +65,12 @@ export function createInputInjector(opts = {}) {
     String(env.HOST_BOT_INPUT || "auto").toLowerCase() !== "0";
 
   if (!enabled) {
-    return { apply() {}, stop() {}, backend: "off", batchCredits: async () => {} };
+    return {
+      apply() {},
+      stop() {},
+      backend: "off",
+      batchCredits: async () => {},
+    };
   }
 
   if (process.platform === "win32") {
@@ -82,49 +87,41 @@ export function createInputInjector(opts = {}) {
   };
 }
 
-/** Batch one-shot: 1 foco + várias teclas (fichas). */
+/** Batch one-shot: só HWND (sem keybd_event / sem foco). */
 async function oneShotBatch(hwnd, pulses, holdMs) {
   const h = Number(hwnd) || 0;
   if (h <= 0) return;
   const items = [];
   for (let i = 0; i < pulses; i++) {
-    items.push({ vk: VK.F1, holdMs }); // P1 Select/Coin
-    items.push({ vk: VK.F2, holdMs }); // P2 Select/Coin
+    items.push({ vk: VK.F1, holdMs });
+    items.push({ vk: VK.F2, holdMs });
   }
   const cmd = `
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public class ArenaShot {
-  public const uint KEYUP = 0x0002;
-  [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
-  [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint uCode, uint uMapType);
-  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
-  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int nCmdShow);
-  [DllImport("user32.dll")] public static extern bool AllowSetForegroundWindow(int dwProcessId);
-  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
   public const uint WM_KEYDOWN = 0x0100;
   public const uint WM_KEYUP = 0x0101;
+  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
+  [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
+  [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint uCode, uint uMapType);
 }
 "@
 $h = [IntPtr]${h}
-[ArenaShot]::AllowSetForegroundWindow(-1) | Out-Null
-[ArenaShot]::ShowWindow($h, 5) | Out-Null
-[ArenaShot]::SetForegroundWindow($h) | Out-Null
-Start-Sleep -Milliseconds 40
 $batch = ConvertFrom-Json '${JSON.stringify(items)}'
 foreach ($item in $batch) {
-  $vk = [byte]$item.vk
+  $vk = [uint32]$item.vk
   $hold = [int]$item.holdMs
-  $scan = [byte]([ArenaShot]::MapVirtualKey([uint32]$vk, 0) -band 0xFF)
+  $scan = [ArenaShot]::MapVirtualKey($vk, 0)
   $lp = [int64](1 -bor ([int64]$scan -shl 16))
   [ArenaShot]::PostMessage($h, [ArenaShot]::WM_KEYDOWN, [IntPtr]$vk, [IntPtr]$lp) | Out-Null
-  [ArenaShot]::keybd_event($vk, $scan, 0, [UIntPtr]::Zero)
+  [ArenaShot]::SendMessage($h, [ArenaShot]::WM_KEYDOWN, [IntPtr]$vk, [IntPtr]$lp) | Out-Null
   Start-Sleep -Milliseconds $hold
   $lpUp = $lp -bor (1 -shl 30) -bor (1 -shl 31)
   [ArenaShot]::PostMessage($h, [ArenaShot]::WM_KEYUP, [IntPtr]$vk, [IntPtr]$lpUp) | Out-Null
-  [ArenaShot]::keybd_event($vk, $scan, [ArenaShot]::KEYUP, [UIntPtr]::Zero)
-  Start-Sleep -Milliseconds 140
+  [ArenaShot]::SendMessage($h, [ArenaShot]::WM_KEYUP, [IntPtr]$vk, [IntPtr]$lpUp) | Out-Null
+  Start-Sleep -Milliseconds 150
 }
 `;
   await execFileAsync(
@@ -136,8 +133,6 @@ foreach ($item in $batch) {
 
 function createWindowsInjector(hwnd, env = process.env) {
   const script = path.join(root, "scripts/host-bot-lua/host-bot-input-win.ps1");
-  const focus =
-    String(env.ARENA_INPUT_FOCUS || "1").toLowerCase() === "0" ? "0" : "1";
   const child = spawn(
     "powershell.exe",
     ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script],
@@ -147,7 +142,7 @@ function createWindowsInjector(hwnd, env = process.env) {
       env: {
         ...env,
         ...(hwnd ? { ARENA_HWND: String(hwnd) } : {}),
-        ARENA_INPUT_FOCUS: focus,
+        ARENA_INPUT_FOCUS: "0",
       },
     },
   );
@@ -172,9 +167,10 @@ function createWindowsInjector(hwnd, env = process.env) {
   }
 
   return {
-    backend: "win-keybd-soft",
+    backend: "win-hwnd-only",
     hwnd: hwnd || null,
     apply(slot, button, value) {
+      if (!hwnd) return;
       const mapped = mapArenaInput(slot, button, value);
       const vk = vkForKey(mapped.key);
       if (vk == null) return;
@@ -182,7 +178,7 @@ function createWindowsInjector(hwnd, env = process.env) {
         vk,
         down: mapped.value === 1 ? 1 : 0,
         key: mapped.key,
-        hwnd: hwnd || undefined,
+        hwnd,
         ext: EXTENDED_KEYS.has(mapped.key) ? 1 : 0,
       });
     },
@@ -192,14 +188,14 @@ function createWindowsInjector(hwnd, env = process.env) {
       this.apply(slot, button, 0);
     },
     async batchCredits(pulses = 2, holdMs = 200) {
-      // Prefer bridge batch (mesmo processo PS) — F1/F2 = Select/Coin Neo Geo
+      if (!hwnd) return;
       if (!dead && child.stdin?.writable) {
         const batch = [];
         for (let i = 0; i < pulses; i++) {
           batch.push({ vk: VK.F1, holdMs, ext: 0 });
           batch.push({ vk: VK.F2, holdMs, ext: 0 });
         }
-        send({ batch, hwnd: hwnd || undefined });
+        send({ batch, hwnd });
         await new Promise((r) => setTimeout(r, pulses * 2 * (holdMs + 180)));
         return;
       }
@@ -220,7 +216,7 @@ function createWindowsInjector(hwnd, env = process.env) {
   };
 }
 
-/** Insere fichas: 2× P1(F1) + 2× P2(F2) num batch estável. */
+/** Insere fichas: 2× P1(F1) + 2× P2(F2) só no HWND do RetroArch. */
 export async function injectCabinetCredits(
   input,
   { pulses = 2, gapMs = 220, holdMs = 200 } = {},
