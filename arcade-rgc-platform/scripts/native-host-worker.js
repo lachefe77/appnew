@@ -506,16 +506,13 @@ async function handle(msg) {
         },
       });
       emitSample();
-      // Uma só semente de fichas (F1/F2). Flood de Y reiniciava o attract.
+      // Duelo aceite → exactamente 1 ficha P1 (Y) + 1 ficha P2 (H). Sem F-keys.
       if (state.input && state.game?.ok && !state.creditsSeeded) {
         state.pendingCredits = true;
         const seed = async () => {
-          await new Promise((r) => setTimeout(r, 2800));
+          await new Promise((r) => setTimeout(r, 2500));
           if (!gameAlive()) return;
-          await injectCabinetCredits(state.input, {
-            pulses: 2,
-            holdMs: 220,
-          });
+          await injectCabinetCredits(state.input);
           state.creditsSeeded = true;
         };
         seed()
@@ -532,8 +529,8 @@ async function handle(msg) {
               event: "progress",
               stage: "cabinet-credits",
               detail: {
-                pulses: "2+2",
-                keys: "F1/F2",
+                pulses: "1+1",
+                keys: "Y/H",
                 backend: state.input?.backend,
                 alive: true,
               },
@@ -557,16 +554,7 @@ async function handle(msg) {
       state.lastMapped = mapped;
       if (mapped.button === 3 && mapped.value === 1) {
         state.starts.add(mapped.slot);
-        // No 1.º START de cada slot: 1 ficha só desse jogador (não reinicia attract).
-        if (
-          state.input &&
-          gameAlive() &&
-          state.startCoin &&
-          !state.startCoin.has(mapped.slot)
-        ) {
-          state.startCoin.add(mapped.slot);
-          state.input.pulse(mapped.slot, 2, 220).catch(() => {});
-        }
+        // Fichas já foram 1+1 no ready — não reinjectar no START (evita attract loop).
       }
       // SendInput (+ foco breve) — PostMessage sozinho o DirectInput ignora.
       try {

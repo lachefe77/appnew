@@ -92,7 +92,7 @@ const lines = [
   "HOST_BOT_VERBOSE=1",
   "HOST_BOT_INPUT=auto",
   "ARENA_INPUT_FOCUS=0",
-  "# Input: só PostMessage no HWND do RetroArch (nunca keybd_event → não abre abas no Chrome)",
+  "# Ficha = Y (P1) / H (P2). Auto 1+1 ao aceitar duelo. Sem F1–F12.",
   "",
 ];
 

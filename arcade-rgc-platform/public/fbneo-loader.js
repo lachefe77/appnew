@@ -111,22 +111,18 @@ export class FBNeoLoader {
     const coinButton = button("FICHA (Y)", () => {
       this.focused = true;
       this.pulse(2);
-      this.status(
-        `P${this.slot}: ficha enviada. Olha CREDIT no RetroArch (não spamar — 1× basta).`,
-      );
+      this.status(`P${this.slot}: ficha (Y). No duelo o servidor já mete 1+1 automático.`);
     });
     coinButton.disabled = false;
     coinButton.title = this.hosted
-      ? "1 ficha (Y). Servidor já mete 2 ao iniciar. Não spamar — reinicia o attract."
+      ? "Tecla Y. No desafio o servidor já põe 1 ficha por jogador ao iniciar."
       : "Inserir ficha (Y)";
     const startButton = button("START", () => {
       this.focused = true;
       this.pulse(3);
-      this.status(
-        `P${this.slot}: START. Se CREDIT > 0, escolhe personagem. Os dois apertam START.`,
-      );
+      this.status(`P${this.slot}: START — os dois jogadores. CREDIT deve ser > 0.`);
     });
-    startButton.title = "Enter / START — só depois do CREDIT subir";
+    startButton.title = "Enter / START";
     button("CONTROLES", () => {
       this.releaseAll();
       openControls();
@@ -291,7 +287,7 @@ export class FBNeoLoader {
       help.textContent =
         `Controles: ${[4, 5, 6, 7].map(label).join(" ")} = movimento • ${[0, 8, 1, 9].map(label).join(" ")} = golpes • ${label(3)} = Start • ${label(2)} = Ficha. ` +
         (this.hosted
-          ? "Clique no vídeo → teclar. 1× FICHA se CREDIT=0; depois START. Desliga overlay Discord no RetroArch. Som = janela RA."
+          ? "Ficha = Y (1+1 automático ao aceitar o duelo). Depois START nos dois. Som = janela RetroArch."
           : "Amistoso local: ambos confirmam VENCI/PERDI.");
     };
     updateHelp();
@@ -425,7 +421,7 @@ export class FBNeoLoader {
       this.lossButton.disabled = false;
     }
     this.status(
-      `P${this.slot} conectado. ${this.hosted ? "Jogo no servidor. Y ou FICHA = crédito; depois START." : "Y ou FICHA = crédito; depois START."} Créditos de demonstração.`,
+      `P${this.slot} conectado. ${this.hosted ? "Jogo no servidor. 1+1 fichas automáticas (Y); pressione START." : "Y = ficha; depois START."} Créditos de demonstração.`,
     );
     this.frame?.contentWindow.arenaEmulator?.resume();
     this.maybeShowGame();

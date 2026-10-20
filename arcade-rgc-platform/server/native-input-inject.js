@@ -1,7 +1,7 @@
 /**
  * Injeta teclas no RetroArch/FBNeo (Fase 4c).
- * Windows: APENAS PostMessage/SendMessage no HWND.
- * keybd_event está proibido — vazava F1/F2 para o Chrome (Help/abas).
+ * - Jogabilidade: PostMessage no HWND (não vaza para o Chrome)
+ * - Fichas auto (1× P1 + 1× P2): um foco breve + keybd_event Y/H (sem F1–F12)
  */
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -25,8 +25,6 @@ export const VK = Object.freeze({
   KeyS: 0x53,
   KeyY: 0x59,
   KeyH: 0x48,
-  F1: 0x70,
-  F2: 0x71,
   KeyU: 0x55,
   KeyI: 0x49,
   KeyJ: 0x4a,
@@ -87,48 +85,54 @@ export function createInputInjector(opts = {}) {
   };
 }
 
-/** Batch one-shot: só HWND (sem keybd_event / sem foco). */
-async function oneShotBatch(hwnd, pulses, holdMs) {
+/**
+ * Exactamente 1 ficha P1 (Y) + 1 ficha P2 (H) no RetroArch.
+ * Foco breve só neste momento — sem F1/F12.
+ */
+export async function seedDuelCredits(hwnd, { holdMs = 200, gapMs = 250 } = {}) {
   const h = Number(hwnd) || 0;
-  if (h <= 0) return;
-  const items = [];
-  for (let i = 0; i < pulses; i++) {
-    items.push({ vk: VK.F1, holdMs });
-    items.push({ vk: VK.F2, holdMs });
-  }
+  if (h <= 0 || process.platform !== "win32") return { ok: false, reason: "no-hwnd" };
   const cmd = `
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
-public class ArenaShot {
+public class ArenaCoin {
+  public const uint KEYUP = 0x0002;
   public const uint WM_KEYDOWN = 0x0100;
   public const uint WM_KEYUP = 0x0101;
-  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
-  [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
+  [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
   [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint uCode, uint uMapType);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int nCmdShow);
+  [DllImport("user32.dll")] public static extern bool AllowSetForegroundWindow(int dwProcessId);
+  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
 }
 "@
-$h = [IntPtr]${h}
-$batch = ConvertFrom-Json '${JSON.stringify(items)}'
-foreach ($item in $batch) {
-  $vk = [uint32]$item.vk
-  $hold = [int]$item.holdMs
-  $scan = [ArenaShot]::MapVirtualKey($vk, 0)
+function Pulse-Y([IntPtr]$h, [byte]$vk, [int]$hold) {
+  $scan = [byte]([ArenaCoin]::MapVirtualKey([uint32]$vk, 0) -band 0xFF)
   $lp = [int64](1 -bor ([int64]$scan -shl 16))
-  [ArenaShot]::PostMessage($h, [ArenaShot]::WM_KEYDOWN, [IntPtr]$vk, [IntPtr]$lp) | Out-Null
-  [ArenaShot]::SendMessage($h, [ArenaShot]::WM_KEYDOWN, [IntPtr]$vk, [IntPtr]$lp) | Out-Null
+  [ArenaCoin]::PostMessage($h, [ArenaCoin]::WM_KEYDOWN, [IntPtr]$vk, [IntPtr]$lp) | Out-Null
+  [ArenaCoin]::keybd_event($vk, $scan, 0, [UIntPtr]::Zero)
   Start-Sleep -Milliseconds $hold
   $lpUp = $lp -bor (1 -shl 30) -bor (1 -shl 31)
-  [ArenaShot]::PostMessage($h, [ArenaShot]::WM_KEYUP, [IntPtr]$vk, [IntPtr]$lpUp) | Out-Null
-  [ArenaShot]::SendMessage($h, [ArenaShot]::WM_KEYUP, [IntPtr]$vk, [IntPtr]$lpUp) | Out-Null
-  Start-Sleep -Milliseconds 150
+  [ArenaCoin]::PostMessage($h, [ArenaCoin]::WM_KEYUP, [IntPtr]$vk, [IntPtr]$lpUp) | Out-Null
+  [ArenaCoin]::keybd_event($vk, $scan, [ArenaCoin]::KEYUP, [UIntPtr]::Zero)
 }
+$h = [IntPtr]${h}
+[ArenaCoin]::AllowSetForegroundWindow(-1) | Out-Null
+[ArenaCoin]::ShowWindow($h, 5) | Out-Null
+[ArenaCoin]::SetForegroundWindow($h) | Out-Null
+Start-Sleep -Milliseconds 50
+Pulse-Y $h 0x59 ${holdMs}   # Y = P1 coin
+Start-Sleep -Milliseconds ${gapMs}
+Pulse-Y $h 0x48 ${holdMs}   # H = P2 coin
 `;
   await execFileAsync(
     "powershell.exe",
     ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", cmd],
-    { windowsHide: true, timeout: 20000, maxBuffer: 64 * 1024 },
+    { windowsHide: true, timeout: 15000, maxBuffer: 64 * 1024 },
   );
+  return { ok: true, keys: ["Y", "H"], each: 1 };
 }
 
 function createWindowsInjector(hwnd, env = process.env) {
@@ -167,7 +171,7 @@ function createWindowsInjector(hwnd, env = process.env) {
   }
 
   return {
-    backend: "win-hwnd-only",
+    backend: "win-hwnd+coin-y",
     hwnd: hwnd || null,
     apply(slot, button, value) {
       if (!hwnd) return;
@@ -187,19 +191,9 @@ function createWindowsInjector(hwnd, env = process.env) {
       await new Promise((r) => setTimeout(r, holdMs));
       this.apply(slot, button, 0);
     },
-    async batchCredits(pulses = 2, holdMs = 200) {
-      if (!hwnd) return;
-      if (!dead && child.stdin?.writable) {
-        const batch = [];
-        for (let i = 0; i < pulses; i++) {
-          batch.push({ vk: VK.F1, holdMs, ext: 0 });
-          batch.push({ vk: VK.F2, holdMs, ext: 0 });
-        }
-        send({ batch, hwnd });
-        await new Promise((r) => setTimeout(r, pulses * 2 * (holdMs + 180)));
-        return;
-      }
-      await oneShotBatch(hwnd, pulses, holdMs);
+    /** 1 ficha P1 (Y) + 1 ficha P2 (H) — chamado ao aceitar o duelo. */
+    async batchCredits() {
+      return seedDuelCredits(hwnd, { holdMs: 220, gapMs: 280 });
     },
     stop() {
       try {
@@ -216,30 +210,16 @@ function createWindowsInjector(hwnd, env = process.env) {
   };
 }
 
-/** Insere fichas: 2× P1(F1) + 2× P2(F2) só no HWND do RetroArch. */
-export async function injectCabinetCredits(
-  input,
-  { pulses = 2, gapMs = 220, holdMs = 200 } = {},
-) {
+/** Compat: 1+1 fichas (ignora pulses>1 — duelo = uma por lado). */
+export async function injectCabinetCredits(input) {
   if (!input) return;
   if (typeof input.batchCredits === "function") {
-    await input.batchCredits(pulses, holdMs);
+    await input.batchCredits();
     return;
   }
-  for (let i = 0; i < pulses; i++) {
-    if (input.pulse) {
-      await input.pulse(1, 2, holdMs);
-      await new Promise((r) => setTimeout(r, gapMs));
-      await input.pulse(2, 2, holdMs);
-    } else {
-      input.apply?.(1, 2, 1);
-      await new Promise((r) => setTimeout(r, holdMs));
-      input.apply?.(1, 2, 0);
-      await new Promise((r) => setTimeout(r, gapMs));
-      input.apply?.(2, 2, 1);
-      await new Promise((r) => setTimeout(r, holdMs));
-      input.apply?.(2, 2, 0);
-    }
-    await new Promise((r) => setTimeout(r, gapMs));
+  if (input.pulse) {
+    await input.pulse(1, 2, 220);
+    await new Promise((r) => setTimeout(r, 280));
+    await input.pulse(2, 2, 220);
   }
 }

@@ -30,8 +30,7 @@ const KEYS_P1 = Object.freeze({
   1: "KeyA",
   9: "KeyS",
   3: "Enter",
-  // F1 no RetroArch (Select/Coin). Browser continua a usar Y → button 2.
-  2: "F1",
+  2: "KeyY", // Ficha P1 → Select (tecla Y fixa)
 });
 
 /** P2: bloco numérico / teclas alternativas (sem conflito com P1). */
@@ -45,7 +44,7 @@ const KEYS_P2 = Object.freeze({
   1: "KeyJ",
   9: "KeyK",
   3: "NumpadEnter",
-  2: "F2", // Ficha P2 → Select
+  2: "KeyH", // Ficha P2 → Select (auto no duelo; browser P2 também pode Y→button 2)
 });
 
 /** Nomes RetroArch input_playerN_* (appendconfig). */
