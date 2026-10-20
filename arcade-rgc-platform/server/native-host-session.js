@@ -97,6 +97,9 @@ export class NativeHostSession {
       case "sample":
         this.applySample(ev.sample);
         break;
+      case "signal":
+        this.onSignal?.(ev.slot, ev.signal);
+        break;
       case "observation":
         this.onObservation?.(ev.observation || ev);
         break;
@@ -212,7 +215,7 @@ export class NativeHostSession {
     this.manifest = {
       ...(ev.manifest || { engine: "native-stub" }),
       launchMode: this.launch.mode,
-      phase: 1,
+      phase: ev.manifest?.phase ?? 2,
     };
     return { manifest: this.manifest };
   }
@@ -263,15 +266,42 @@ export class NativeHostSession {
     this.send("resetObserver").catch(() => {});
   }
 
-  /** Stub: evidência textual até haver framebuffer/ffmpeg (Fase 2). */
+  /** Evidência Fase 2: PPM 320×240 via frame source (framebuffer FBNeo depois). */
   async captureEvidence(matchId) {
+    const fs = await import("node:fs");
+    const dir = path.join(root, "data", "evidence", String(matchId));
+    fs.mkdirSync(dir, { recursive: true });
+    const name = `frame-${Date.now()}.ppm`;
+    const filePath = path.join(dir, name);
+    const done = new Promise((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(Error("Timeout na evidência nativa.")),
+        5000,
+      );
+      const onLine = (line) => {
+        try {
+          const ev = JSON.parse(line);
+          if (ev.event === "evidence" && ev.path === filePath) {
+            clearTimeout(timer);
+            this._rl?.off("line", onLine);
+            resolve(ev);
+          }
+        } catch {
+          /* keep waiting */
+        }
+      };
+      this._rl?.on("line", onLine);
+    });
+    await this.send("captureEvidence", { path: filePath });
+    await done;
     return {
-      kind: "native-phase1",
+      kind: "native-phase2",
       matchId: String(matchId),
       at: Date.now(),
       sample: this.lastSample,
       mappedInput: this.lastMappedInput,
-      note: "Screenshot nativo entra na fase 2 (framebuffer/ffmpeg).",
+      path: filePath,
+      note: "PPM lab 320p; framebuffer FBNeo/ffmpeg na próxima etapa.",
     };
   }
 

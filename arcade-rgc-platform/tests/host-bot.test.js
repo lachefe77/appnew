@@ -25,6 +25,20 @@ import {
   resolveHostBotBin,
   defaultRetroArchLabConfig,
 } from "../server/native-host-launcher.js";
+import {
+  createFrameSource,
+  paintSyntheticI420,
+  i420ByteLength,
+  NATIVE_FRAME,
+} from "../server/native-frame-source.js";
+import { createNativeMediaBridge } from "../server/native-webrtc.js";
+import { spawn } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 test("capacidade: VPS teste 4GB/2c native recomenda faixa baixa", () => {
   const c = capacityForKnownVps("test4g2c", "native");
@@ -144,6 +158,10 @@ test("normalizeSample + observeSample liquidam sem RASTATE", () => {
 });
 
 test("NativeHostSession stub sobe, peers e para sem Chrome", async () => {
+  const prevPeers = process.env.HOST_BOT_AUTO_PEERS;
+  const prevMedia = process.env.HOST_BOT_MEDIA;
+  process.env.HOST_BOT_AUTO_PEERS = "1";
+  process.env.HOST_BOT_MEDIA = "lab";
   const peers = [];
   const progress = [];
   const session = new NativeHostSession({
@@ -152,22 +170,89 @@ test("NativeHostSession stub sobe, peers e para sem Chrome", async () => {
     onProgress: (stage) => progress.push(stage),
     onFailure: (m) => assert.fail(m),
   });
-  const started = await session.start();
-  assert.equal(started.manifest.engine, "native-stub");
-  assert.equal(started.manifest.phase, 1);
-  assert.ok(progress.includes("boot"));
-  assert.deepEqual(
-    peers.filter((p) => p.state === "connected").map((p) => p.slot).sort(),
-    [1, 2],
+  try {
+    const started = await session.start();
+    assert.equal(started.manifest.engine, "native-stub");
+    assert.equal(started.manifest.phase, 2);
+    assert.ok(progress.includes("boot"));
+    assert.ok(progress.includes("media"));
+    assert.deepEqual(
+      peers.filter((p) => p.state === "connected").map((p) => p.slot).sort(),
+      [1, 2],
+    );
+    await session.input(1, 0, 1);
+    await session.input(1, 0, 0);
+    await session.resume();
+    await session.pause();
+  } finally {
+    await session.stop().catch(() => {});
+    if (prevPeers == null) delete process.env.HOST_BOT_AUTO_PEERS;
+    else process.env.HOST_BOT_AUTO_PEERS = prevPeers;
+    if (prevMedia == null) delete process.env.HOST_BOT_MEDIA;
+    else process.env.HOST_BOT_MEDIA = prevMedia;
+  }
+});
+
+test("frame source 320p I420 + evidência PPM", () => {
+  assert.equal(NATIVE_FRAME.width, 320);
+  assert.equal(NATIVE_FRAME.height, 240);
+  const buf = Buffer.alloc(i420ByteLength());
+  paintSyntheticI420(buf, 7);
+  assert.ok(buf[0] >= 0);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "arena-frame-"));
+  const file = path.join(dir, "t.ppm");
+  const src = createFrameSource({ onFrame: () => {} });
+  src.writePpmEvidence(file, 3);
+  const raw = fs.readFileSync(file);
+  assert.ok(raw.toString("ascii", 0, 2) === "P6");
+  src.stop();
+});
+
+test("Fase 2 lab: viewer-ready → offer → answer → peer connected", async () => {
+  const events = [];
+  const bridge = await createNativeMediaBridge({
+    media: "lab",
+    emit: (ev) => events.push(ev),
+  });
+  assert.equal(bridge.backend, "lab");
+  await bridge.signal(1, { kind: "viewer-ready" });
+  assert.ok(events.some((e) => e.event === "signal" && e.signal?.kind === "offer"));
+  await bridge.signal(1, {
+    kind: "answer",
+    sdp: { type: "answer", sdp: "v=0" },
+  });
+  assert.ok(
+    events.some((e) => e.event === "peer" && e.slot === 1 && e.state === "connected"),
   );
-  await session.input(1, 0, 1);
-  await session.input(1, 0, 0);
-  await session.resume();
-  await session.pause();
-  await session.stop();
+  const m = await bridge.metrics();
+  assert.equal(m.encoding.width, 320);
+  bridge.stop();
+});
+
+test("Fase 2 wrtc: loopback offer/answer entrega track (child)", async () => {
+  const child = spawn(
+    process.execPath,
+    [path.join(root, "tests/host-bot-webrtc-child.js")],
+    { cwd: root, stdio: ["ignore", "pipe", "pipe"] },
+  );
+  let out = "";
+  let err = "";
+  child.stdout.on("data", (d) => (out += d));
+  child.stderr.on("data", (d) => (err += d));
+  const code = await new Promise((resolve) => child.on("exit", resolve));
+  assert.equal(code, 0, err || out);
+  const line = out.trim().split("\n").pop();
+  const result = JSON.parse(line);
+  assert.equal(result.ok, true);
+  if (!result.skipped) {
+    assert.equal(result.gotTrack, true);
+    assert.equal(result.peerConnected, true);
+  }
 });
 
 test("Fase 1: samples sintéticos → observeSample → vitória P1", async () => {
+  const prevMedia = process.env.HOST_BOT_MEDIA;
+  process.env.HOST_BOT_MEDIA = "lab";
   const observations = [];
   const results = [];
   const samples = [];
@@ -178,44 +263,47 @@ test("Fase 1: samples sintéticos → observeSample → vitória P1", async () =
     onResult: (r) => results.push(r),
     onFailure: (m) => assert.fail(m),
   });
-  await session.start();
-  await session.input(1, 3, 1); // start P1
-  await session.input(2, 3, 1); // start P2
-  await session.resume();
+  try {
+    await session.start();
+    await session.input(1, 3, 1); // start P1
+    await session.input(2, 3, 1); // start P2
+    await session.resume();
 
-  // Combate observado
-  await session.injectSample({
-    frame: 50,
-    health: [0x67, 0x67],
-    timer: 0x60,
-    wins: [0, 0],
-  });
-  // deixa o worker processar a linha
-  await new Promise((r) => setTimeout(r, 80));
-  assert.ok(observations.includes("COMBAT_OBSERVED"), String(observations));
+    await session.injectSample({
+      frame: 50,
+      health: [0x67, 0x67],
+      timer: 0x60,
+      wins: [0, 0],
+    });
+    await new Promise((r) => setTimeout(r, 80));
+    assert.ok(observations.includes("COMBAT_OBSERVED"), String(observations));
 
-  await session.injectSample({
-    frame: 100,
-    health: [20, 0],
-    timer: 0x45,
-    wins: [1, 0],
-  });
-  await session.injectSample({
-    frame: 140,
-    health: [20, 0],
-    timer: 0x45,
-    wins: [1, 0],
-  });
-  await session.injectSample({
-    frame: 180,
-    health: [20, 0],
-    timer: 0x45,
-    wins: [1, 0],
-  });
-  await new Promise((r) => setTimeout(r, 120));
+    await session.injectSample({
+      frame: 100,
+      health: [20, 0],
+      timer: 0x45,
+      wins: [1, 0],
+    });
+    await session.injectSample({
+      frame: 140,
+      health: [20, 0],
+      timer: 0x45,
+      wins: [1, 0],
+    });
+    await session.injectSample({
+      frame: 180,
+      health: [20, 0],
+      timer: 0x45,
+      wins: [1, 0],
+    });
+    await new Promise((r) => setTimeout(r, 120));
 
-  assert.ok(samples.length >= 2, "samples recebidos");
-  assert.equal(results[0]?.winnerSlot, 1);
-  assert.equal(session.lastMappedInput?.action, "start");
-  await session.stop();
+    assert.ok(samples.length >= 2, "samples recebidos");
+    assert.equal(results[0]?.winnerSlot, 1);
+    assert.equal(session.lastMappedInput?.action, "start");
+  } finally {
+    await session.stop().catch(() => {});
+    if (prevMedia == null) delete process.env.HOST_BOT_MEDIA;
+    else process.env.HOST_BOT_MEDIA = prevMedia;
+  }
 });

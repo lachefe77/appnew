@@ -44,58 +44,74 @@ Produção leve: `HOSTED_ENGINE=native`.
 | Fase | Entrega | Critério de pronto |
 |---|---|---|
 | **0** | Plano + factory + stub IPC + testes | `npm test` verde; engine selecionável |
-| **1** | Bot Windows: spawn + input + sample de estado | 1 X1 lab sem Playwright |
-| **2** | Encode leve + WebRTC/LiveKit para 2 peers | Paridade visual mínima (ex. 320p30) |
+| **1** | Bot Windows: spawn + input + sample de estado | 1 X1 lab sem Playwright ✅ |
+| **2** | Encode leve + WebRTC para 2 peers (320p30) | 2 viewers com track sem Chrome ✅ |
 | **3** | Capacidade medida na VPS 4 GB | Relatório N partidas estáveis ≥ 10 min |
 | **4** | `HOSTED_MAX_SESSIONS` calibrado + fila | Meta teste 5–8; desenho 20 |
 | **5** | VPS 10 GB / 5 vCPU | Validar 20 X1 com folga |
 
-## Fase 1 (atual) — sample sem Chrome
-
-### O que entra
+## Fase 1 — sample sem Chrome
 
 | Peça | Papel |
 |---|---|
-| `Kof2002Observer.observeSample` | Mesma máquina de estados do Chrome; **sem** RASTATE/EJS |
+| `Kof2002Observer.observeSample` | Mesma máquina de estados; **sem** RASTATE/EJS |
 | `native-input-map.js` | Botão Arena → tecla / bind RetroArch |
-| `native-host-launcher.js` | Monta cmdline stub ou RetroArch/FBNeo |
-| `scripts/native-host-worker.js` | Emite `event:"sample"` (sintético no stub) |
-| `scripts/host-bot-lua/kof2002-reporter.lua` | Lê RAM peon2/Fightcade → `ARENA_SAMPLE {json}` |
+| `native-host-launcher.js` | Cmdline stub ou RetroArch/FBNeo |
+| Worker `event:"sample"` | Estado JSON (stub ou Lua) |
+| `kof2002-reporter.lua` | RAM peon2/Fightcade → `ARENA_SAMPLE` |
 
-### Por que Lua e não savestate nativo
+Savestate nativo ≠ layout EmulatorJS — por isso Lua/JSON, não RASTATE.
 
-O perfil `kof2002-ejs423-legacy-v1` depende do snapshot EmulatorJS (414144 bytes, `ramOffset 0x3064c`). Savestate RetroArch/FBNeo **não** tem o mesmo layout. O Lua emite health/timer/wins já decodificados; o Node chama `observeSample`.
+## Fase 2 (atual) — encode 320p30 + WebRTC
 
-### Protocolo JSONL (extensão Fase 0)
+| Peça | Papel |
+|---|---|
+| `native-frame-source.js` | Frames I420 320×240 @ 30fps (sintético no lab) |
+| `native-webrtc.js` | 2× `RTCPeerConnection` via `@roamhq/wrtc` |
+| Worker `cmd:"signal"` | Mesmos kinds do Chrome: `viewer-ready` / `offer` / `answer` / `ice` |
+| `event:"signal"` / `event:"peer"` | Fan-out para `platform.js` → clientes |
+
+**Critério:** 2 viewers recebem track de vídeo sem Playwright.  
+**Ainda sintético:** barras coloridas (framebuffer FBNeo/ffmpeg = próxima etapa).  
+**Fallback:** `HOST_BOT_MEDIA=lab` — FSM de sinalização sem RTP (CI).
+
+### Protocolo JSONL
 
 ```text
-→ { "cmd":"start"|"input"|"pause"|"resume"|"stop"|"injectSample"|"injectResult", ... }
-← { "event":"sample", "sample": { "frame", "health":[h1,h2], "timer", "wins":[w1,w2] } }
+→ { "cmd":"start"|"input"|"signal"|"pause"|"resume"|"stop"|"injectSample"|"captureEvidence", ... }
+← { "event":"sample", "sample": { "frame", "health", "timer", "wins" } }
+← { "event":"signal", "slot":1|2, "signal": { "kind":"offer"|"ice", ... } }
+← { "event":"peer", "slot":1|2, "state":"connecting"|"connected"|... }
 ```
 
 ### Teste no PC Windows (PowerShell)
 
+Já estás em `C:\Users\Pc Gamer\Documents\appnew\arcade-rgc-platform` — **não** faças `cd Documents\...` de novo.
+
 ```powershell
-cd arcade-rgc-platform
-git fetch
-git checkout cursor/host-bot-nativo-4ff7
+git pull
 npm ci
 $env:HOSTED_ENGINE="native"
-npm run smoke:host-bot -- 1
+npm run smoke:host-bot -- 1 webrtc
 npm test -- tests/host-bot.test.js
 ```
 
-Esperado no smoke: `phase: "ok"`, `manifest.phase: 1`, samples no fluxo.
+Esperado: `phase:"ok"`, `hostPhase:2`, `mode:"webrtc"`, `tracks: {1:true,2:true}`.
 
-Com RetroArch instalado (opcional, ainda sem vídeo):
+Se `@roamhq/wrtc` falhar no Windows (Build Tools):
 
 ```powershell
-$env:HOSTED_ENGINE="native"
+npm run smoke:host-bot -- 2 peers
+# ou
+$env:HOST_BOT_MEDIA="lab"
+npm run smoke:host-bot -- 1
+```
+
+Com RetroArch (opcional; vídeo ainda sintético até plugar framebuffer):
+
+```powershell
 $env:HOST_BOT_BIN="C:\caminho\retroarch.exe"
 $env:HOST_BOT_KIND="retroarch"
-$env:HOST_BOT_WORKDIR="data/hosted/kof2002"
-# Fase 1 ainda usa o worker Node para IPC; o bin fica documentado no launch.
-npm run smoke:host-bot -- 1
 ```
 
 ## Números honestos
