@@ -59,10 +59,13 @@ Produção leve: `HOSTED_ENGINE=native`.
 1. `npm run test:local` sobe com `.env` nativo (RetroArch + ROM + ffmpeg).
 2. Browser normal + anónimo → 2 contas → mesma sala → desafio com créditos.
 3. RetroArch abre; **stream nos browsers mostra o KOF** (não Explorer/desktop).
-4. FICHA / START nos dois; personagem mexe com setas/Z X A S.
-5. Round jogável; sem crash do host no terminal.
+4. **START nos dois** (ready-check). Fichas do gabinete são injetadas pelo host (botão FICHA fica desativado no hosted).
+5. Clique no vídeo → setas / Z X A S mexem no personagem.
+6. Round jogável; sem crash do host no terminal.
 
-Captura: `retroarch-lab.cfg` força `video_driver=sdl2` (GL/Vulkan/D3D11 + gdigrab = ecrã preto). Worker resolve HWND do PID e usa `gdigrab -i hwnd=…`. Alternativa: `HOST_BOT_FFMPEG_GRAB=desktop` (crop DWM; a janela do jogo não pode ficar tapada pelos browsers). Input: foca o HWND antes do `keybd_event`.
+Captura: `video_driver=sdl2` + `gdigrab hwnd=…` (GL puro = ecrã preto).  
+Input: binds RetroArch (`z`/`up`, não `KeyZ`/`ArrowUp`) + `PostMessage` no HWND (browser mantém o foco).  
+Créditos: worker pulsa select/coin no core ao boot (cliente hosted bloqueia button 2).
 
 ## Fase 1 — sample sem Chrome
 
