@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Revisões — Arena Arcade</title>
+    <style>
+      body {
+        background: #090e19;
+        color: #e3edf7;
+        font: 16px system-ui;
+        max-width: 1000px;
+        margin: 30px auto;
+        padding: 16px;
+      }
+      a {
+        color: #00d4ec;
+      }
+      article {
+        background: #141e30;
+        border: 1px solid #304660;
+        padding: 20px;
+        margin: 18px 0;
+        border-radius: 9px;
+      }
+      button,
+      select,
+      textarea {
+        font: inherit;
+        padding: 9px;
+        margin: 5px;
+        background: #203047;
+        color: white;
+        border: 1px solid #55708c;
+        border-radius: 5px;
+      }
+      textarea {
+        display: block;
+        width: 90%;
+        min-height: 75px;
+      }
+      pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      button {
+        cursor: pointer;
+      }
+      small {
+        color: #aec1d4;
+      }
+    </style>
+  </head>
+  <body>
+    <a href="/">← Voltar à plataforma</a>
+    <h1>Revisões de partidas</h1>
+    <p>
+      Após o início, interrupções e divergências entram em análise. As reservas
+      ficam preservadas até decisão ou prazo limite. Sem decisão no prazo, há
+      estorno sem atribuição de vitória.
+    </p>
+    <p>
+      <strong>Créditos de demonstração, sem valor monetário.</strong> O
+      histórico registra declarações dos clientes; ainda não comprova
+      automaticamente o resultado do KOF.
+    </p>
+    <button id="refresh">Atualizar</button>
+    <p id="status" role="status"></p>
+    <main id="list"></main>
+    <script type="module" src="/reviews.js"></script>
+  </body>
+</html>

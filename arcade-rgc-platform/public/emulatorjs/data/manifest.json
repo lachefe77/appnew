@@ -1,0 +1,35 @@
+{
+  "version": "4.2.3",
+  "source": "https://cdn.emulatorjs.org/4.2.3/data/",
+  "files": {
+    "loader.js": {
+      "bytes": 7594,
+      "sha256": "69e0903bf1e2f62ced78895e7e511fa26e11316f7eb734925c35e919ba1287b2"
+    },
+    "emulator.min.js": {
+      "bytes": 426343,
+      "sha256": "6aec3fd7bb2721255801b0a6af02e47e78b05e28a1822b1f213aacbd348abaee"
+    },
+    "emulator.min.css": {
+      "bytes": 25630,
+      "sha256": "16406c60b2dc3b04ae9b115e308613e6f567a0cc7068e21d9d0c1e5030fb395e"
+    },
+    "cores/fbneo-legacy-wasm.data": {
+      "bytes": 8272960,
+      "sha256": "9dbb6242c028f4179549f324688b654353881beb552292f939bc6171a0828b5f"
+    },
+    "cores/reports/fbneo.json": {
+      "bytes": 119,
+      "sha256": "d2c5e07c2afc2b53937f14b721d7d025ad599d111e9627fc77e9b3fd17450e70"
+    },
+    "compression/extract7z.js": {
+      "bytes": 280155,
+      "sha256": "4ac9933b995a516cb6b3ca4027db860278372a20c21c405d93ceb1998498853a"
+    },
+    "compression/extractzip.js": {
+      "bytes": 196199,
+      "sha256": "3cc825428724213acd43d30552a78008e0869b2326de17dee240dbff9ee2f629"
+    }
+  },
+  "downloadedAt": "2026-10-19T21:50:33.682Z"
+}
