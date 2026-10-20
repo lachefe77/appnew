@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>KOF 2002 — sessão</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #080c16;
+        color: #e6eefb;
+        font: 15px system-ui;
+        height: 100%;
+      }
+      #setup {
+        padding: 24px;
+        max-width: 600px;
+        margin: auto;
+      }
+      label {
+        display: block;
+        margin: 18px 0;
+      }
+      input {
+        display: block;
+        margin-top: 8px;
+        width: 100%;
+      }
+      button {
+        padding: 12px 24px;
+        background: #00d4ec;
+        color: #001720;
+        border: 0;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      #game {
+        height: 100%;
+        width: 100%;
+      }
+      #status {
+        white-space: pre-wrap;
+        color: #ffcc66;
+      }
+      small {
+        color: #acb9d0;
+      }
+    </style>
+  </head>
+  <body>
+    <section id="setup">
+      <h2>Preparar KOF 2002</h2>
+      <p>
+        Selecione a ROM e a BIOS. Os arquivos ficam neste navegador. O outro
+        jogador recebe a imagem desta mesma sessão.
+      </p>
+      <label
+        >Jogo original — kof2002.zip<input
+          id="rom"
+          type="file"
+          accept=".zip" /></label
+      ><label
+        >BIOS Neo Geo — neogeo.zip<input id="bios" type="file" accept=".zip"
+      /></label>
+      <button id="load">CARREGAR JOGO</button>
+      <p id="status">Verificando arquivos salvos…</p>
+      <small
+        >O ZIP deve manter seu nome original. Um arquivo de Magic Plus é outro
+        romset e não deve ser renomeado para kof2002.zip.</small
+      >
+    </section>
+    <div id="game" hidden></div>
+    <script type="module">
+      import { inspectZip, validateBios, validateRom } from "/rom-check.js";
+      import {
+        installNeoGeoBios,
+        verifyCoreStarted,
+      } from "/emulator-runtime.js";
+      const origin = location.origin,
+        signal = (type, detail = {}) =>
+          parent.postMessage(
+            { source: "arena-emulator", type, ...detail },
+            origin,
+          );
+      let database,
+        rom,
+        bios,
+        urls = [],
+        loading = false;
+      const status = document.querySelector("#status"),
+        load = document.querySelector("#load");
+      function setStatus(s) {
+        status.textContent = s;
+        signal("status", { message: s });
+      }
+      async function open() {
+        database = await new Promise((resolve, reject) => {
+          const r = indexedDB.open("ArenaArcadeROMs", 2);
+          r.onupgradeneeded = () => {
+            if (!r.result.objectStoreNames.contains("roms"))
+              r.result.createObjectStore("roms");
+          };
+          r.onsuccess = () => resolve(r.result);
+          r.onerror = () => reject(r.error);
+        });
+      }
+      function read(key) {
+        return new Promise((resolve, reject) => {
+          const r = database.transaction("roms").objectStore("roms").get(key);
+          r.onsuccess = () => resolve(r.result);
+          r.onerror = () => reject(r.error);
+        });
+      }
+      function put(key, value) {
+        return new Promise((resolve, reject) => {
+          const tx = database.transaction("roms", "readwrite");
+          tx.objectStore("roms").put(value, key);
+          tx.oncomplete = resolve;
+          tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error);
+        });
+      }
+      async function checkZip(file, kind) {
+        if (!file || file.size < 100 || file.size > 160 * 1024 * 1024)
+          throw Error("ZIP ausente, vazio ou muito grande.");
+        const signature = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+        if (signature[0] !== 80 || signature[1] !== 75)
+          throw Error("O arquivo não é um ZIP válido.");
+        if (
+          file.name &&
+          file.name.toLowerCase() !==
+            (kind === "bios" ? "neogeo.zip" : "kof2002.zip")
+        )
+          throw Error(
+            "Selecione " +
+              (kind === "bios" ? "neogeo.zip" : "kof2002.zip") +
+              " sem renomear outro romset.",
+          );
+      }
+      try {
+        await open();
+        rom = await read("kof2002");
+        bios = await read("neogeo");
+        setStatus(
+          rom
+            ? "ROM salva encontrada. " +
+                (bios
+                  ? "BIOS salva encontrada. Clique em CARREGAR JOGO."
+                  : "Selecione também a BIOS neogeo.zip.")
+            : "Selecione kof2002.zip e neogeo.zip.",
+        );
+      } catch (e) {
+        setStatus(
+          "Armazenamento local indisponível. Selecione os arquivos: " +
+            e.message,
+        );
+      }
+      load.onclick = async () => {
+        if (loading) return;
+        try {
+          const selectedRom = document.querySelector("#rom").files[0],
+            selectedBios = document.querySelector("#bios").files[0];
+          rom = selectedRom || rom;
+          bios = selectedBios || bios;
+          await checkZip(rom, "rom");
+          if (!bios)
+            throw Error(
+              "Falta neogeo.zip (BIOS). O ZIP do KOF fornecido não contém a BIOS.",
+            );
+          await checkZip(bios, "bios");
+          const romEntries = inspectZip(await rom.arrayBuffer()),
+            biosEntries = inspectZip(await bios.arrayBuffer());
+          validateRom(romEntries);
+          validateBios(biosEntries);
+          loading = true;
+          load.disabled = true;
+          setStatus("Validando arquivos e preparando emulador…");
+          if (database) {
+            await put("kof2002", rom);
+            await put("neogeo", bios);
+          }
+          const make = (blob) => {
+            const url = URL.createObjectURL(blob);
+            urls.push(url);
+            return url;
+          };
+          // Filenames are explicit because blob URLs do not preserve the ZIP filename.
+          window.EJS_player = "#game";
+          window.EJS_core = "fbneo";
+          window.EJS_gameName = "kof2002.zip";
+          window.EJS_gameUrl = make(rom);
+          window.EJS_biosUrl = "";
+          // EmulatorJS 4.2.3 externalFiles passes an ArrayBuffer to FS.writeFile,
+          // which creates an empty file. Install bytes before ROM startup instead.
+          const biosBytes = new Uint8Array(await bios.arrayBuffer());
+          window.EJS_externalFiles = {};
+          let biosInstalled = false;
+          window.EJS_ready = () => {
+            window.EJS_emulator.on("saveDatabaseLoaded", (fs) => {
+              try {
+                installNeoGeoBios(fs, biosBytes);
+                biosInstalled = true;
+              } catch (error) {
+                signal("error", { message: error.message });
+                throw error;
+              }
+            });
+          };
+          window.EJS_forceLegacyCores = true;
+          window.EJS_defaultOptions = { "fbneo-neogeo-mode": "MVS_EUR" };
+          window.EJS_pathtodata = "/emulatorjs/data/";
+          window.EJS_startOnLoaded = true;
+          window.EJS_disableDatabases = true;
+          window.EJS_disableLocalStorage = true;
+          window.EJS_disableAutoLang = true;
+          window.EJS_language = "en-US";
+          window.EJS_startButtonName = "Iniciar KOF 2002";
+          window.EJS_color = "#00d4ec";
+          window.EJS_Buttons = {
+            playPause: false,
+            restart: false,
+            settings: false,
+            saveState: false,
+            loadState: false,
+            quickSave: false,
+            quickLoad: false,
+            cheat: false,
+            netplay: false,
+            gamepad: false,
+            fullscreen: false,
+            volume: true,
+            mute: true,
+          };
+          window.EJS_onGameStart = () => {
+            if (!biosInstalled) {
+              signal("error", {
+                message: "BIOS não instalada; a partida não pode iniciar.",
+              });
+              return;
+            }
+            const e = window.EJS_emulator,
+              gm = e.gameManager;
+            try {
+              verifyCoreStarted(gm);
+            } catch (error) {
+              gm.toggleMainLoop(0);
+              signal("error", { message: error.message });
+              return;
+            }
+            gm.setKeyboardEnabled(false);
+            window.arenaEmulator = {
+              input: (port, button, value) =>
+                gm.simulateInput(port, button, value),
+              pause: () => gm.toggleMainLoop(0),
+              resume: () => gm.toggleMainLoop(1),
+              canvas: () => e.canvas || document.querySelector("#game canvas"),
+              stream: () =>
+                e.collectScreenRecordingMediaTracks?.(e.canvas, 60) ||
+                e.canvas.captureStream(60),
+              manager: gm,
+              stop: () => {
+                try {
+                  e.callEvent("exit");
+                } catch {
+                  gm.toggleMainLoop(0);
+                }
+              },
+            };
+            signal("ready");
+          };
+          document.querySelector("#setup").hidden = true;
+          document.querySelector("#game").hidden = false;
+          const script = document.createElement("script");
+          script.src = "/emulatorjs/data/loader.js";
+          script.onerror = () =>
+            signal("error", {
+              message:
+                "Falha ao carregar os arquivos locais do emulador. Execute npm run setup:emulator.",
+            });
+          document.body.append(script);
+          // Core startup errors are surfaced instead of falling back to a different game.
+          const watch = setInterval(() => {
+            const error =
+              document.querySelector(".ejs_error") ||
+              document.querySelector(".ejs_start_button");
+            if (window.arenaEmulator) {
+              clearInterval(watch);
+              return;
+            }
+            const message = document.querySelector("#game")?.innerText || "";
+            if (
+              /failed|error|missing|not found/i.test(message) &&
+              message.length < 2000
+            ) {
+              signal("status", { message: "Emulador: " + message });
+            }
+          }, 1000);
+          setTimeout(() => {
+            clearInterval(watch);
+            if (!window.arenaEmulator)
+              signal("error", {
+                message:
+                  "O core não iniciou. Confira ROM/BIOS e os arquivos locais do emulador.",
+              });
+          }, 120000);
+        } catch (e) {
+          loading = false;
+          load.disabled = false;
+          setStatus(e.message);
+        }
+      };
+      window.addEventListener("error", (e) =>
+        signal("status", { message: e.message || "Erro no emulador." }),
+      );
+      window.addEventListener("unhandledrejection", (e) =>
+        signal("error", { message: String(e.reason?.message || e.reason) }),
+      );
+      window.addEventListener("beforeunload", () =>
+        urls.forEach(URL.revokeObjectURL),
+      );
+    </script>
+  </body>
+</html>

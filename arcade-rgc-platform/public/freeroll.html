@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Freeroll — Arena Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { margin:0; background:#070708; color:#f3efe6; font-family:"Barlow Condensed",sans-serif; }
+    header { padding:20px; border-bottom:1px solid #2a2a2e; display:flex; gap:16px; }
+    h1 { margin:0; font-family:Oswald,sans-serif; }
+    a { color:#f5c518; }
+    main { max-width:720px; margin:24px auto; padding:0 16px; }
+    .card { background:#121214; border:1px solid #2a2a2e; padding:18px; margin-bottom:12px; }
+    button { background:#3ddc97; color:#000; border:0; padding:10px 16px; font-weight:800; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <header><h1>FREEROLL 8</h1><a href="/">← Lobby</a><a href="/torneios.html">Torneios</a></header>
+  <main>
+    <div class="card">
+      <p>Buy-in 0 · créditos fictícios · bracket single-elim automático ao fechar 8 inscritos.</p>
+      <button onclick="reg()">Inscrever-me no freeroll diário</button>
+      <p id="st" style="color:#9a958c"></p>
+    </div>
+    <div id="list"></div>
+  </main>
+  <script>
+    async function load(){
+      const r = await fetch("/api/freeroll");
+      const d = await r.json();
+      document.getElementById("list").innerHTML = (d.freerolls||[]).map(f =>
+        `<div class="card"><b>${f.id}</b> · ${f.status} · ${f.registered}/${f.size}</div>`
+      ).join("") || "<p style='color:#9a958c'>Nenhum freeroll aberto ainda — a inscrição cria o diário.</p>";
+    }
+    async function reg(){
+      const token = localStorage.getItem("arenaToken");
+      if (!token) { alert("Faça login no lobby primeiro."); return; }
+      const r = await fetch("/api/freeroll/register", {
+        method:"POST",
+        headers:{ Authorization:"Bearer "+token, "Content-Type":"application/json" },
+        body: JSON.stringify({ freerollId: "freeroll_daily" }),
+      });
+      const b = await r.json().catch(()=>({}));
+      document.getElementById("st").textContent = r.ok
+        ? `Inscrito: ${b.freeroll.registered}/${b.freeroll.size} (${b.freeroll.status})`
+        : (b.error || "Falha");
+      load();
+    }
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Amigos / DM — Arena Arcade</title>
+  <style>
+    body { margin:0; background:#070708; color:#f3efe6; font-family:system-ui,sans-serif; }
+    main { max-width:720px; margin:24px auto; padding:0 16px; }
+    a { color:#f5c518; }
+    input,button,textarea { padding:8px; margin:4px 0; background:#1c1c20; border:1px solid #2a2a2e; color:#fff; }
+    button { background:#e10600; border:0; cursor:pointer; font-weight:700; }
+    .card { background:#121214; border:1px solid #2a2a2e; padding:14px; margin:10px 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <p><a href="/">← Lobby</a></p>
+    <h1>Amigos & DM</h1>
+    <div class="card">
+      <input id="peer" placeholder="userId do amigo" style="width:100%" />
+      <button onclick="req()">Pedir amizade</button>
+      <button onclick="acc()">Aceitar</button>
+      <button onclick="blk()" style="background:#333">Bloquear</button>
+    </div>
+    <div class="card">
+      <textarea id="dm" placeholder="Mensagem DM" rows="3" style="width:100%"></textarea>
+      <button onclick="sendDm()">Enviar DM</button>
+      <pre id="hist" style="font-size:12px;white-space:pre-wrap"></pre>
+    </div>
+    <div class="card"><pre id="list"></pre></div>
+  </main>
+  <script>
+    const token = () => localStorage.getItem("arenaToken");
+    function wsSend(o) {
+      // Usa BroadcastChannel / opener se disponível; senão API não cobre WS — pede lobby
+      if (window.opener?.wsSend) return window.opener.wsSend(o);
+      alert("Abra a partir do lobby logado (mesma origem) ou use o chat WS no index.");
+    }
+    function req(){ wsSend({ type:"FRIEND_REQUEST", userId: peer.value }); }
+    function acc(){ wsSend({ type:"FRIEND_ACCEPT", userId: peer.value }); }
+    function blk(){ wsSend({ type:"BLOCK_USER", userId: peer.value }); }
+    function sendDm(){ wsSend({ type:"SEND_DM", userId: peer.value, text: dm.value }); loadDm(); }
+    async function load(){
+      const r = await fetch("/api/friends", { headers:{ Authorization:"Bearer "+token() }});
+      list.textContent = JSON.stringify(await r.json(), null, 2);
+    }
+    async function loadDm(){
+      if (!peer.value) return;
+      const r = await fetch("/api/dm?peerId="+encodeURIComponent(peer.value), { headers:{ Authorization:"Bearer "+token() }});
+      hist.textContent = JSON.stringify(await r.json(), null, 2);
+    }
+    load();
+  </script>
+</body>
+</html>
