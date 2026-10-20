@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ranking / Temporada — Arena Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg:#070708; --panel:#121214; --line:#2a2a2e; --text:#f3efe6; --muted:#9a958c; --gold:#f5c518; --red:#e10600; }
+    body { margin:0; background:radial-gradient(1200px 600px at 10% -10%,#2a1010,transparent),var(--bg); color:var(--text); font-family:"Barlow Condensed",sans-serif; }
+    header { padding:20px 24px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:baseline; flex-wrap:wrap; }
+    h1 { margin:0; font-family:Oswald,sans-serif; letter-spacing:.04em; }
+    a { color:var(--gold); }
+    main { max-width:900px; margin:0 auto; padding:24px; }
+    .season { background:var(--panel); border:1px solid var(--line); padding:16px; margin-bottom:20px; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); }
+    th { color:var(--muted); font-size:.75rem; text-transform:uppercase; }
+    .elo { font-family:"IBM Plex Mono",monospace; color:var(--gold); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>TEMPORADA</h1>
+    <a href="/">← Lobby</a>
+    <a href="/clas.html">Clãs</a>
+  </header>
+  <main>
+    <div class="season" id="seasonBox">Carregando temporada…</div>
+    <div class="season" id="calBox">Calendário…</div>
+    <table>
+      <thead><tr><th>#</th><th>Jogador</th><th>ELO</th><th>W</th><th>L</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </main>
+  <script>
+    (async () => {
+      const r = await fetch("/api/season");
+      const data = await r.json();
+      const s = data.season;
+      document.getElementById("seasonBox").innerHTML = s
+        ? `<strong>${s.name}</strong><br><span style="color:var(--muted)">Início ${s.starts_at || "—"}${s.ends_at ? " · fim " + s.ends_at : ""} · ${s.active ? "ATIVA" : "inativa"}</span>`
+        : "Nenhuma temporada ativa — o admin pode ativar em /admin.html.";
+      document.getElementById("rows").innerHTML = (data.leaderboard || [])
+        .map((u, i) => `<tr><td>${i + 1}</td><td>${u.username}</td><td class="elo">${u.elo}</td><td>${u.wins}</td><td>${u.losses}</td></tr>`)
+        .join("");
+      const cal = await fetch("/api/season/calendar").then((r) => r.json());
+      document.getElementById("calBox").innerHTML = (cal.calendar || [])
+        .map(
+          (c) =>
+            `<strong>${c.name}</strong><br><span style="color:var(--muted)">${c.starts_at} → ${c.ends_at || "aberto"} · ${c.ceremony_note || ""}</span><br>Recompensas: ${(c.rewards || []).map((x) => x.label || x.place).join(", ") || "—"}`,
+        )
+        .join("<hr>") || "Sem calendário — ative uma temporada no admin.";
+    })().catch((e) => {
+      document.getElementById("seasonBox").textContent = e.message;
+    });
+  </script>
+</body>
+</html>

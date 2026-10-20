@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Clãs — Arena Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg:#070708; --panel:#121214; --line:#2a2a2e; --text:#f3efe6; --muted:#9a958c; --cyan:#3ddc97; --gold:#f5c518; }
+    body { margin:0; background:linear-gradient(180deg,#101820,var(--bg)); color:var(--text); font-family:"Barlow Condensed",sans-serif; }
+    header { padding:20px 24px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:baseline; }
+    h1 { margin:0; font-family:Oswald,sans-serif; }
+    a { color:var(--gold); }
+    main { max-width:960px; margin:0 auto; padding:24px; display:grid; gap:16px; }
+    .card { background:var(--panel); border:1px solid var(--line); padding:16px; }
+    .tag { color:var(--cyan); font-family:Oswald,sans-serif; letter-spacing:.08em; }
+    button { background:#e10600; color:#fff; border:0; padding:8px 14px; cursor:pointer; font-weight:700; }
+    input { background:#1c1c20; border:1px solid var(--line); color:var(--text); padding:8px; margin:4px 0; width:100%; max-width:280px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CLÃS</h1>
+    <a href="/">← Lobby</a>
+    <a href="/ranking.html">Ranking</a>
+  </header>
+  <main>
+    <div class="card">
+      <h2>Criar / entrar</h2>
+      <p style="color:var(--muted)">Pontos sobem quando membros vencem partidas (settlement real).</p>
+      <input id="tag" placeholder="TAG (2–4)" maxlength="4" />
+      <input id="name" placeholder="Nome do clã" />
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <button onclick="createClan()">Criar</button>
+        <button onclick="joinClan()" style="background:#1c1c20;border:1px solid var(--line);">Entrar</button>
+      </div>
+      <p id="msg" style="color:var(--muted)"></p>
+    </div>
+    <div id="list"></div>
+  </main>
+  <script>
+    function token(){ return localStorage.getItem("arenaToken") || ""; }
+    function wsSend(obj){
+      const w = window.opener?.app?.ws || window.app?.ws;
+      if (w && w.readyState === 1) { w.send(JSON.stringify(obj)); return true; }
+      document.getElementById("msg").textContent = "Abra o lobby logado e use o chat/WS; ou recarregue após login.";
+      return false;
+    }
+    function createClan(){
+      if (!wsSend({ type:"CREATE_CLAN", tag: tag.value, name: name.value })) return;
+      document.getElementById("msg").textContent = "Pedido enviado — atualize a lista.";
+      setTimeout(load, 800);
+    }
+    function joinClan(){
+      if (!wsSend({ type:"JOIN_CLAN", tag: tag.value })) return;
+      setTimeout(load, 800);
+    }
+    async function load(){
+      const r = await fetch("/api/clans");
+      const clans = await r.json();
+      document.getElementById("list").innerHTML = (clans||[]).map(c => `
+        <div class="card"><span class="tag">[${c.tag}]</span> ${c.name}
+        <div style="color:var(--muted);margin-top:6px;">${c.points} pts · ${c.wins}W/${c.losses}L · ${c.members||1} membros · nv ${c.level||1}
+        · tesouraria R$ ${c.treasuryReais || "0,00"}</div>
+        <div style="font-size:.85rem;color:var(--muted)">${c.description||""}</div>
+        <button onclick="invite('${c.tag}')" style="margin-top:8px;background:#1c1c20;border:1px solid var(--line);">Convidar userId</button>
+        </div>`).join("") || "<p>Sem clãs.</p>";
+    }
+    function invite(tag){
+      const userId = prompt("userId para convidar:");
+      if (!userId) return;
+      wsSend({ type:"CLAN_INVITE", tag, userId });
+    }
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Arena Arcade - OBS Live Stream Overlay</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: transparent; overflow: hidden; width: 1920px; height: 1080px; }
+    
+    .stream-hud {
+      position: absolute;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1200px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .player-card {
+      flex: 1;
+      background: rgba(10, 15, 25, 0.85);
+      border: 2px solid #00f3ff;
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      box-shadow: 0 0 25px rgba(0, 243, 255, 0.4);
+      backdrop-filter: blur(8px);
+    }
+
+    .player-card.p2 {
+      border-color: #ff0055;
+      box-shadow: 0 0 25px rgba(255, 0, 85, 0.4);
+      flex-direction: row-reverse;
+      text-align: right;
+    }
+
+    .avatar {
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      border: 3px solid #ffaa00;
+      object-fit: cover;
+    }
+
+    .player-info {
+      flex: 1;
+    }
+
+    .player-name {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+
+    .player-stats {
+      font-size: 0.85rem;
+      color: #88a0c0;
+      font-family: monospace;
+      margin-top: 4px;
+    }
+
+    .health-bar-container {
+      width: 100%;
+      height: 16px;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 4px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .health-bar-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #ff0055, #ffaa00, #00ff66);
+      transition: width 0.2s ease-out;
+    }
+
+    .center-pot {
+      background: rgba(5, 5, 10, 0.95);
+      border: 2px solid #ffaa00;
+      border-radius: 16px;
+      padding: 12px 25px;
+      text-align: center;
+      box-shadow: 0 0 30px rgba(255, 170, 0, 0.6);
+      min-width: 220px;
+    }
+
+    .pot-label {
+      font-size: 0.75rem;
+      color: #88a0c0;
+      font-weight: 800;
+      letter-spacing: 2px;
+    }
+
+    .pot-value {
+      font-size: 2rem;
+      font-weight: 900;
+      color: #00ff66;
+      font-family: monospace;
+      text-shadow: 0 0 10px rgba(0, 255, 102, 0.6);
+    }
+
+    .live-badge {
+      display: inline-block;
+      background: #ff0055;
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 900;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-top: 4px;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stream-hud">
+    <!-- PLAYER 1 -->
+    <div class="player-card p1">
+      <img src="https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150" class="avatar" id="p1Photo">
+      <div class="player-info">
+        <div class="player-name" id="p1Name">Iori_Mestre [ORO]</div>
+        <div class="player-stats">ELO: <span id="p1Elo">1640</span> | V/D: 84% | Ping: 4ms</div>
+        <div class="health-bar-container">
+          <div class="health-bar-fill" id="p1HpBar" style="width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POT / APOSTA CENTRAL -->
+    <div class="center-pot">
+      <div class="pot-label">DISPUTA X1 APOSTADO</div>
+      <div class="pot-value" id="potValue">R$ 50,00</div>
+      <div class="live-badge">🔴 AO VIVO NO FLIPERAMA</div>
+    </div>
+
+    <!-- PLAYER 2 -->
+    <div class="player-card p2">
+      <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150" class="avatar" id="p2Photo">
+      <div class="player-info">
+        <div class="player-name" id="p2Name">Kyo_Fliper [NEO]</div>
+        <div class="player-stats">ELO: <span id="p2Elo">1590</span> | V/D: 81% | Ping: 8ms</div>
+        <div class="health-bar-container">
+          <div class="health-bar-fill" id="p2HpBar" style="width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function refresh() {
+      try {
+        const r = await fetch('/api/overlay/live');
+        const d = await r.json();
+        const m = (d.matches || [])[0];
+        if (!m) {
+          document.getElementById('potValue').textContent = 'AGUARDANDO';
+          return;
+        }
+        document.getElementById('p1Name').textContent = m.playerA || 'P1';
+        document.getElementById('p2Name').textContent = m.playerB || 'P2';
+        document.getElementById('p1Elo').textContent = m.eloA ?? '—';
+        document.getElementById('p2Elo').textContent = m.eloB ?? '—';
+        const a = m.seriesScore?.a ?? 0, b = m.seriesScore?.b ?? 0;
+        document.getElementById('potValue').textContent = `BO${m.seriesBestOf || 1} · ${a}×${b}`;
+        document.querySelector('.pot-label').textContent = (m.mode || 'X1') + ' · ' + (m.phase || '');
+        const tot = Math.max(1, (m.seriesBestOf || 1));
+        document.getElementById('p1HpBar').style.width = Math.min(100, (a / Math.ceil(tot/2)) * 100) + '%';
+        document.getElementById('p2HpBar').style.width = Math.min(100, (b / Math.ceil(tot/2)) * 100) + '%';
+      } catch {}
+    }
+    refresh();
+    setInterval(refresh, 2000);
+  </script>
+</body>
+</html>

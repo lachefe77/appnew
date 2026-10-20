@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Arena Arcade — Operação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Mono:wght@400;600&family=Space+Grotesk:wght@500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+<script type="module" src="/theme-apply.js"></script>
+<style>
+  :root {
+    --bg: #070708; --panel: #121214; --elev: #1c1c20; --text: #f3efe6; --muted: #9a958c;
+    --accent: #e10600; --accent2: #f5c518; --line: #2a2a2e; --ok: #3ddc97; --danger: #ff5a5a;
+    --font-ui: "Space Grotesk", system-ui, sans-serif;
+    --font-display: Syne, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-ui); min-height: 100vh; }
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+  .side { border-right: 1px solid var(--line); background: var(--panel); padding: 18px 12px; position: sticky; top: 0; height: 100vh; overflow: auto; }
+  .brand { font-family: var(--font-display); font-weight: 800; letter-spacing: .04em; padding: 4px 8px 16px; }
+  .brand b { color: var(--accent); }
+  .navbtn {
+    display: block; width: 100%; text-align: left; border: 0; background: transparent; color: var(--muted);
+    padding: 10px 12px; border-radius: 4px; cursor: pointer; font: 700 .85rem Barlow Condensed, sans-serif;
+    letter-spacing: .05em; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .navbtn.on, .navbtn:hover { background: var(--elev); color: var(--text); }
+  .navbtn.on { box-shadow: inset 3px 0 0 var(--accent); }
+  .main { padding: 20px 24px 48px; }
+  .topbar { display: flex; justify-content: space-between; gap: 12px; align-items: end; margin-bottom: 18px; flex-wrap: wrap; }
+  .topbar h1 { margin: 0; font: 800 1.6rem var(--font-display); }
+  .topbar p { margin: 4px 0 0; color: var(--muted); font-size: .85rem; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--line); background: var(--elev); padding: 6px 10px; border-radius: 999px; font-size: .75rem; }
+  .chip b { color: var(--accent2); }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(12, 1fr); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; }
+  .span-3 { grid-column: span 3; } .span-4 { grid-column: span 4; } .span-6 { grid-column: span 6; } .span-8 { grid-column: span 8; } .span-12 { grid-column: span 12; }
+  .metric { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .metric + strong { display: block; margin-top: 6px; font-size: 1.35rem; font-family: "IBM Plex Mono", monospace; }
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 700; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
+  input, select, textarea, button.btn {
+    background: var(--elev); color: var(--text); border: 1px solid var(--line); border-radius: 4px;
+    padding: 8px 10px; font: inherit;
+  }
+  button.btn { cursor: pointer; font: 700 .8rem Barlow Condensed, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+  button.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.btn.ghost { background: transparent; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .muted { color: var(--muted); }
+  .ok { color: var(--ok); } .danger { color: var(--danger); }
+  .login {
+    max-width: 420px; margin: 12vh auto; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 24px; display: grid; gap: 10px;
+  }
+  .login h1 { margin: 0; font: 800 1.4rem var(--font-display); }
+  .hidden { display: none !important; }
+  .tag { display: inline-block; padding: 2px 7px; border-radius: 3px; background: var(--elev); font-size: .7rem; font-weight: 700; }
+  @media (max-width: 960px) {
+    .shell { grid-template-columns: 1fr; }
+    .side { position: relative; height: auto; display: flex; gap: 6px; overflow: auto; }
+    .navbtn { white-space: nowrap; }
+    .span-3, .span-4, .span-6, .span-8 { grid-column: span 12; }
+  }
+</style>
+</head>
+<body>
+  <div id="loginView" class="login">
+    <h1>Operação Arena</h1>
+    <p class="muted">Acesso MASTER / ADMIN / MODERATOR / SUPPORT. VIP e jogadores usam a vitrine.</p>
+    <input id="email" type="email" placeholder="E-mail" value="admin@arena.gg" />
+    <input id="password" type="password" placeholder="Senha" />
+    <button class="btn primary" id="btnLogin">Entrar</button>
+    <p id="loginErr" class="danger"></p>
+    <p class="muted"><a href="/theme-gallery.html" style="color:var(--accent2)">Abrir catálogo de 25 temas</a> · <a href="/" style="color:var(--muted)">Voltar à arena</a></p>
+  </div>
+
+  <div id="app" class="shell hidden">
+    <aside class="side" id="side"></aside>
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <h1 id="pageTitle">Overview</h1>
+          <p id="pageSub">Controle operacional da plataforma KOF 2002</p>
+        </div>
+        <div class="chips" id="topChips"></div>
+      </div>
+      <div id="content" class="grid"></div>
+    </main>
+  </div>
+
+<script type="module">
+const state = {
+  token: localStorage.getItem("arena.admin.token") || "",
+  user: null,
+  tab: "overview",
+  overview: null,
+  audit: [],
+  seasons: [],
+  reviews: [],
+  themes: null,
+};
+
+const TABS = [
+  { id: "overview", label: "Overview", perm: "admin.panel" },
+  { id: "users", label: "Usuários & cargos", perm: "admin.users" },
+  { id: "audit", label: "Auditoria", perm: "admin.audit" },
+  { id: "reviews", label: "Revisões", perm: "admin.reviews" },
+  { id: "finance", label: "Financeiro", perm: "admin.finance" },
+  { id: "seasons", label: "Season / ELO", perm: "admin.seasons" },
+  { id: "rooms", label: "Salas", perm: "mod.rooms" },
+  { id: "live", label: "Live / Stream", perm: "admin.panel" },
+  { id: "theme", label: "Tema visual", perm: "admin.panel" },
+  { id: "security", label: "MFA / Beta / Cupons", perm: "admin.panel" },
+];
+
+const ROLE_ORDER = ["MASTER","ADMIN","MODERATOR","SUPPORT","VIP","USER","GUEST"];
+
+async function api(path, data) {
+  const r = await fetch(path, {
+    method: data === undefined ? "GET" : "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(state.token ? { Authorization: "Bearer " + state.token } : {}),
+    },
+    body: data === undefined ? undefined : JSON.stringify(data),
+  });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.error || body.message || ("HTTP " + r.status));
+  return body;
+}
+
+function roleRank(role) {
+  const i = ROLE_ORDER.indexOf(String(role || "").toUpperCase());
+  return i < 0 ? 99 : i;
+}
+function canStaff() {
+  return roleRank(state.user?.role) <= roleRank("SUPPORT");
+}
+
+function showLogin(err="") {
+  document.getElementById("loginView").classList.remove("hidden");
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("loginErr").textContent = err;
+}
+function showApp() {
+  document.getElementById("loginView").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+}
+
+async function login() {
+  try {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    // Auth via WS is primary; use a lightweight bootstrap: open WS for AUTH then store token.
+    const token = await wsLogin(email, password);
+    state.token = token.sessionToken;
+    state.user = token.user;
+    localStorage.setItem("arena.admin.token", state.token);
+    if (!canStaff()) throw new Error("Esta conta não tem cargo de operação.");
+    showApp();
+    await refresh();
+  } catch (e) {
+    showLogin(e.message);
+  }
+}
+
+function wsLogin(email, password) {
+  return new Promise((resolve, reject) => {
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(proto + "://" + location.host + "/ws");
+    const timer = setTimeout(() => { ws.close(); reject(new Error("Timeout de autenticação")); }, 8000);
+    ws.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === "INIT_SESSION") {
+        ws.send(JSON.stringify({ type: "LOGIN_ACCOUNT", email, password }));
+      }
+      if (msg.type === "AUTH_SUCCESS") {
+        clearTimeout(timer);
+        ws.close();
+        resolve(msg);
+      }
+      if (msg.type === "ERROR_NOTICE") {
+        clearTimeout(timer);
+        ws.close();
+        reject(new Error(msg.message || "Falha no login"));
+      }
+    };
+    ws.onerror = () => { clearTimeout(timer); reject(new Error("WebSocket indisponível")); };
+  });
+}
+
+async function refresh() {
+  renderNav();
+  try {
+    if (roleRank(state.user.role) <= roleRank("ADMIN")) {
+      state.overview = await api("/api/admin/overview");
+      state.audit = (await api("/api/admin/audit-log")).trail || (await api("/api/admin/audit-log")).entries || [];
+      state.reviews = (await api("/api/admin/match-reviews")).reviews || [];
+    }
+  } catch (e) {
+    if (/401|403|autorizado|negado/i.test(e.message)) {
+      localStorage.removeItem("arena.admin.token");
+      return showLogin(e.message);
+    }
+  }
+  try { state.themes = await (await fetch("/themes/themes.json")).json(); } catch {}
+  render();
+}
+
+function renderNav() {
+  const side = document.getElementById("side");
+  side.innerHTML = `<div class="brand">ARENA <b>OPS</b><div class="muted" style="font-size:.72rem;font-weight:500;margin-top:4px">${state.user.username} · ${state.user.role}</div></div>`;
+  for (const t of TABS) {
+    // Soft gate: SUPPORT+ sees most; finer checks on actions
+    if (roleRank(state.user.role) > roleRank("SUPPORT") && t.id !== "theme") continue;
+    const b = document.createElement("button");
+    b.className = "navbtn" + (state.tab === t.id ? " on" : "");
+    b.textContent = t.label;
+    b.onclick = () => { state.tab = t.id; render(); };
+    side.appendChild(b);
+  }
+  const out = document.createElement("button");
+  out.className = "navbtn";
+  out.textContent = "Sair";
+  out.onclick = () => { localStorage.removeItem("arena.admin.token"); location.reload(); };
+  side.appendChild(out);
+}
+
+function money(n) { return "R$ " + Number(n || 0).toFixed(2); }
+
+function render() {
+  const titles = {
+    overview: ["Overview", "Pulso da arena, saldos e partidas"],
+    users: ["Usuários & cargos", "MASTER → GUEST · VIP entre USER e SUPPORT"],
+    audit: ["Auditoria", "Tudo que o usuário faz fica registrado"],
+    reviews: ["Revisões", "Disputas com reservas preservadas"],
+    finance: ["Financeiro", "Créditos fictícios · PIX real ainda off"],
+    seasons: ["Season / ELO", "Ativar temporada e resetar ELO"],
+    rooms: ["Salas", "KOF 2002 e rake da sala"],
+    live: ["Live / Stream", "Capacidade hosted, fila e TURN"],
+    theme: ["Tema visual", "Escolha um dos 25 temas autorais"],
+  };
+  const [t, s] = titles[state.tab] || ["Ops", ""];
+  document.getElementById("pageTitle").textContent = t;
+  document.getElementById("pageSub").textContent = s;
+  const chips = document.getElementById("topChips");
+  const o = state.overview;
+  chips.innerHTML = o ? `
+    <div class="chip">Online <b>${o.stats?.onlineNow ?? "—"}</b></div>
+    <div class="chip">Partidas <b>${o.stats?.activeMatches ?? "—"}</b></div>
+    <div class="chip">Rake <b>${o.vault?.platformRakeProfitReais ?? "—"}</b></div>
+    <div class="chip">Usuários <b>${o.stats?.totalUsers ?? "—"}</b></div>` : "";
+
+  const c = document.getElementById("content");
+  c.innerHTML = "";
+  if (state.tab === "overview") renderOverview(c);
+  if (state.tab === "users") renderUsers(c);
+  if (state.tab === "audit") renderAudit(c);
+  if (state.tab === "reviews") renderReviews(c);
+  if (state.tab === "finance") renderFinance(c);
+  if (state.tab === "seasons") renderSeasons(c);
+  if (state.tab === "rooms") renderRooms(c);
+  if (state.tab === "live") renderLive(c);
+  if (state.tab === "theme") void renderTheme(c);
+  if (state.tab === "security") void renderSecurity(c);
+}
+
+async function renderSecurity(c) {
+  c.append(
+    card(
+      6,
+      `<div class="metric">MFA admin (TOTP + QR)</div>
+      <p class="muted">Gera secret e QR para autenticador. Com MFA_ENFORCE=1, ações sensíveis pedem código.</p>
+      <button class="btn" id="btnMfaSetup">Gerar MFA / QR</button>
+      <div id="mfaBox" class="muted" style="margin-top:10px"></div>`,
+    ),
+    card(
+      6,
+      `<div class="metric">Beta allowlist</div>
+      <p class="muted">Com BETA_CLOSED=1, só e-mails na lista (ou convite) registram.</p>
+      <div class="row"><input id="betaEmail" placeholder="email@exemplo.com" /><button class="btn" id="btnBetaAdd">Allow</button></div>
+      <pre id="betaList" style="margin-top:10px;font-size:.75rem;white-space:pre-wrap;"></pre>`,
+    ),
+    card(
+      6,
+      `<div class="metric">Cupons</div>
+      <div class="row">
+        <input id="couponCode" placeholder="CODIGO" />
+        <input id="couponAmt" type="number" placeholder="centavos" style="width:110px" />
+        <input id="couponMax" type="number" placeholder="max uses" style="width:90px" value="50" />
+        <button class="btn" id="btnCoupon">Criar</button>
+      </div>
+      <pre id="couponList" style="margin-top:10px;font-size:.75rem;"></pre>`,
+    ),
+    card(
+      6,
+      `<div class="metric">Backup off-box</div>
+      <p class="muted">Dispara snapshot local + cópia remota (BACKUP_REMOTE_DIR). Agende com BACKUP_INTERVAL_MS.</p>
+      <button class="btn" id="btnBackup">Rodar backup agora</button>
+      <pre id="backupOut" style="margin-top:10px;font-size:.75rem;"></pre>`,
+    ),
+  );
+  document.getElementById("btnMfaSetup").onclick = async () => {
+    try {
+      const b = await api("/api/admin/mfa/setup", {});
+      document.getElementById("mfaBox").innerHTML =
+        `<p>Secret: <code>${b.secret}</code></p>` +
+        (b.qrUrl
+          ? `<img alt="QR MFA" src="${b.qrUrl}" width="200" height="200" style="background:#fff;padding:8px" />`
+          : "") +
+        `<p class="muted">${b.message || ""}</p>`;
+    } catch (e) {
+      document.getElementById("mfaBox").textContent = e.message;
+    }
+  };
+  const refreshBeta = async () => {
+    try {
+      const b = await api("/api/admin/beta-allowlist");
+      document.getElementById("betaList").textContent = JSON.stringify(b, null, 2);
+    } catch (e) {
+      document.getElementById("betaList").textContent = e.message;
+    }
+  };
+  document.getElementById("btnBetaAdd").onclick = async () => {
+    try {
+      await api("/api/admin/beta-allowlist", {
+        email: document.getElementById("betaEmail").value,
+      });
+      refreshBeta();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+  refreshBeta();
+  const refreshCoupons = async () => {
+    try {
+      const b = await api("/api/admin/coupons");
+      document.getElementById("couponList").textContent = JSON.stringify(
+        b.coupons || b,
+        null,
+        2,
+      );
+    } catch (e) {
+      document.getElementById("couponList").textContent = e.message;
+    }
+  };
+  document.getElementById("btnCoupon").onclick = async () => {
+    try {
+      await api("/api/admin/coupon", {
+        code: document.getElementById("couponCode").value,
+        amountCents: Number(document.getElementById("couponAmt").value),
+        maxUses: Number(document.getElementById("couponMax").value) || 50,
+      });
+      refreshCoupons();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+  refreshCoupons();
+  document.getElementById("btnBackup").onclick = async () => {
+    try {
+      const b = await api("/api/ops/backup", {});
+      document.getElementById("backupOut").textContent = JSON.stringify(b, null, 2);
+    } catch (e) {
+      document.getElementById("backupOut").textContent = e.message;
+    }
+  };
+}
+
+function card(span, html) {
+  const d = document.createElement("div");
+  d.className = "card span-" + span;
+  d.innerHTML = html;
+  return d;
+}
+
+function renderOverview(c) {
+  const o = state.overview || { vault: {}, stats: {}, dre: {} };
+  c.append(
+    card(3, `<div class="metric">Capital / rake</div><strong>${o.vault.totalCompanyCapitalReais || "0.00"}</strong>`),
+    card(3, `<div class="metric">Em disputa (locked)</div><strong>${o.vault.lockedEscrowReais || "0.00"}</strong>`),
+    card(3, `<div class="metric">Saques pendentes</div><strong>${o.vault.pendingWithdrawalsReais || "0.00"}</strong>`),
+    card(3, `<div class="metric">Partidas totais</div><strong>${o.stats.totalMatchesAllTime || 0}</strong>`),
+    card(12, `<div class="metric">Operação</div>
+      <p class="muted">PIX real desligado. Créditos fictícios apenas em development + ENABLE_SIMULATED_FUNDS=1. Cargos: MASTER, ADMIN, MODERATOR, SUPPORT, VIP, USER, GUEST.</p>
+      <div class="row" style="margin-top:10px">
+        <a class="btn" href="/theme-gallery.html" target="_blank">Galeria de temas</a>
+        <a class="btn" href="/reviews.html" target="_blank">Fila de revisões (UI jogador)</a>
+        <button class="btn" id="btnRefresh">Atualizar</button>
+      </div>`),
+  );
+  c.querySelector("#btnRefresh")?.addEventListener("click", refresh);
+}
+
+function renderUsers(c) {
+  const users = state.overview?.allUsers || [];
+  c.append(card(12, `
+    <div class="row" style="margin-bottom:10px">
+      <input id="roleUser" placeholder="user id ou e-mail" style="min-width:220px" />
+      <select id="rolePick">${ROLE_ORDER.map(r => `<option>${r}</option>`).join("")}</select>
+      <button class="btn primary" id="btnRole">Definir cargo</button>
+      <span class="muted">VIP fica acima de USER e abaixo de SUPPORT</span>
+    </div>
+    <table><thead><tr><th>Nick</th><th>E-mail</th><th>Cargo</th><th>VIP</th><th>ELO</th><th>W/L</th><th>Estado</th></tr></thead>
+    <tbody>${users.slice(0, 200).map(u => `<tr>
+      <td>${esc(u.username)}</td><td>${esc(u.email)}</td><td><span class="tag">${esc(u.role)}</span></td>
+      <td>${esc(u.vipLevel || u.vip_level || "—")}</td><td>${u.elo}</td>
+      <td>${u.wins}/${u.losses}</td>
+      <td>${u.isBanned || u.is_banned ? "<span class='danger'>BAN</span>" : u.isFrozen || u.is_frozen ? "<span class='danger'>FREEZE</span>" : "<span class='ok'>OK</span>"}</td>
+    </tr>`).join("") || "<tr><td colspan=7 class='muted'>Sem dados (precisa ADMIN+)</td></tr>"}</tbody></table>`));
+  c.querySelector("#btnRole")?.addEventListener("click", async () => {
+    try {
+      await api("/api/admin/action", {
+        action: "SET_ROLE",
+        userId: document.getElementById("roleUser").value.trim(),
+        role: document.getElementById("rolePick").value,
+      });
+      await refresh();
+      alert("Cargo atualizado");
+    } catch (e) { alert(e.message); }
+  });
+}
+
+function renderAudit(c) {
+  const rows = Array.isArray(state.audit) ? state.audit : [];
+  c.append(card(12, `
+    <p class="muted">Entrada/saída de salas, desafios, vitórias, mudanças de nick/cargo, decisões admin.</p>
+    <table><thead><tr><th>Quando</th><th>Ator</th><th>Cargo</th><th>Ação</th><th>Alvo</th><th>Meta</th></tr></thead>
+    <tbody>${rows.slice(0, 300).map(a => `<tr>
+      <td>${esc(a.created_at || a.at || a.at_ms || "")}</td>
+      <td>${esc(a.actor_id)}</td><td>${esc(a.actor_role)}</td>
+      <td><b>${esc(a.action)}</b></td><td>${esc(a.target_id || a.targetId || "")}</td>
+      <td class="muted">${esc(typeof a.detail === "string" ? a.detail : JSON.stringify(a.meta || a.detail || {}))}</td>
+    </tr>`).join("") || "<tr><td colspan=6 class='muted'>Sem eventos</td></tr>"}</tbody></table>`));
+}
+
+function renderReviews(c) {
+  const rows = state.reviews || [];
+  c.append(card(12, `<table><thead><tr><th>Partida</th><th>Motivo</th><th>Status</th><th>Stake</th><th>Decisão</th></tr></thead>
+    <tbody>${rows.map(r => `<tr>
+      <td>${esc(r.match_id)}</td><td>${esc(r.reason)}</td><td>${esc(r.status)}</td>
+      <td>${((r.stake_cents||0)/100).toFixed(2)}</td>
+      <td class="row">
+        <button class="btn" data-d="REFUND" data-id="${esc(r.match_id)}">Estornar</button>
+        <button class="btn" data-d="PLAYER_A" data-id="${esc(r.match_id)}">P1</button>
+        <button class="btn" data-d="PLAYER_B" data-id="${esc(r.match_id)}">P2</button>
+      </td>
+    </tr>`).join("") || "<tr><td colspan=5 class='muted'>Nenhuma revisão aberta</td></tr>"}</tbody></table>`));
+  c.querySelectorAll("button[data-d]").forEach(btn => btn.onclick = async () => {
+    const reason = prompt("Justificativa (20–1000 chars) com evidências:");
+    if (!reason) return;
+    try {
+      await api("/api/admin/match-reviews/" + btn.dataset.id, { decision: btn.dataset.d, reason });
+      await refresh();
+    } catch (e) { alert(e.message); }
+  });
+}
+
+function renderFinance(c) {
+  const o = state.overview || { vault: {}, pendingWithdrawals: [] };
+  c.append(
+    card(6, `<div class="metric">Depósitos</div><strong>${o.vault.totalDepositsReais || "0.00"}</strong>
+      <p class="muted">PIX real bloqueado até integração.</p>`),
+    card(6, `<div class="metric">Saques pagos</div><strong>${o.vault.totalWithdrawalsReais || "0.00"}</strong>`),
+    card(12, `<table><thead><tr><th>ID</th><th>User</th><th>Valor</th><th>Chave</th><th>Ações</th></tr></thead>
+      <tbody>${(o.pendingWithdrawals||[]).map(w => `<tr>
+        <td>${esc(w.id)}</td><td>${esc(w.username||w.userId)}</td><td>${esc(w.amountReais)}</td><td>${esc(w.pixKey)}</td>
+        <td class="row">
+          <button class="btn" data-w="approve" data-id="${esc(w.id)}">Aprovar*</button>
+          <button class="btn" data-w="reject" data-id="${esc(w.id)}">Rejeitar</button>
+        </td></tr>`).join("") || "<tr><td colspan=5 class='muted'>Fila vazia</td></tr>"}</tbody></table>
+      <p class="muted">*Aprovar em produção sem PIX integrado retorna 409 (esperado).</p>`),
+  );
+  c.querySelectorAll("button[data-w]").forEach(btn => btn.onclick = async () => {
+    try {
+      await api("/api/admin/withdrawal/" + btn.dataset.w, { withdrawalId: btn.dataset.id });
+      await refresh();
+    } catch (e) { alert(e.message); }
+  });
+}
+
+function renderSeasons(c) {
+  c.append(card(12, `
+    <div class="row">
+      <input id="seasonName" placeholder="Nome da season (ex: Season 01 — Outono)" style="min-width:280px" />
+      <button class="btn primary" id="btnSeason">Ativar season + reset ELO</button>
+    </div>
+    <p class="muted" style="margin-top:10px">Reseta ELO para 1200 em todos os jogadores e registra auditoria. Só MASTER/ADMIN com permissão admin.seasons.</p>
+  `));
+  c.querySelector("#btnSeason")?.addEventListener("click", async () => {
+    try {
+      await api("/api/admin/action", {
+        action: "START_SEASON",
+        name: document.getElementById("seasonName").value.trim() || ("Season " + new Date().toISOString().slice(0,10)),
+        resetElo: true,
+      });
+      alert("Season ativada");
+      await refresh();
+    } catch (e) { alert(e.message); }
+  });
+}
+
+function renderRooms(c) {
+  const rooms = state.overview?.rooms || [];
+  c.append(card(12, `<table><thead><tr><th>Nome</th><th>Jogo</th><th>Região</th><th>Rake %</th><th>Ativa</th></tr></thead>
+    <tbody>${rooms.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(r.game)}</td><td>${esc(r.region)}</td><td>${r.rakePercent}</td><td>${r.active ? "sim" : "não"}</td></tr>`).join("") || "<tr><td colspan=5 class='muted'>Sem salas</td></tr>"}</tbody></table>`));
+}
+
+function renderLive(c) {
+  c.append(card(12, `
+    <div class="row">
+      <button class="btn" id="btnCfg">Ler /api/config</button>
+      <pre id="cfgOut" class="muted" style="width:100%;white-space:pre-wrap;background:var(--elev);padding:10px;border-radius:4px"></pre>
+    </div>
+    <p class="muted">Capacidade hosted, fila, TURN (HOSTED_ICE_SERVERS), multi-sessão via HOSTED_MAX_SESSIONS.</p>
+  `));
+  c.querySelector("#btnCfg").onclick = async () => {
+    const cfg = await fetch("/api/config").then(r => r.json());
+    document.getElementById("cfgOut").textContent = JSON.stringify(cfg, null, 2);
+  };
+}
+
+async function renderTheme(c) {
+  let active = null;
+  try { active = await api("/api/admin/theme"); } catch (e) {
+    try { active = await fetch("/api/theme").then(r => r.json()); } catch {}
+  }
+  const presets = active?.presets || state.themes?.themes || [];
+  const colors = { ...(active?.colors || {}) };
+  const colorFields = ["bg","panel","elev","text","muted","accent","accent2","line","ok","danger"];
+  c.append(card(12, `
+    <p class="muted">Tema global da empresa (vale para todos os jogadores). Padrão atual: <b>${esc(active?.name || "—")}</b> (<code>${esc(active?.id || "")}</code>). Galeria: <a href="/theme-gallery.html" style="color:var(--accent2)" target="_blank">abrir</a></p>
+    <div class="row" style="margin:10px 0; gap:8px; flex-wrap:wrap" id="presetRow">
+      ${presets.map(t => `<button class="btn" data-preset="${esc(t.id)}" style="border-color:${esc(t.colors?.accent || "#888")};${t.id===active?.id?"outline:2px solid var(--accent)":""}">${esc(t.name)}</button>`).join("")}
+    </div>
+    <div class="grid" style="margin-top:8px" id="colorGrid">
+      ${colorFields.map(k => `
+        <label class="card span-3" style="padding:10px">
+          <div class="metric">${k}</div>
+          <div class="row" style="margin-top:6px">
+            <input type="color" data-color="${k}" value="${esc(colors[k] || "#000000")}" />
+            <input type="text" data-hex="${k}" value="${esc(colors[k] || "")}" style="flex:1; min-width:90px; font-family:IBM Plex Mono,monospace; font-size:.75rem" />
+          </div>
+        </label>`).join("")}
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" id="btnSaveTheme">Salvar tema global</button>
+      <button class="btn" id="btnResetColors">Limpar cores custom (voltar ao preset)</button>
+      <span class="muted" id="themeMsg"></span>
+    </div>
+  `));
+
+  let selectedId = active?.id || "vinyl-redline";
+  const syncHex = () => {
+    c.querySelectorAll("[data-color]").forEach(inp => {
+      const hex = c.querySelector(`[data-hex="${inp.dataset.color}"]`);
+      if (hex) hex.value = inp.value;
+      colors[inp.dataset.color] = inp.value;
+    });
+  };
+  c.querySelectorAll("[data-color]").forEach(inp => {
+    inp.oninput = () => { syncHex(); window.ArenaTheme?.applyTheme({ id: selectedId, colors: { ...colors }, fonts: active?.fonts }); };
+  });
+  c.querySelectorAll("[data-hex]").forEach(inp => {
+    inp.onchange = () => {
+      if (!/^#[0-9a-fA-F]{6}$/.test(inp.value.trim())) return;
+      const color = c.querySelector(`[data-color="${inp.dataset.hex}"]`);
+      if (color) color.value = inp.value.trim();
+      colors[inp.dataset.hex] = inp.value.trim();
+      window.ArenaTheme?.applyTheme({ id: selectedId, colors: { ...colors }, fonts: active?.fonts });
+    };
+  });
+  c.querySelectorAll("[data-preset]").forEach(btn => btn.onclick = () => {
+    selectedId = btn.dataset.preset;
+    const preset = presets.find(t => t.id === selectedId);
+    if (!preset) return;
+    Object.assign(colors, preset.colors);
+    colorFields.forEach(k => {
+      const color = c.querySelector(`[data-color="${k}"]`);
+      const hex = c.querySelector(`[data-hex="${k}"]`);
+      if (color) color.value = colors[k];
+      if (hex) hex.value = colors[k];
+    });
+    window.ArenaTheme?.applyTheme(preset);
+    document.getElementById("themeMsg").textContent = "Preset selecionado: " + preset.name + " (ainda não salvo)";
+  });
+  c.querySelector("#btnResetColors").onclick = () => {
+    const preset = presets.find(t => t.id === selectedId);
+    if (!preset) return;
+    Object.assign(colors, preset.colors);
+    colorFields.forEach(k => {
+      const color = c.querySelector(`[data-color="${k}"]`);
+      const hex = c.querySelector(`[data-hex="${k}"]`);
+      if (color) color.value = colors[k];
+      if (hex) hex.value = colors[k];
+    });
+    window.ArenaTheme?.applyTheme(preset);
+  };
+  c.querySelector("#btnSaveTheme").onclick = async () => {
+    syncHex();
+    try {
+      const theme = await window.ArenaTheme.saveServerTheme(selectedId, colors, state.token);
+      document.getElementById("themeMsg").textContent = "Salvo: " + theme.name + " — todos os clientes receberão o tema.";
+      state.themes = { themes: theme.presets };
+    } catch (e) {
+      document.getElementById("themeMsg").textContent = e.message;
+      alert(e.message);
+    }
+  };
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
+}
+
+document.getElementById("btnLogin").onclick = login;
+if (state.token) {
+  // try resume
+  showApp();
+  state.user = { username: "sessão", role: "ADMIN" };
+  refresh().catch(() => showLogin());
+}
+</script>
+</body>
+</html>
