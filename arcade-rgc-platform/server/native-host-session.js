@@ -1,6 +1,7 @@
 /**
  * NativeHostSession — Host Bot sem Chrome/Playwright.
  * Fala JSONL com scripts/native-host-worker.js (stub) ou HOST_BOT_BIN real.
+ * Fase 1: samples JSON → observeSample (sem RASTATE/EmulatorJS).
  * Mesma superfície pública que HostedSession para platform.js.
  */
 import { spawn } from "node:child_process";
@@ -8,22 +9,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline";
 import { Kof2002Observer } from "./kof2002-observer.js";
+import { buildNativeHostLaunch } from "./native-host-launcher.js";
+import { mapArenaInput } from "./native-input-map.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-
-function defaultBotCommand() {
-  const bin = process.env.HOST_BOT_BIN;
-  if (bin) {
-    const args = (process.env.HOST_BOT_ARGS || "")
-      .split(/\s+/)
-      .filter(Boolean);
-    return { command: bin, args };
-  }
-  return {
-    command: process.execPath,
-    args: [path.join(root, "scripts/native-host-worker.js")],
-  };
-}
 
 export class NativeHostSession {
   constructor({
@@ -58,7 +47,9 @@ export class NativeHostSession {
     this.chain = Promise.resolve();
     this.child = null;
     this.lastSample = null;
+    this.lastMappedInput = null;
     this.engine = "native";
+    this.launch = null;
   }
 
   send(cmd, extra = {}) {
@@ -67,6 +58,27 @@ export class NativeHostSession {
     }
     this.child.stdin.write(JSON.stringify({ cmd, ...extra }) + "\n");
     return Promise.resolve();
+  }
+
+  applySample(raw) {
+    if (this.closed) return;
+    try {
+      const observation = this.observer.observeSample(raw);
+      this.lastSample = observation.sample;
+      this.onSample?.(observation.sample);
+      if (observation.needsReview) {
+        this.send("pause").catch(() => {});
+        this.fail(observation.reason || observation.event);
+        return;
+      }
+      if (observation.event) this.onObservation?.(observation);
+      if (observation.result) {
+        this.send("pause").catch(() => {});
+        this.onResult?.(observation.result);
+      }
+    } catch (error) {
+      this.fail(error.message || String(error));
+    }
   }
 
   handleEvent(ev) {
@@ -81,6 +93,9 @@ export class NativeHostSession {
       case "ready":
         this.started = true;
         this.manifest = ev.manifest || { engine: "native" };
+        break;
+      case "sample":
+        this.applySample(ev.sample);
         break;
       case "observation":
         this.onObservation?.(ev.observation || ev);
@@ -104,13 +119,40 @@ export class NativeHostSession {
 
   async start() {
     if (this.closed) throw Error("Sessão encerrada.");
-    const { command, args } = defaultBotCommand();
-    this.child = spawn(command, args, {
-      cwd: process.env.HOST_BOT_WORKDIR
-        ? path.resolve(root, process.env.HOST_BOT_WORKDIR)
-        : root,
+    this.launch = buildNativeHostLaunch();
+    const { command, args, workdir, env: launchEnv } = this.launch;
+
+    // Fase 1 lab: sempre sobe o worker Node (stub). HOST_BOT_BIN real
+    // entra via env no worker / launcher docs; vídeo = Fase 2.
+    // Se o operador apontar HOST_BOT_BIN para o próprio worker, respeitamos.
+    const useWorker =
+      this.launch.mode === "stub" ||
+      String(process.env.HOST_BOT_USE_WORKER || "1") !== "0";
+
+    const spawnCmd = useWorker
+      ? process.execPath
+      : command;
+    const spawnArgs = useWorker
+      ? [path.join(root, "scripts/native-host-worker.js")]
+      : args;
+
+    this.child = spawn(spawnCmd, spawnArgs, {
+      cwd: useWorker
+        ? root
+        : workdir ||
+          (process.env.HOST_BOT_WORKDIR
+            ? path.resolve(root, process.env.HOST_BOT_WORKDIR)
+            : root),
       stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env, HOST_BOT_ROLE: "worker" },
+      env: {
+        ...process.env,
+        HOST_BOT_ROLE: "worker",
+        HOST_BOT_MODE: launchEnv?.HOST_BOT_MODE || "stub",
+        HOST_BOT_LUA: launchEnv?.HOST_BOT_LUA || "",
+        HOST_BOT_LAUNCH_MODE: this.launch.mode,
+        HOST_BOT_LAUNCH_BIN: command,
+        HOST_BOT_LAUNCH_ARGS: JSON.stringify(args),
+      },
       windowsHide: true,
     });
     this.child.on("exit", (code) => {
@@ -159,10 +201,19 @@ export class NativeHostSession {
     await this.send("start", {
       matchId: this.matchId,
       iceServers: this.iceServers,
+      launch: {
+        mode: this.launch.mode,
+        command,
+        args,
+      },
     });
     const ev = await ready;
     this.started = true;
-    this.manifest = ev.manifest || { engine: "native-stub" };
+    this.manifest = {
+      ...(ev.manifest || { engine: "native-stub" }),
+      launchMode: this.launch.mode,
+      phase: 1,
+    };
     return { manifest: this.manifest };
   }
 
@@ -187,7 +238,15 @@ export class NativeHostSession {
 
   input(slot, button, value) {
     if (button === 3 && value === 1) this.observer.startPressed(slot);
-    return this.enqueue(() => this.send("input", { slot, button, value }));
+    this.lastMappedInput = mapArenaInput(slot, button, value);
+    return this.enqueue(() =>
+      this.send("input", {
+        slot,
+        button,
+        value,
+        mapped: this.lastMappedInput,
+      }),
+    );
   }
 
   pause() {
@@ -204,13 +263,14 @@ export class NativeHostSession {
     this.send("resetObserver").catch(() => {});
   }
 
-  /** Stub: evidência textual até haver framebuffer/ffmpeg. */
+  /** Stub: evidência textual até haver framebuffer/ffmpeg (Fase 2). */
   async captureEvidence(matchId) {
     return {
-      kind: "native-stub",
+      kind: "native-phase1",
       matchId: String(matchId),
       at: Date.now(),
       sample: this.lastSample,
+      mappedInput: this.lastMappedInput,
       note: "Screenshot nativo entra na fase 2 (framebuffer/ffmpeg).",
     };
   }
@@ -218,6 +278,11 @@ export class NativeHostSession {
   /** Lab/testes: injeta resultado no worker stub. */
   async injectFixtureResult(winnerSlot) {
     return this.send("injectResult", { winnerSlot });
+  }
+
+  /** Lab/testes: injeta sample sintético (observeSample sem FBNeo). */
+  async injectSample(sample) {
+    return this.send("injectSample", { sample });
   }
 
   fail(message) {

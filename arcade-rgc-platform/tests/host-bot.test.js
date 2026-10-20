@@ -10,6 +10,21 @@ import {
 } from "../server/host-bot-factory.js";
 import { NativeHostSession } from "../server/native-host-session.js";
 import { HostedSession } from "../server/hosted-session.js";
+import {
+  Kof2002Observer,
+  normalizeSample,
+} from "../server/kof2002-observer.js";
+import {
+  mapArenaInput,
+  arenaAction,
+  retroArchKeyboardLines,
+  isKnownArenaButton,
+} from "../server/native-input-map.js";
+import {
+  buildNativeHostLaunch,
+  resolveHostBotBin,
+  defaultRetroArchLabConfig,
+} from "../server/native-host-launcher.js";
 
 test("capacidade: VPS teste 4GB/2c native recomenda faixa baixa", () => {
   const c = capacityForKnownVps("test4g2c", "native");
@@ -49,6 +64,85 @@ test("factory resolve chrome vs native", () => {
   assert.ok(nativeFactory({}) instanceof NativeHostSession);
 });
 
+test("input map: Arena → ação e tecla P1/P2", () => {
+  assert.equal(arenaAction(3), "start");
+  assert.equal(arenaAction(0), "punch1");
+  assert.ok(isKnownArenaButton(4));
+  assert.equal(isKnownArenaButton(99), false);
+  const p1 = mapArenaInput(1, 0, 1);
+  assert.equal(p1.action, "punch1");
+  assert.equal(p1.key, "KeyZ");
+  assert.equal(p1.retroBind, "b");
+  const p2 = mapArenaInput(2, 4, 1);
+  assert.equal(p2.action, "up");
+  assert.equal(p2.key, "Numpad8");
+  assert.ok(retroArchKeyboardLines(1).some((l) => l.includes("input_player1_")));
+  assert.ok(defaultRetroArchLabConfig().includes("input_player2_start"));
+});
+
+test("launcher: sem HOST_BOT_BIN = stub", () => {
+  const prev = process.env.HOST_BOT_BIN;
+  delete process.env.HOST_BOT_BIN;
+  try {
+    assert.equal(resolveHostBotBin({}), null);
+    const launch = buildNativeHostLaunch({});
+    assert.equal(launch.mode, "stub");
+    assert.ok(launch.args[0].endsWith("native-host-worker.js"));
+  } finally {
+    if (prev != null) process.env.HOST_BOT_BIN = prev;
+    else delete process.env.HOST_BOT_BIN;
+  }
+});
+
+test("launcher: RetroArch monta -L fbneo + rom", () => {
+  const launch = buildNativeHostLaunch({
+    HOST_BOT_BIN: "C:\\games\\retroarch.exe",
+    HOST_BOT_KIND: "retroarch",
+    HOST_BOT_WORKDIR: "data/hosted/kof2002",
+  });
+  assert.equal(launch.mode, "retroarch");
+  assert.equal(launch.command, "C:\\games\\retroarch.exe");
+  assert.ok(launch.args.includes("-L"));
+  assert.ok(launch.args.includes("fbneo_libretro"));
+});
+
+test("normalizeSample + observeSample liquidam sem RASTATE", () => {
+  assert.throws(() => normalizeSample(null), /inválido/);
+  const observer = new Kof2002Observer();
+  observer.arm();
+  observer.startPressed(1);
+  observer.startPressed(2);
+  assert.equal(
+    observer.observeSample({
+      frame: 100,
+      health: [0x67, 0x67],
+      timer: 0x60,
+      wins: [0, 0],
+    }).event,
+    "COMBAT_OBSERVED",
+  );
+  observer.observeSample({
+    frame: 200,
+    health: [10, 0],
+    timer: 0x40,
+    wins: [1, 0],
+  });
+  observer.observeSample({
+    frame: 240,
+    health: [10, 0],
+    timer: 0x40,
+    wins: [1, 0],
+  });
+  const out = observer.observeSample({
+    frame: 280,
+    health: [10, 0],
+    timer: 0x40,
+    wins: [1, 0],
+  });
+  assert.equal(out.result?.winnerSlot, 1);
+  assert.equal(out.result?.source, "private-server-memory");
+});
+
 test("NativeHostSession stub sobe, peers e para sem Chrome", async () => {
   const peers = [];
   const progress = [];
@@ -60,6 +154,7 @@ test("NativeHostSession stub sobe, peers e para sem Chrome", async () => {
   });
   const started = await session.start();
   assert.equal(started.manifest.engine, "native-stub");
+  assert.equal(started.manifest.phase, 1);
   assert.ok(progress.includes("boot"));
   assert.deepEqual(
     peers.filter((p) => p.state === "connected").map((p) => p.slot).sort(),
@@ -69,5 +164,58 @@ test("NativeHostSession stub sobe, peers e para sem Chrome", async () => {
   await session.input(1, 0, 0);
   await session.resume();
   await session.pause();
+  await session.stop();
+});
+
+test("Fase 1: samples sintéticos → observeSample → vitória P1", async () => {
+  const observations = [];
+  const results = [];
+  const samples = [];
+  const session = new NativeHostSession({
+    matchId: "test_phase1_sample",
+    onSample: (s) => samples.push(s),
+    onObservation: (o) => observations.push(o.event),
+    onResult: (r) => results.push(r),
+    onFailure: (m) => assert.fail(m),
+  });
+  await session.start();
+  await session.input(1, 3, 1); // start P1
+  await session.input(2, 3, 1); // start P2
+  await session.resume();
+
+  // Combate observado
+  await session.injectSample({
+    frame: 50,
+    health: [0x67, 0x67],
+    timer: 0x60,
+    wins: [0, 0],
+  });
+  // deixa o worker processar a linha
+  await new Promise((r) => setTimeout(r, 80));
+  assert.ok(observations.includes("COMBAT_OBSERVED"), String(observations));
+
+  await session.injectSample({
+    frame: 100,
+    health: [20, 0],
+    timer: 0x45,
+    wins: [1, 0],
+  });
+  await session.injectSample({
+    frame: 140,
+    health: [20, 0],
+    timer: 0x45,
+    wins: [1, 0],
+  });
+  await session.injectSample({
+    frame: 180,
+    health: [20, 0],
+    timer: 0x45,
+    wins: [1, 0],
+  });
+  await new Promise((r) => setTimeout(r, 120));
+
+  assert.ok(samples.length >= 2, "samples recebidos");
+  assert.equal(results[0]?.winnerSlot, 1);
+  assert.equal(session.lastMappedInput?.action, "start");
   await session.stop();
 });

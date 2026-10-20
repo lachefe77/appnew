@@ -35,6 +35,30 @@ export function readKofSample(state) {
     wins: kofProfile.wins.map(raw),
   };
 }
+
+/**
+ * Sample já decodificado (Host Bot Lua/JSON). Não usa layout RASTATE/EJS.
+ * Endereços de origem: peon2/fbneo-training-mode + fightcade detectors.
+ */
+export function normalizeSample(raw) {
+  if (!raw || typeof raw !== "object")
+    throw Error("Sample de estado inválido; resultado bloqueado.");
+  const frame = Number(raw.frame);
+  if (!Number.isFinite(frame) || frame < 0)
+    throw Error("Frame de sample inválido; resultado bloqueado.");
+  const health = [Number(raw.health?.[0]), Number(raw.health?.[1])];
+  const wins = [Number(raw.wins?.[0]), Number(raw.wins?.[1])];
+  const timer = Number(raw.timer);
+  if (health.some((h) => !Number.isFinite(h)) || wins.some((w) => !Number.isFinite(w)) || !Number.isFinite(timer))
+    throw Error("Campos de sample incompletos; resultado bloqueado.");
+  return {
+    frame: Math.floor(frame),
+    health: health.map((h) => h & 0xff),
+    timer: timer & 0xff,
+    wins: wins.map((w) => w & 0xff),
+  };
+}
+
 export class Kof2002Observer {
   constructor() {
     this.armed = false;
@@ -63,8 +87,17 @@ export class Kof2002Observer {
     this.timeOverSince = null;
     this.armed = false;
   }
+  /** Chrome/EmulatorJS: snapshot RASTATE → sample. */
   observe(state) {
-    const sample = readKofSample(state);
+    return this.observeSample(readKofSample(state));
+  }
+  /**
+   * Host Bot nativo: sample JSON pré-decodificado (Lua bridge).
+   * Mesma máquina de estados que observe(); não depende de RASTATE.
+   */
+  observeSample(raw) {
+    const sample = normalizeSample(raw);
+    this.samples++;
     if (sample.frame < this.lastFrame)
       throw Error("Relógio do core retrocedeu; resultado bloqueado.");
     if (sample.frame === this.lastFrame) return { sample };

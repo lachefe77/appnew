@@ -1,6 +1,6 @@
 /**
- * Smoke do Host Bot nativo (sem Chrome).
- * Uso na VPS de teste (PowerShell):
+ * Smoke do Host Bot nativo (sem Chrome) — Fase 1: input + samples.
+ * Uso na VPS / PC (PowerShell):
  *   $env:HOSTED_ENGINE="native"
  *   npm run smoke:host-bot -- 4
  */
@@ -14,24 +14,31 @@ console.log(
   JSON.stringify({
     phase: "start",
     engine: "native-stub",
+    hostPhase: 1,
     sessions: n,
-    hint: "Primeiro teste = stub leve. FBNeo real + vídeo = próxima fase.",
+    hint: "Fase 1 = spawn + input map + samples. Vídeo = Fase 2.",
   }),
 );
 
 try {
   for (let i = 0; i < n; i++) {
     let peerCount = 0;
+    let sampleCount = 0;
     const session = new NativeHostSession({
       matchId: `smoke_${i}`,
       onPeer: (_slot, state) => {
         if (state === "connected") peerCount++;
+      },
+      onSample: () => {
+        sampleCount++;
       },
       onFailure: (message) => {
         throw new Error(`session ${i}: ${message}`);
       },
     });
     await session.start();
+    await session.input(1, 3, 1);
+    await session.input(2, 3, 1);
     await session.resume();
     for (let k = 0; k < 10; k++) {
       await session.input(1, 0, 1);
@@ -39,7 +46,21 @@ try {
       await session.input(2, 8, 1);
       await session.input(2, 8, 0);
     }
-    sessions.push({ session, i, peerCount, manifest: session.manifest });
+    await session.injectSample({
+      frame: 40 + i,
+      health: [0x67, 0x67],
+      timer: 0x60,
+      wins: [0, 0],
+    });
+    await new Promise((r) => setTimeout(r, 50));
+    sessions.push({
+      session,
+      i,
+      peerCount,
+      sampleCount,
+      lastSample: session.lastSample,
+      manifest: session.manifest,
+    });
   }
 
   const mem = process.memoryUsage();
@@ -47,6 +68,7 @@ try {
     JSON.stringify(
       {
         phase: "ok",
+        hostPhase: 1,
         sessions: sessions.length,
         elapsedMs: Date.now() - startedAt,
         rssMb: Math.round(mem.rss / 1024 / 1024),
@@ -54,6 +76,8 @@ try {
         detail: sessions.map((s) => ({
           i: s.i,
           peers: s.peerCount,
+          samples: s.sampleCount,
+          lastFrame: s.lastSample?.frame ?? null,
           manifest: s.manifest,
         })),
       },
