@@ -55,6 +55,11 @@ import {
 } from "./security.js";
 import { can, roleAtLeast, assignableRoles, normalizeRole } from "./roles.js";
 import { audit } from "./audit-middleware.js";
+import {
+  ensureDefaultTheme,
+  getActiveTheme,
+  setActiveTheme,
+} from "./theme-settings.js";
 
 const scrypt = promisify(crypto.scrypt),
   uuid = () => crypto.randomUUID();
@@ -165,6 +170,7 @@ export function startPlatform({
   hostedFactory = defaultHostedFactory,
 } = {}) {
   recoverMatches();
+  ensureDefaultTheme();
   const clients = new Map(),
     matches = new Map(),
     challenges = new Map(),
@@ -1024,7 +1030,9 @@ export function startPlatform({
             seriesBestOf: SERIES_BEST_OF,
             dailyLossLimitCents,
             rageQuitDefault: "loss",
+            themeId: getActiveTheme().id,
           });
+        if (p === "/api/theme") return json(res, 200, getActiveTheme());
         if (p === "/api/rooms") return json(res, 200, manager.publicList());
         if (p === "/api/tournaments")
           return json(res, 200, tournaments.getAllTournaments());
@@ -1501,6 +1509,28 @@ export function startPlatform({
               cents(d.maxUses, { max: 100000 }),
             );
             return json(res, 200, { success: true });
+          }
+          if (p === "/api/admin/theme") {
+            if (!can(admin, "admin.panel")) throw fail("Acesso negado.", 403);
+            if (req.method === "GET") return json(res, 200, getActiveTheme());
+            if (req.method === "POST") {
+              const d = await body(req);
+              const theme = setActiveTheme({
+                id: text(d.id || d.themeId || "neogeo-cabinet", 64),
+                colors: d.colors && typeof d.colors === "object" ? d.colors : {},
+              });
+              AuditLog.record({
+                actorId: admin.id,
+                actorRole: admin.role,
+                action: "SET_THEME",
+                targetType: "theme",
+                targetId: theme.id,
+                meta: { customColors: theme.customColors },
+              });
+              for (const [ws] of clients)
+                send(ws, { type: "THEME_UPDATED", theme });
+              return json(res, 200, { success: true, theme });
+            }
           }
           if (p === "/api/admin/broadcast" && req.method === "POST") {
             const d = await body(req);

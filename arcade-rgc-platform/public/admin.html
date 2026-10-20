@@ -265,7 +265,7 @@ function render() {
   if (state.tab === "seasons") renderSeasons(c);
   if (state.tab === "rooms") renderRooms(c);
   if (state.tab === "live") renderLive(c);
-  if (state.tab === "theme") renderTheme(c);
+  if (state.tab === "theme") void renderTheme(c);
 }
 
 function card(span, html) {
@@ -421,20 +421,93 @@ function renderLive(c) {
   };
 }
 
-function renderTheme(c) {
-  const themes = state.themes?.themes || [];
+async function renderTheme(c) {
+  let active = null;
+  try { active = await api("/api/admin/theme"); } catch (e) {
+    try { active = await fetch("/api/theme").then(r => r.json()); } catch {}
+  }
+  const presets = active?.presets || state.themes?.themes || [];
+  const colors = { ...(active?.colors || {}) };
+  const colorFields = ["bg","panel","elev","text","muted","accent","accent2","line","ok","danger"];
   c.append(card(12, `
-    <p class="muted">Prévia rápida. Para comparar vitrine/sala/perfil/admin lado a lado abra a <a href="/theme-gallery.html" style="color:var(--accent2)">galeria completa</a>.</p>
-    <div class="row" style="margin-top:8px">${themes.map(t => `
-      <button class="btn" data-theme="${t.id}" style="border-color:${t.colors.accent}">${t.name}</button>
-    `).join("")}</div>
+    <p class="muted">Tema global da empresa (vale para todos os jogadores). Padrão atual: <b>${esc(active?.name || "—")}</b> (<code>${esc(active?.id || "")}</code>). Galeria: <a href="/theme-gallery.html" style="color:var(--accent2)" target="_blank">abrir</a></p>
+    <div class="row" style="margin:10px 0; gap:8px; flex-wrap:wrap" id="presetRow">
+      ${presets.map(t => `<button class="btn" data-preset="${esc(t.id)}" style="border-color:${esc(t.colors?.accent || "#888")};${t.id===active?.id?"outline:2px solid var(--accent)":""}">${esc(t.name)}</button>`).join("")}
+    </div>
+    <div class="grid" style="margin-top:8px" id="colorGrid">
+      ${colorFields.map(k => `
+        <label class="card span-3" style="padding:10px">
+          <div class="metric">${k}</div>
+          <div class="row" style="margin-top:6px">
+            <input type="color" data-color="${k}" value="${esc(colors[k] || "#000000")}" />
+            <input type="text" data-hex="${k}" value="${esc(colors[k] || "")}" style="flex:1; min-width:90px; font-family:IBM Plex Mono,monospace; font-size:.75rem" />
+          </div>
+        </label>`).join("")}
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" id="btnSaveTheme">Salvar tema global</button>
+      <button class="btn" id="btnResetColors">Limpar cores custom (voltar ao preset)</button>
+      <span class="muted" id="themeMsg"></span>
+    </div>
   `));
-  c.querySelectorAll("[data-theme]").forEach(btn => btn.onclick = async () => {
-    const catalog = state.themes;
-    window.ArenaTheme?.setTheme(btn.dataset.theme, catalog);
-    localStorage.setItem("arena.theme", btn.dataset.theme);
-    alert("Tema aplicado: " + btn.dataset.theme);
+
+  let selectedId = active?.id || "neogeo-cabinet";
+  const syncHex = () => {
+    c.querySelectorAll("[data-color]").forEach(inp => {
+      const hex = c.querySelector(`[data-hex="${inp.dataset.color}"]`);
+      if (hex) hex.value = inp.value;
+      colors[inp.dataset.color] = inp.value;
+    });
+  };
+  c.querySelectorAll("[data-color]").forEach(inp => {
+    inp.oninput = () => { syncHex(); window.ArenaTheme?.applyTheme({ id: selectedId, colors: { ...colors }, fonts: active?.fonts }); };
   });
+  c.querySelectorAll("[data-hex]").forEach(inp => {
+    inp.onchange = () => {
+      if (!/^#[0-9a-fA-F]{6}$/.test(inp.value.trim())) return;
+      const color = c.querySelector(`[data-color="${inp.dataset.hex}"]`);
+      if (color) color.value = inp.value.trim();
+      colors[inp.dataset.hex] = inp.value.trim();
+      window.ArenaTheme?.applyTheme({ id: selectedId, colors: { ...colors }, fonts: active?.fonts });
+    };
+  });
+  c.querySelectorAll("[data-preset]").forEach(btn => btn.onclick = () => {
+    selectedId = btn.dataset.preset;
+    const preset = presets.find(t => t.id === selectedId);
+    if (!preset) return;
+    Object.assign(colors, preset.colors);
+    colorFields.forEach(k => {
+      const color = c.querySelector(`[data-color="${k}"]`);
+      const hex = c.querySelector(`[data-hex="${k}"]`);
+      if (color) color.value = colors[k];
+      if (hex) hex.value = colors[k];
+    });
+    window.ArenaTheme?.applyTheme(preset);
+    document.getElementById("themeMsg").textContent = "Preset selecionado: " + preset.name + " (ainda não salvo)";
+  });
+  c.querySelector("#btnResetColors").onclick = () => {
+    const preset = presets.find(t => t.id === selectedId);
+    if (!preset) return;
+    Object.assign(colors, preset.colors);
+    colorFields.forEach(k => {
+      const color = c.querySelector(`[data-color="${k}"]`);
+      const hex = c.querySelector(`[data-hex="${k}"]`);
+      if (color) color.value = colors[k];
+      if (hex) hex.value = colors[k];
+    });
+    window.ArenaTheme?.applyTheme(preset);
+  };
+  c.querySelector("#btnSaveTheme").onclick = async () => {
+    syncHex();
+    try {
+      const theme = await window.ArenaTheme.saveServerTheme(selectedId, colors, state.token);
+      document.getElementById("themeMsg").textContent = "Salvo: " + theme.name + " — todos os clientes receberão o tema.";
+      state.themes = { themes: theme.presets };
+    } catch (e) {
+      document.getElementById("themeMsg").textContent = e.message;
+      alert(e.message);
+    }
+  };
 }
 
 function esc(s) {

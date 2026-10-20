@@ -7,7 +7,7 @@
   <title>ARENA ARCADE — Fliperama Online e Duelos 1x1</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Barlow+Condensed:wght@500;700;800&family=IBM+Plex+Mono:wght@400;600&family=Press+Start+2P&family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <!-- Toast notification system (must load before any JS) -->
   <script src="/toast.js"></script>
   <!-- Audio engine (sets window.ArcadeAudio) -->
@@ -23,21 +23,25 @@
 
   </script>
   <style>
+    /* Default: Neo Geo Cabinet (01) — admin pode trocar em /admin.html → Tema visual */
     :root {
-      --bg-dark: #080a0f;
-      --bg-card: #10141e;
-      --bg-card-sub: #161c2b;
-      --bg-hover: #1e2638;
-      --border-color: #242e42;
-      --neon-cyan: #00e5ff;
-      --neon-green: #00ff88;
-      --neon-gold: #ffcc00;
-      --kof-fire: #ff4d00;
-      --kof-crimson: #ff0055;
-      --text-main: #f0f4fa;
-      --text-muted: #8494ab;
-      --font-display: 'Chakra Petch', sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      --bg-dark: #070708;
+      --bg-card: #121214;
+      --bg-card-sub: #1c1c20;
+      --bg-hover: #1c1c20;
+      --border-color: #2a2a2e;
+      --neon-cyan: #f5c518;
+      --neon-green: #3ddc97;
+      --neon-gold: #f5c518;
+      --kof-fire: #e10600;
+      --kof-crimson: #e10600;
+      --text-main: #f3efe6;
+      --text-muted: #9a958c;
+      --accent: #e10600;
+      --accent2: #f5c518;
+      --font-display: 'Oswald', 'Barlow Condensed', sans-serif;
+      --font-mono: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+      --font-ui: 'Barlow Condensed', sans-serif;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -1235,6 +1239,10 @@
         case 'SERIES_NEXT_GAME':
           renderScoreboard(msg);
           window.toast?.info('Série', msg.message || msg.type);
+          break;
+        case 'THEME_UPDATED':
+          if (msg.theme) window.ArenaTheme?.applyTheme(msg.theme);
+          window.toast?.info('Tema', 'Administração atualizou o visual da arena');
           break;
         case 'INPUT_ACK':
           if(app.fbneo?.matchId===msg.matchId)app.fbneo.onInputAck(msg);break;
