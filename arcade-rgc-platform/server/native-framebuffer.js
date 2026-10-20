@@ -34,7 +34,8 @@ export function buildFfmpegFrameCapture(env = process.env) {
   const outArgs = [
     "-an",
     "-vf",
-    `scale=${w}:${h}:flags=neighbor`,
+    // force size exacto + yuv420p evita riscas (chroma desalinhada / SAR estranho)
+    `scale=${w}:${h}:flags=neighbor:force_original_aspect_ratio=disable,format=yuv420p,setsar=1`,
     "-r",
     String(fps),
     "-f",

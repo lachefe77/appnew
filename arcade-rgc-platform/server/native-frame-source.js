@@ -128,7 +128,7 @@ export function createFrameSource({
   fps = NATIVE_FRAME.fps,
   onFrame,
   /** ms: se external mais fresco que isto, não pinta synthetic */
-  externalTtlMs = 400,
+  externalTtlMs = Number(process.env.HOST_BOT_EXTERNAL_TTL_MS) || 400,
   mode = "auto", // auto | synthetic | external
 } = {}) {
   const data = Buffer.alloc(i420ByteLength(width, height));

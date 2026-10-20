@@ -104,7 +104,9 @@ test("input map: Arena → ação e tecla P1/P2", () => {
   const p2 = mapArenaInput(2, 4, 1);
   assert.equal(p2.action, "up");
   assert.equal(p2.key, "Numpad8");
-  assert.ok(retroArchKeyboardLines(1).some((l) => l.includes("input_player1_")));
+  const lines = retroArchKeyboardLines(1);
+  assert.ok(lines.some((l) => l.includes('input_player1_b = "z"')));
+  assert.ok(lines.every((l) => !l.includes("KeyZ") && !l.includes("ArrowUp")));
   assert.ok(defaultRetroArchLabConfig().includes("input_player2_start"));
 });
 

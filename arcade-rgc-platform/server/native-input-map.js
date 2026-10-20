@@ -61,6 +61,33 @@ const RETRO_BINDS = Object.freeze({
   coin: "select",
 });
 
+/**
+ * Arena KeyZ/ArrowUp → nome que o RetroArch entende no .cfg
+ * (não usar "KeyZ" — o RetroArch ignora e o teclado não liga).
+ */
+export const RETRO_KEY_NAMES = Object.freeze({
+  ArrowUp: "up",
+  ArrowDown: "down",
+  ArrowLeft: "left",
+  ArrowRight: "right",
+  KeyZ: "z",
+  KeyX: "x",
+  KeyA: "a",
+  KeyS: "s",
+  KeyU: "u",
+  KeyI: "i",
+  KeyJ: "j",
+  KeyK: "k",
+  Enter: "enter",
+  NumpadEnter: "keypad enter",
+  Digit5: "5",
+  Digit6: "6",
+  Numpad8: "keypad8",
+  Numpad2: "keypad2",
+  Numpad4: "keypad4",
+  Numpad6: "keypad6",
+});
+
 export function arenaAction(button) {
   return ARENA_ACTIONS[Number(button)] || null;
 }
@@ -81,16 +108,17 @@ export function mapArenaInput(slot, button, value) {
   };
 }
 
-/** Linhas input_playerN_*_btn para um .cfg RetroArch de lab. */
+/** Linhas input_playerN_* para um .cfg RetroArch de lab. */
 export function retroArchKeyboardLines(slot = 1) {
   const s = Number(slot) === 2 ? 2 : 1;
   const keys = s === 2 ? KEYS_P2 : KEYS_P1;
   const lines = [];
   for (const [button, action] of Object.entries(ARENA_ACTIONS)) {
     const bind = RETRO_BINDS[action];
-    const key = keys[Number(button)];
-    if (!bind || !key) continue;
-    lines.push(`input_player${s}_${bind} = "${key}"`);
+    const arenaKey = keys[Number(button)];
+    const retroKey = arenaKey ? RETRO_KEY_NAMES[arenaKey] : null;
+    if (!bind || !retroKey) continue;
+    lines.push(`input_player${s}_${bind} = "${retroKey}"`);
   }
   return lines;
 }

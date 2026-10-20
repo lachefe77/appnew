@@ -126,11 +126,12 @@ export function buildNativeHostLaunch(env = process.env) {
 export function defaultRetroArchLabConfig() {
   return [
     "# Gerado para lab Host Bot — teclado P1/P2 (native-input-map)",
-    "video_fullscreen = \"false\"",
-    "video_windowed_fullscreen = \"false\"",
-    "audio_enable = \"false\"",
-    "fps_show = \"false\"",
-    "input_autodetect_enable = \"false\"",
+    'video_driver = "sdl2"',
+    'video_fullscreen = "false"',
+    'video_windowed_fullscreen = "false"',
+    'audio_enable = "false"',
+    'fps_show = "false"',
+    'input_autodetect_enable = "false"',
     ...retroArchKeyboardLines(1),
     ...retroArchKeyboardLines(2),
     "",

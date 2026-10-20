@@ -1,7 +1,6 @@
 /**
- * Injeta teclas no OS para o core RetroArch/FBNeo (Fase 4b).
- * Windows: PowerShell + keybd_event (sem addon nativo).
- * Outros: no-op (lab).
+ * Injeta teclas no OS para o core RetroArch/FBNeo (Fase 4b/4c).
+ * Windows: PowerShell + PostMessage no HWND (não rouba foco do browser).
  */
 import { spawn } from "node:child_process";
 import path from "node:path";
@@ -34,13 +33,24 @@ export const VK = Object.freeze({
   Numpad6: 0x66,
 });
 
+const EXTENDED_KEYS = new Set([
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "NumpadEnter",
+  "Numpad8",
+  "Numpad2",
+  "Numpad4",
+  "Numpad6",
+]);
+
 export function vkForKey(key) {
   return VK[key] || null;
 }
 
 /**
  * @param {{ hwnd?: number|null, env?: NodeJS.ProcessEnv }} [opts]
- * @returns {{ apply: (slot, button, value) => void, stop: () => void, backend: string }}
  */
 export function createInputInjector(opts = {}) {
   const env = opts.env || process.env;
@@ -56,7 +66,6 @@ export function createInputInjector(opts = {}) {
     return createWindowsInjector(opts.hwnd || null);
   }
 
-  // Linux lab: regista só (sem X11 fake); encode/lab não precisa.
   return {
     backend: "noop",
     apply(slot, button, value) {
@@ -81,7 +90,6 @@ function createWindowsInjector(hwnd) {
     },
   );
   let dead = false;
-  let lastFocusAt = 0;
   child.on("exit", () => {
     dead = true;
   });
@@ -102,17 +110,18 @@ function createWindowsInjector(hwnd) {
       const mapped = mapArenaInput(slot, button, value);
       const vk = vkForKey(mapped.key);
       if (vk == null) return;
-      // Re-foca a janela do core de tempos a tempos (browser rouba o foco).
-      const now = Date.now();
-      const needFocus = hwnd && now - lastFocusAt > 700;
-      if (needFocus) lastFocusAt = now;
       send({
         vk,
         down: mapped.value === 1 ? 1 : 0,
         key: mapped.key,
         hwnd: hwnd || undefined,
-        focus: needFocus ? 1 : 0,
+        ext: EXTENDED_KEYS.has(mapped.key) ? 1 : 0,
       });
+    },
+    async pulse(slot, button, holdMs = 80) {
+      this.apply(slot, button, 1);
+      await new Promise((r) => setTimeout(r, holdMs));
+      this.apply(slot, button, 0);
     },
     stop() {
       try {
@@ -127,4 +136,25 @@ function createWindowsInjector(hwnd) {
       }
     },
   };
+}
+
+/** Insere fichas no gabinete FBNeo (hosted bloqueia button 2 no cliente). */
+export async function injectCabinetCredits(input, { pulses = 3, gapMs = 120 } = {}) {
+  if (!input?.pulse && !input?.apply) return;
+  for (let i = 0; i < pulses; i++) {
+    if (input.pulse) {
+      await input.pulse(1, 2, 70);
+      await new Promise((r) => setTimeout(r, gapMs));
+      await input.pulse(2, 2, 70);
+    } else {
+      input.apply(1, 2, 1);
+      await new Promise((r) => setTimeout(r, 70));
+      input.apply(1, 2, 0);
+      await new Promise((r) => setTimeout(r, gapMs));
+      input.apply(2, 2, 1);
+      await new Promise((r) => setTimeout(r, 70));
+      input.apply(2, 2, 0);
+    }
+    await new Promise((r) => setTimeout(r, gapMs));
+  }
 }

@@ -23,7 +23,10 @@ import {
   launchFromWorkerEnv,
   startNativeGameProcess,
 } from "../server/native-game-process.js";
-import { createInputInjector } from "../server/native-input-inject.js";
+import {
+  createInputInjector,
+  injectCabinetCredits,
+} from "../server/native-input-inject.js";
 import {
   waitForWindowByPid,
   focusWindow,
@@ -240,8 +243,17 @@ async function handle(msg) {
           state.input = createInputInjector({
             hwnd: state.gameHwnd || null,
           });
-          // Frame extra para o FBNeo pintar INSERT COIN antes do 1º frame.
-          await new Promise((r) => setTimeout(r, 800));
+          // Hosted bloqueia FICHA no cliente — o server injeta créditos no core.
+          await injectCabinetCredits(state.input, { pulses: 3 });
+          emit({ event: "progress", stage: "cabinet-credits" });
+          // Evita misturar barras synthetic (riscas) com o vídeo real.
+          if (process.env.HOST_BOT_FFMPEG_INPUT) {
+            process.env.HOST_BOT_FRAME_MODE =
+              process.env.HOST_BOT_FRAME_MODE || "external";
+            process.env.HOST_BOT_EXTERNAL_TTL_MS =
+              process.env.HOST_BOT_EXTERNAL_TTL_MS || "2500";
+          }
+          await new Promise((r) => setTimeout(r, 500));
         } else {
           emit({
             event: "progress",
@@ -285,8 +297,13 @@ async function handle(msg) {
       state.lastMapped = mapped;
       if (mapped.button === 3 && mapped.value === 1) {
         state.starts.add(mapped.slot);
+        // Reforça fichas quando ambos dão START (sai do INSERT COIN / attract).
+        if (state.starts.size >= 2 && state.input && !state.creditsTopup) {
+          state.creditsTopup = true;
+          injectCabinetCredits(state.input, { pulses: 2 }).catch(() => {});
+        }
       }
-      // Fase 4b: teclado real no core (Windows keybd_event).
+      // Fase 4c: PostMessage no HWND do RetroArch (browser mantém o foco).
       try {
         state.input?.apply(msg.slot, msg.button, msg.value);
       } catch {
