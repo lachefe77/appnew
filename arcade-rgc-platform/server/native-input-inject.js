@@ -1,6 +1,7 @@
 /**
  * Injeta teclas no OS para o core RetroArch/FBNeo (Fase 4b/4c).
- * Windows: PowerShell long-running (stdin UTF-8) + one-shot fallback p/ fichas.
+ * Windows: PowerShell PostMessage/SendMessage no HWND.
+ * Nunca SetForegroundWindow enquanto o gdigrab corre — isso fechava o RetroArch.
  */
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -9,7 +10,6 @@ import { fileURLToPath } from "node:url";
 import { mapArenaInput } from "./native-input-map.js";
 
 const execFileAsync = promisify(execFile);
-
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Virtual-key codes (US) para as teclas do native-input-map. */
@@ -80,40 +80,36 @@ export function createInputInjector(opts = {}) {
   };
 }
 
-/** One-shot fiável (não depende do pipe stdin do processo longo). */
+/** One-shot só PostMessage/SendMessage — sem foco (não mata o RA + gdigrab). */
 async function oneShotVk(vk, hwnd, { holdMs = 140, ext = false } = {}) {
   const h = Number(hwnd) || 0;
+  if (h <= 0) return;
   const extFlag = ext ? 1 : 0;
   const cmd = `
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public class ArenaShot {
-  [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+  public const uint WM_KEYDOWN = 0x0100;
+  public const uint WM_KEYUP = 0x0101;
+  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
+  [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
   [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint uCode, uint uMapType);
-  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
-  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int nCmdShow);
-  [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr h);
-  [DllImport("user32.dll")] public static extern bool AllowSetForegroundWindow(int dwProcessId);
-  public const uint KEYUP = 0x0002; public const uint EXT = 0x0001;
 }
 "@
-$vk = [byte]${vk}
+$vk = [uint32]${vk}
 $h = [IntPtr]${h}
 $hold = ${holdMs}
 $ext = ${extFlag}
-if ($h -ne [IntPtr]::Zero) {
-  [ArenaShot]::AllowSetForegroundWindow(-1) | Out-Null
-  [ArenaShot]::ShowWindow($h, 5) | Out-Null
-  [ArenaShot]::BringWindowToTop($h) | Out-Null
-  [ArenaShot]::SetForegroundWindow($h) | Out-Null
-  Start-Sleep -Milliseconds 30
-}
-$scan = [byte]([ArenaShot]::MapVirtualKey([uint32]$vk, 0) -band 0xFF)
-$fl = 0; if ($ext -eq 1) { $fl = $fl -bor [ArenaShot]::EXT }
-[ArenaShot]::keybd_event($vk, $scan, $fl, [UIntPtr]::Zero)
+$scan = [ArenaShot]::MapVirtualKey($vk, 0)
+$lp = [int64](1 -bor ([int64]$scan -shl 16))
+if ($ext -eq 1) { $lp = $lp -bor (1 -shl 24) }
+[ArenaShot]::PostMessage($h, [ArenaShot]::WM_KEYDOWN, [IntPtr]$vk, [IntPtr]$lp) | Out-Null
+[ArenaShot]::SendMessage($h, [ArenaShot]::WM_KEYDOWN, [IntPtr]$vk, [IntPtr]$lp) | Out-Null
 Start-Sleep -Milliseconds $hold
-[ArenaShot]::keybd_event($vk, $scan, ($fl -bor [ArenaShot]::KEYUP), [UIntPtr]::Zero)
+$lpUp = $lp -bor (1 -shl 30) -bor (1 -shl 31)
+[ArenaShot]::PostMessage($h, [ArenaShot]::WM_KEYUP, [IntPtr]$vk, [IntPtr]$lpUp) | Out-Null
+[ArenaShot]::SendMessage($h, [ArenaShot]::WM_KEYUP, [IntPtr]$vk, [IntPtr]$lpUp) | Out-Null
 `;
   await execFileAsync(
     "powershell.exe",
@@ -133,6 +129,7 @@ function createWindowsInjector(hwnd) {
       env: {
         ...process.env,
         ...(hwnd ? { ARENA_HWND: String(hwnd) } : {}),
+        ARENA_INPUT_FOCUS: "0",
       },
     },
   );
@@ -157,7 +154,7 @@ function createWindowsInjector(hwnd) {
   }
 
   return {
-    backend: "win-keybd",
+    backend: "win-postmsg",
     hwnd: hwnd || null,
     apply(slot, button, value) {
       const mapped = mapArenaInput(slot, button, value);
@@ -175,7 +172,6 @@ function createWindowsInjector(hwnd) {
       const mapped = mapArenaInput(slot, button, 1);
       const vk = vkForKey(mapped.key);
       if (vk == null) return;
-      // Fichas / START: one-shot (fiável). Resto: bridge stdin.
       if (button === 2 || button === 3) {
         await oneShotVk(vk, hwnd, {
           holdMs,
@@ -205,10 +201,10 @@ function createWindowsInjector(hwnd) {
   };
 }
 
-/** Insere fichas: 2 por jogador (P1=Y, P2=H) via one-shot fiável. */
+/** Insere fichas: 2 por jogador (P1=Y, P2=H) sem roubar foco. */
 export async function injectCabinetCredits(
   input,
-  { pulses = 2, gapMs = 200, holdMs = 160 } = {},
+  { pulses = 2, gapMs = 220, holdMs = 160 } = {},
 ) {
   if (!input) return;
   for (let i = 0; i < pulses; i++) {

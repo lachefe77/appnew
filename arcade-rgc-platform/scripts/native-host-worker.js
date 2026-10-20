@@ -109,16 +109,39 @@ async function waitForExternalFrames(frameSource, ms = 2000) {
 }
 
 function gameAlive() {
-  return !!(state.game?.ok && state.game.child && state.game.child.exitCode == null);
+  if (!state.game?.ok || !state.game.child) return false;
+  if (state.game.child.exitCode != null) return false;
+  const pid = state.game.pid;
+  if (!pid) return false;
+  // Windows às vezes atrasa o evento 'exit' — probe o PID.
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function stopCapture(reason) {
+  const fb = state.ffmpegFb;
+  state.ffmpegFb = null;
   try {
-    state.ffmpegFb?.stop();
+    fb?.stop();
   } catch {
     /* ignore */
   }
-  state.ffmpegFb = null;
+  // Mata ffmpeg órfão (senão continua a filmar o desktop).
+  try {
+    const pid = fb?.child?.pid;
+    if (pid) process.kill(pid, "SIGKILL");
+  } catch {
+    /* ignore */
+  }
+  try {
+    state.media?.frameSource?.pause?.();
+  } catch {
+    /* ignore */
+  }
   if (state.gameWatch) {
     clearInterval(state.gameWatch);
     state.gameWatch = null;
@@ -133,16 +156,17 @@ function armGameWatchdog() {
   state.gameWatch = setInterval(() => {
     if (!state.started || state.closing) return;
     if (!state.game?.ok) return;
-    if (state.game.child?.exitCode == null) return;
+    if (gameAlive()) return;
     stopCapture("game-pid-dead");
     if (!state.closing) {
+      state.closing = true;
       emit({
         event: "failure",
         message:
-          "RetroArch fechou (watchdog). Sem janela do jogo não há vídeo — sessão encerrada.",
+          "RetroArch fechou (watchdog). Captura do desktop bloqueada — sessão encerrada.",
       });
     }
-  }, 200);
+  }, 150);
   state.gameWatch.unref?.();
 }
 
@@ -478,27 +502,28 @@ async function handle(msg) {
         },
       });
       emitSample();
-      // 2 fichas P1 (Y) + 2 fichas P2 (H) — one-shot fiável.
+      // Fichas sem roubar foco (SetForegroundWindow + gdigrab = RA fecha).
       if (state.input && state.game?.ok) {
         state.pendingCredits = true;
         const seed = async () => {
-          await new Promise((r) => setTimeout(r, 800));
+          await new Promise((r) => setTimeout(r, 2500));
+          if (!gameAlive()) return;
           await injectCabinetCredits(state.input, {
             pulses: 2,
-            gapMs: 220,
-            holdMs: 180,
-          });
-          // Segunda leva se o attract ainda engolir o 1.º pulso
-          await new Promise((r) => setTimeout(r, 600));
-          await injectCabinetCredits(state.input, {
-            pulses: 1,
-            gapMs: 200,
-            holdMs: 180,
+            gapMs: 250,
+            holdMs: 160,
           });
         };
         seed()
           .then(() => {
             state.pendingCredits = false;
+            if (!gameAlive()) {
+              emit({
+                event: "failure",
+                message: "RetroArch fechou ao inserir fichas.",
+              });
+              return;
+            }
             emit({
               event: "progress",
               stage: "cabinet-credits",
@@ -506,6 +531,7 @@ async function handle(msg) {
                 pulses: "2+2",
                 keys: "Y/H",
                 backend: state.input?.backend,
+                alive: true,
               },
             });
           })
@@ -527,13 +553,13 @@ async function handle(msg) {
       state.lastMapped = mapped;
       if (mapped.button === 3 && mapped.value === 1) {
         state.starts.add(mapped.slot);
-        // Reforça fichas no 1.º START (e se ainda estiver em INSERT COIN).
-        if (state.input && !state.creditsTopup) {
+        // Reforça fichas no 1.º START (sem foco — só PostMessage).
+        if (state.input && !state.creditsTopup && gameAlive()) {
           state.creditsTopup = true;
           injectCabinetCredits(state.input, {
-            pulses: 3,
-            gapMs: 160,
-            holdMs: 140,
+            pulses: 2,
+            gapMs: 200,
+            holdMs: 150,
           }).catch(() => {});
         }
       }

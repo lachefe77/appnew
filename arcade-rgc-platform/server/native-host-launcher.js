@@ -128,8 +128,12 @@ export function buildNativeHostLaunch(env = process.env) {
 
 /** Conteúdo mínimo de appendconfig para lab (teclado P1+P2). */
 export function defaultRetroArchLabConfig(env = process.env) {
-  // Não forçar gdi/sdl2 por defeito — builds sem esse driver fecham no boot.
-  const driver = String(env.HOST_BOT_VIDEO_DRIVER || "").trim();
+  // gdi: estável com desktop-crop; override HOST_BOT_VIDEO_DRIVER= (vazio) para default.
+  const driverRaw = env.HOST_BOT_VIDEO_DRIVER;
+  const driver =
+    driverRaw === undefined || driverRaw === null
+      ? "gdi"
+      : String(driverRaw).trim();
   return [
     "# Gerado para lab Host Bot — teclado P1/P2 (native-input-map)",
     driver ? `video_driver = "${driver}"` : "# video_driver: default do RetroArch",
@@ -148,8 +152,8 @@ export function defaultRetroArchLabConfig(env = process.env) {
     'input_autodetect_enable = "false"',
     'input_max_users = "2"',
     'input_auto_game_focus = "off"',
-    // dinput + SendInput com foco breve (ver host-bot-input-win.ps1)
-    'input_driver = "dinput"',
+    // GDI + mensagens de janela (PostMessage) — sem SetForegroundWindow
+    'input_driver = "raw"',
     ...retroArchKeyboardLines(1),
     ...retroArchKeyboardLines(2),
     "",

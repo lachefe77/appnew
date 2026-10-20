@@ -88,10 +88,10 @@ const lines = [
   "HOST_BOT_FFMPEG=ffmpeg",
   "HOST_BOT_FFMPEG_INPUT_KIND=gdigrab",
   "HOST_BOT_FFMPEG_GRAB=desktop-crop",
+  "HOST_BOT_VIDEO_DRIVER=gdi",
   "HOST_BOT_VERBOSE=1",
   "HOST_BOT_INPUT=auto",
-  "# Captura = crop DWM da janela (nunca title=/hwnd= — crashava o RetroArch)",
-  "# Input: keybd_event + foco breve no RetroArch (ARENA_INPUT_FOCUS=0 desliga foco)",
+  "# Captura = crop DWM; input = PostMessage (NUNCA SetForegroundWindow com gdigrab)",
   "",
 ];
 
