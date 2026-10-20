@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Torneios — Arena Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #04050c; --panel: #0a0c16; --border: #1a2040;
+      --cyan: #00e5ff; --green: #39ff14; --amber: #ffa500;
+      --red: #ff2222; --purple: #cc00ff; --gold: #ffe000;
+      --text: #f0f4fa; --muted: #6a7a9a;
+      --px: 'Press Start 2P', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Chakra Petch', sans-serif; min-height: 100vh; overflow-x: hidden; }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px);
+      pointer-events: none; z-index: 999;
+    }
+
+    nav {
+      height: 54px; background: rgba(10,12,22,0.97); border-bottom: 2px solid var(--border);
+      display: flex; align-items: center; padding: 0 20px; gap: 14px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .nav-brand { font-family: var(--px); font-size: 0.65rem; color: var(--gold); text-shadow: 0 0 10px rgba(255,224,0,0.4); }
+    nav a { color: var(--muted); text-decoration: none; font-size: 0.82rem; font-weight: 600; }
+    nav a:hover { color: var(--cyan); }
+    .nav-sep { color: var(--border); }
+
+    main { max-width: 1280px; margin: 0 auto; padding: 28px 20px 80px; }
+
+    /* ── PAGE TITLE ── */
+    .page-hero {
+      text-align: center;
+      padding: 32px 0 24px;
+      margin-bottom: 32px;
+      position: relative;
+    }
+    .page-hero h1 {
+      font-family: var(--px);
+      font-size: clamp(1rem, 3vw, 1.6rem);
+      letter-spacing: 4px;
+      color: #fff;
+      text-shadow: 0 0 20px rgba(0,229,255,0.3), 3px 3px 0 #001a2a, 6px 6px 0 #000a14;
+      margin-bottom: 10px;
+    }
+    .page-hero p { color: var(--muted); font-size: 0.9rem; }
+
+    /* ── SECTION ── */
+    .sec-title {
+      font-family: var(--px); font-size: 0.55rem; color: var(--amber);
+      letter-spacing: 3px; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .sec-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ── TABS ── */
+    .tabs { display: flex; gap: 4px; margin-bottom: 28px; border-bottom: 2px solid var(--border); padding-bottom: 0; }
+    .tab-btn {
+      font-family: var(--px); font-size: 0.45rem; padding: 10px 18px; cursor: pointer;
+      border: 1px solid transparent; border-bottom: none; color: var(--muted);
+      background: transparent; letter-spacing: 1px; position: relative; bottom: -2px;
+    }
+    .tab-btn.active { background: var(--panel); border-color: var(--border); color: var(--cyan); border-bottom-color: var(--panel); }
+    .tab-btn:hover:not(.active) { color: #fff; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── ACTIVE TOURNAMENTS LIST ── */
+    .tournament-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .t-card {
+      background: var(--panel); border: 1px solid var(--border); padding: 20px;
+      position: relative; overflow: hidden; cursor: pointer; transition: border-color 0.2s;
+    }
+    .t-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--tc, var(--cyan)); }
+    .t-card:hover { border-color: var(--cyan); }
+    .t-card-name { font-family: var(--px); font-size: 0.55rem; letter-spacing: 1px; margin-bottom: 10px; }
+    .t-card-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; font-size: 0.78rem; color: var(--muted); }
+    .t-tag { padding: 2px 8px; font-size: 0.65rem; border: 1px solid var(--border); color: var(--muted); }
+    .t-tag.live { border-color: var(--red); color: var(--red); animation: pulseBorder 1.4s ease infinite; }
+    @keyframes pulseBorder { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    .t-prize { font-family: var(--px); font-size: 0.6rem; color: var(--gold); }
+    .t-progress { margin-top: 12px; }
+    .t-progress-bar { height: 4px; background: var(--border); margin-top: 4px; }
+    .t-progress-fill { height: 100%; background: var(--cyan); transition: width 0.5s; }
+    .t-btn { font-family: var(--px); font-size: 0.45rem; padding: 8px 16px; cursor: pointer; border: 2px solid; margin-top: 12px; }
+    .t-btn.register { border-color: var(--green); color: var(--green); background: transparent; }
+    .t-btn.register:hover { background: var(--green); color: #000; }
+    .t-btn.view-bracket { border-color: var(--cyan); color: var(--cyan); background: transparent; }
+    .t-btn.view-bracket:hover { background: rgba(0,229,255,0.1); }
+
+    /* ── BRACKET ── */
+    #bracketView { display: none; }
+    .bracket-header {
+      display: flex; align-items: center; gap: 16px; margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .bracket-title { font-family: var(--px); font-size: 0.7rem; color: #fff; }
+    .bracket-back { font-family: var(--px); font-size: 0.4rem; padding: 6px 14px; cursor: pointer; border: 1px solid var(--border); color: var(--muted); background: transparent; }
+    .bracket-back:hover { color: var(--cyan); border-color: var(--cyan); }
+
+    .bracket-wrap { overflow-x: auto; padding-bottom: 20px; }
+    .bracket {
+      display: flex;
+      gap: 0;
+      min-width: max-content;
+      align-items: center;
+    }
+    .bracket-round {
+      display: flex; flex-direction: column;
+      gap: 0;
+      position: relative;
+    }
+    .round-label {
+      font-family: var(--px); font-size: 0.4rem; color: var(--amber);
+      text-align: center; padding: 6px 24px; letter-spacing: 2px;
+      border-bottom: 1px solid var(--border);
+    }
+    .round-matches { display: flex; flex-direction: column; justify-content: space-around; flex: 1; }
+
+    .match-slot {
+      display: flex; flex-direction: column;
+      width: 160px; margin: 16px 0; position: relative;
+    }
+    .match-connector {
+      width: 24px; height: 100%;
+      display: flex; align-items: center;
+    }
+    .match-player {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--panel); border: 1px solid var(--border);
+      padding: 7px 10px; font-size: 0.75rem;
+      position: relative; transition: background 0.15s;
+    }
+    .match-player:first-child { border-bottom: none; }
+    .match-player.winner { background: rgba(57,255,20,0.07); border-color: var(--green); color: var(--green); font-weight: 700; }
+    .match-player.loser { opacity: 0.4; }
+    .match-player.tbd { color: var(--muted); font-style: italic; font-size: 0.7rem; }
+    .mp-seed { font-family: var(--px); font-size: 0.35rem; color: var(--muted); min-width: 18px; }
+    .mp-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mp-score { font-family: var(--px); font-size: 0.45rem; color: var(--cyan); min-width: 14px; text-align: right; }
+
+    /* Connector lines SVG */
+    .bracket-round-wrap { display: flex; align-items: stretch; }
+    .connector-col { display: flex; flex-direction: column; justify-content: space-around; width: 24px; }
+    .conn-svg { width: 24px; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: var(--muted);
+    }
+    .empty-state p { font-family: var(--px); font-size: 0.5rem; margin-bottom: 8px; }
+    .empty-state span { font-size: 0.82rem; }
+
+    /* ── PAST RESULTS ── */
+    .results-table { width: 100%; border-collapse: collapse; }
+    .results-table th {
+      font-family: var(--px); font-size: 0.4rem; color: var(--muted);
+      text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border);
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .results-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+    .results-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .champion-name { font-weight: 700; color: var(--gold); }
+
+    @media (max-width: 600px) {
+      .tournament-cards { grid-template-columns: 1fr; }
+      .match-slot { width: 130px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <span class="nav-brand">⚡ ARENA ARCADE</span>
+    <span class="nav-sep">|</span>
+    <a href="/">← Lobby</a>
+    <span style="flex:1;"></span>
+    <span id="navUser" style="font-size:0.75rem; color:var(--muted);">Não conectado</span>
+  </nav>
+
+  <main>
+    <div class="page-hero">
+      <h1>TORNEIOS</h1>
+      <p>Competições oficiais · Bracket eliminatório · Premiações em fichas</p>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('ativos')">EM ANDAMENTO</button>
+      <button class="tab-btn" onclick="showTab('inscricao')">INSCRIÇÕES ABERTAS</button>
+      <button class="tab-btn" onclick="showTab('historico')">HISTÓRICO</button>
+    </div>
+
+    <!-- TAB: ATIVOS -->
+    <div id="tab-ativos" class="tab-content active">
+      <div id="bracketView">
+        <div class="bracket-header">
+          <button class="bracket-back" onclick="closeBracket()">← VOLTAR</button>
+          <span class="bracket-title" id="bracketTitle">TORNEIO</span>
+          <span id="bracketStatus" style="font-family:var(--px); font-size:0.4rem; color:var(--red);">AO VIVO</span>
+        </div>
+        <div class="bracket-wrap" id="bracketContainer"></div>
+      </div>
+      <div id="activeList">
+        <div class="sec-title">EM ANDAMENTO</div>
+        <div class="tournament-cards" id="activeTournaments">
+          <div class="empty-state"><p>CARREGANDO...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: INSCRIÇÕES -->
+    <div id="tab-inscricao" class="tab-content">
+      <div class="sec-title">INSCRIÇÕES ABERTAS</div>
+      <div class="tournament-cards" id="openTournaments">
+        <div class="empty-state"><p>NENHUM TORNEIO</p><span>Novos torneios são anunciados pelo admin da arena.</span></div>
+      </div>
+    </div>
+
+    <!-- TAB: HISTÓRICO -->
+    <div id="tab-historico" class="tab-content">
+      <div class="sec-title">RESULTADOS ANTERIORES</div>
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Torneio</th>
+            <th>Data</th>
+            <th>Campeão</th>
+            <th>Participantes</th>
+            <th>Prêmio</th>
+          </tr>
+        </thead>
+        <tbody id="historicBody">
+          <tr><td colspan="5" style="color:var(--muted); text-align:center; padding:30px 0;">Nenhum torneio concluído ainda.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    const API = '';
+    let currentTournament = null;
+
+    // ── Demo data ──────────────────────────────────────────────────
+    const DEMO_TOURNAMENTS = [
+      {
+        id: 't001',
+        name: 'COPA KOF 2002 — OUTUBRO',
+        game: 'KOF 2002',
+        status: 'LIVE',
+        prizePool: 5000,
+        participants: 8,
+        maxParticipants: 8,
+        format: 'SINGLE ELIMINATION',
+        color: '#ff2222',
+        startedAt: new Date(Date.now() - 3600000).toISOString(),
+        bracket: buildDemo8PlayerBracket(),
+      },
+      {
+        id: 't002',
+        name: 'CLASH SEMANAL #12',
+        game: 'KOF 2002',
+        status: 'PENDING',
+        prizePool: 2000,
+        participants: 3,
+        maxParticipants: 8,
+        format: 'SINGLE ELIMINATION',
+        color: '#ffa500',
+        startedAt: null,
+        bracket: null,
+      },
+    ];
+
+    function buildDemo8PlayerBracket() {
+      const players = [
+        { name: 'IORI_YAGAMI', seed: 1 },
+        { name: 'KYO_KUSANAGI', seed: 8 },
+        { name: 'OMEGA_RUGAL', seed: 4 },
+        { name: 'CLARK_STEEL', seed: 5 },
+        { name: 'MAI_SHIRANUI', seed: 3 },
+        { name: 'TERRY_BOGARD', seed: 6 },
+        { name: 'BENIMARU_N', seed: 2 },
+        { name: 'RALF_JONES', seed: 7 },
+      ];
+      return {
+        rounds: [
+          {
+            name: 'QUARTAS',
+            matches: [
+              { p1: players[0], p2: players[1], winner: 0, score: [2,1] },
+              { p1: players[2], p2: players[3], winner: 0, score: [2,0] },
+              { p1: players[4], p2: players[5], winner: 1, score: [1,2] },
+              { p1: players[6], p2: players[7], winner: 0, score: [2,1] },
+            ]
+          },
+          {
+            name: 'SEMI',
+            matches: [
+              { p1: players[0], p2: players[2], winner: null, score: [0,0] },
+              { p1: players[5], p2: players[6], winner: null, score: [0,0] },
+            ]
+          },
+          {
+            name: 'FINAL',
+            matches: [
+              { p1: null, p2: null, winner: null, score: [0,0] }
+            ]
+          }
+        ]
+      };
+    }
+
+    // ── Render active tournaments ──────────────────────────────────
+    function renderActiveTournaments() {
+      const live = DEMO_TOURNAMENTS.filter(t => t.status === 'LIVE');
+      const el = document.getElementById('activeTournaments');
+      if (!live.length) {
+        el.innerHTML = '<div class="empty-state"><p>SEM TORNEIOS ATIVOS</p><span>Aguarde o próximo torneio na aba "Inscrições Abertas".</span></div>';
+        return;
+      }
+      el.innerHTML = live.map(t => `
+        <div class="t-card" style="--tc:${t.color}" onclick="viewBracket('${t.id}')">
+          <div class="t-card-name">${t.name}</div>
+          <div class="t-card-meta">
+            <span class="t-tag live">● AO VIVO</span>
+            <span class="t-tag">${t.game}</span>
+            <span class="t-tag">${t.format}</span>
+          </div>
+          <div class="t-prize">🏆 R$${(t.prizePool/100).toFixed(2)} em fichas</div>
+          <div class="t-progress">
+            <span style="font-size:0.72rem; color:var(--muted);">${t.participants}/${t.maxParticipants} jogadores</span>
+            <div class="t-progress-bar"><div class="t-progress-fill" style="width:${(t.participants/t.maxParticipants*100).toFixed(0)}%"></div></div>
+          </div>
+          <button class="t-btn view-bracket" onclick="event.stopPropagation(); viewBracket('${t.id}')">VER BRACKET</button>
+        </div>
+      `).join('');
+    }
+
+    function renderOpenTournaments() {
+      const open = DEMO_TOURNAMENTS.filter(t => t.status === 'PENDING');
+      const el = document.getElementById('openTournaments');
+      if (!open.length) {
+        el.innerHTML = '<div class="empty-state"><p>NENHUM TORNEIO</p><span>Novos torneios são anunciados pelo admin da arena.</span></div>';
+        return;
+      }
+      el.innerHTML = open.map(t => `
+        <div class="t-card" style="--tc:${t.color}">
+          <div class="t-card-name">${t.name}</div>
+          <div class="t-card-meta">
+            <span class="t-tag">${t.game}</span>
+            <span class="t-tag">${t.format}</span>
+          </div>
+          <div class="t-prize">🏆 R$${(t.prizePool/100).toFixed(2)} em fichas</div>
+          <div class="t-progress">
+            <span style="font-size:0.72rem; color:var(--muted);">${t.participants}/${t.maxParticipants} inscritos</span>
+            <div class="t-progress-bar"><div class="t-progress-fill" style="width:${(t.participants/t.maxParticipants*100).toFixed(0)}%"></div></div>
+          </div>
+          <button class="t-btn register" onclick="registerTournament('${t.id}')">INSCREVER-SE</button>
+        </div>
+      `).join('');
+    }
+
+    // ── Bracket Renderer ──────────────────────────────────────────
+    function viewBracket(tid) {
+      const t = DEMO_TOURNAMENTS.find(x => x.id === tid);
+      if (!t || !t.bracket) return;
+      currentTournament = t;
+      document.getElementById('bracketTitle').textContent = t.name;
+      document.getElementById('bracketContainer').innerHTML = renderBracketHTML(t.bracket);
+      document.getElementById('activeList').style.display = 'none';
+      document.getElementById('bracketView').style.display = 'block';
+    }
+
+    function closeBracket() {
+      document.getElementById('bracketView').style.display = 'none';
+      document.getElementById('activeList').style.display = 'block';
+      currentTournament = null;
+    }
+
+    function renderBracketHTML(bracket) {
+      const rounds = bracket.rounds;
+      let html = '<div class="bracket">';
+      rounds.forEach((round, ri) => {
+        const totalSlots = rounds[0].matches.length;
+        const thisSlots = round.matches.length;
+        const spacing = (totalSlots / thisSlots);
+
+        html += `<div class="bracket-round">
+          <div class="round-label">${round.name}</div>
+          <div class="round-matches" style="gap:${spacing * 8}px; padding:${spacing * 8}px 0;">`;
+
+        round.matches.forEach((m, mi) => {
+          const p1 = m.p1;
+          const p2 = m.p2;
+          const w = m.winner;
+          html += `<div class="match-slot">`;
+          // Player 1
+          const p1cls = w === null ? '' : w === 0 ? ' winner' : ' loser';
+          const p1name = p1 ? p1.name : '...TBD';
+          html += `<div class="match-player${p1cls}${!p1 ? ' tbd' : ''}">
+            <span class="mp-seed">${p1 ? '#'+p1.seed : ''}</span>
+            <span class="mp-name">${p1name}</span>
+            <span class="mp-score">${w !== null ? m.score[0] : ''}</span>
+          </div>`;
+          // Player 2
+          const p2cls = w === null ? '' : w === 1 ? ' winner' : ' loser';
+          const p2name = p2 ? p2.name : '...TBD';
+          html += `<div class="match-player${p2cls}${!p2 ? ' tbd' : ''}">
+            <span class="mp-seed">${p2 ? '#'+p2.seed : ''}</span>
+            <span class="mp-name">${p2name}</span>
+            <span class="mp-score">${w !== null ? m.score[1] : ''}</span>
+          </div>`;
+          html += `</div>`;
+        });
+
+        html += `</div></div>`;
+
+        // Connector SVG between rounds
+        if (ri < rounds.length - 1) {
+          const matchCount = round.matches.length;
+          html += renderConnectors(matchCount, spacing);
+        }
+      });
+      html += '</div>';
+      return html;
+    }
+
+    function renderConnectors(matchCount, spacing) {
+      const slotH = 58; // approx height of one match slot
+      const gap = spacing * 8;
+      const pairH = (slotH * 2 + gap) * 2; // not actually used
+      let html = `<div style="display:flex; flex-direction:column; justify-content:space-around; width:32px; padding:${spacing*8}px 0; gap:${spacing*8}px;">`;
+      for (let i = 0; i < matchCount / 2; i++) {
+        html += `<svg width="32" height="${slotH * 2 + gap + spacing * 8 + 16}" xmlns="http://www.w3.org/2000/svg" style="overflow:visible; flex-shrink:0;">
+          <line x1="0" y1="${slotH * 0.5 + 7}" x2="16" y2="${slotH * 0.5 + 7}" stroke="#1a2040" stroke-width="1.5"/>
+          <line x1="0" y1="${slotH * 1.5 + gap + 7}" x2="16" y2="${slotH * 1.5 + gap + 7}" stroke="#1a2040" stroke-width="1.5"/>
+          <line x1="16" y1="${slotH * 0.5 + 7}" x2="16" y2="${slotH * 1.5 + gap + 7}" stroke="#1a2040" stroke-width="1.5"/>
+          <line x1="16" y1="${(slotH + gap/2) + 7 + slotH/2}" x2="32" y2="${(slotH + gap/2) + 7 + slotH/2}" stroke="#1a2040" stroke-width="1.5"/>
+        </svg>`;
+      }
+      html += '</div>';
+      return html;
+    }
+
+    function registerTournament(tid) {
+      alert('Inscrições de torneio ainda não estão habilitadas. Use as salas de duelo KOF 2002.');
+      return;
+      // legado demo abaixo (desativado)
+      const token = localStorage.getItem('arenaToken');
+      if (!token) { alert('Faça login no lobby para se inscrever.'); return; }
+      alert('Inscrição enviada! Aguarde confirmação do admin.');
+    }
+
+    // ── Tabs ──────────────────────────────────────────────────────
+    function showTab(id) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById('tab-' + id).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    // ── Session check ─────────────────────────────────────────────
+    const token = localStorage.getItem('arenaToken');
+    const username = localStorage.getItem('arenaUsername');
+    if (username) document.getElementById('navUser').textContent = username;
+
+    renderActiveTournaments();
+    renderOpenTournaments();
+  </script>
+</body>
+</html>
