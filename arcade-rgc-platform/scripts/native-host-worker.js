@@ -195,9 +195,10 @@ async function handle(msg) {
           if (win?.hwnd) {
             state.gameHwnd = win.hwnd;
             await focusWindow(win.hwnd);
-            // GL/D3D + gdigrab hwnd= → preto. Desktop crop (DWM) ou sdl2 no cfg.
+            // appendconfig força video_driver=sdl2 → hwnd= deixa de ser preto.
+            // desktop= crop do ecrã (falha se o browser tapar a janela do jogo).
             const grabMode = String(
-              process.env.HOST_BOT_FFMPEG_GRAB || "desktop",
+              process.env.HOST_BOT_FFMPEG_GRAB || "hwnd",
             ).toLowerCase();
             process.env.HOST_BOT_FFMPEG_INPUT_KIND =
               process.env.HOST_BOT_FFMPEG_INPUT_KIND || "gdigrab";
