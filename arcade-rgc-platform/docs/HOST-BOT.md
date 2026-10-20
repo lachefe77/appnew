@@ -62,7 +62,7 @@ Produção leve: `HOSTED_ENGINE=native`.
 4. FICHA / START nos dois; personagem mexe com setas/Z X A S.
 5. Round jogável; sem crash do host no terminal.
 
-Captura: worker resolve `hwnd` do PID do RetroArch e usa `gdigrab -i hwnd=…` (evita `title=RetroArch` apanhar janela errada). Input: foca esse HWND antes do `keybd_event`.
+Captura: `retroarch-lab.cfg` força `video_driver=sdl2` (GL/Vulkan/D3D11 + gdigrab = ecrã preto). Worker resolve HWND do PID e usa `gdigrab -i hwnd=…`. Alternativa: `HOST_BOT_FFMPEG_GRAB=desktop` (crop DWM; a janela do jogo não pode ficar tapada pelos browsers). Input: foca o HWND antes do `keybd_event`.
 
 ## Fase 1 — sample sem Chrome
 
