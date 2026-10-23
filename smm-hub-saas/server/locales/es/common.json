@@ -1,0 +1,14 @@
+{
+  "welcome": "Bienvenido a SMM Hub",
+  "login": "Entrar",
+  "register": "Crear cuenta",
+  "balance": "Saldo",
+  "new_order": "Nuevo pedido",
+  "orders": "Pedidos",
+  "wallet": "Billetera",
+  "support": "Soporte",
+  "logout": "Salir",
+  "insufficient_balance": "Saldo insuficiente",
+  "order_created": "¡Pedido creado con éxito!",
+  "deposit": "Depositar"
+}

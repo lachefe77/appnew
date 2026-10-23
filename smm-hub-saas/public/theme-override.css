@@ -1,0 +1,91 @@
+/* ============ VITRINE THEME OVERRIDE PRO DASHBOARD ============ */
+/* Repagina o index.html SPA original pra paleta da vitrine sem reescrever 3000 linhas. */
+
+@import url('/brand.css');
+
+html, body {
+  background: var(--bg) !important;
+  color: var(--ink) !important;
+  font-family: var(--sans) !important;
+}
+
+/* Preto puro em todos os backgrounds de card/elev */
+[class*="bg-[#0b0f17]"], [class*="bg-[#111827]"], .bg-dark-bg, .bg-dark-card,
+[class*="bg-gray-900"], [class*="bg-slate-900"] { background: var(--bg-elev) !important; }
+
+[class*="bg-[#111827]/80"], [class*="bg-[#111827]/70"] { background: rgba(20,20,20,0.85) !important; backdrop-filter: blur(16px); }
+
+/* Bordas */
+[class*="border-gray-800"], [class*="border-gray-700"], [class*="border-slate-800"], .border-dark-border { border-color: var(--border) !important; }
+[class*="border-gray-900"] { border-color: var(--bg) !important; }
+
+/* Texto */
+[class*="text-gray-100"], [class*="text-white"], [class*="text-slate-100"] { color: var(--ink) !important; }
+[class*="text-gray-300"], [class*="text-gray-400"] { color: var(--ink-mute) !important; }
+[class*="text-gray-500"], [class*="text-gray-600"] { color: var(--ink-dim) !important; }
+
+/* Marca original cyan/emerald → vitrine amarelo cítrico */
+[class*="text-cyan-400"], [class*="text-emerald-400"], [class*="text-brand-500"], [class*="text-cyan-500"], [class*="text-emerald-500"] { color: var(--accent) !important; }
+[class*="text-cyan-300"], [class*="text-emerald-300"] { color: var(--accent) !important; }
+[class*="bg-cyan-500"], [class*="bg-emerald-500"], [class*="bg-brand-500"], [class*="bg-cyan-600"], [class*="bg-emerald-600"], [class*="bg-brand-600"] {
+  background: var(--accent) !important; color: #000 !important;
+}
+[class*="bg-cyan-500/10"], [class*="bg-emerald-500/10"] { background: var(--accent-wash) !important; }
+[class*="border-cyan-500"], [class*="border-emerald-500"], [class*="border-brand-500"] { border-color: var(--accent) !important; }
+[class*="border-emerald-500/20"], [class*="border-cyan-500/20"] { border-color: var(--accent-line) !important; }
+
+/* Gradient logo text (de "from-cyan-400 to-emerald-400 bg-clip-text") → sólido amarelo */
+.bg-gradient-to-r.from-cyan-400.to-emerald-400,
+[class*="from-cyan-"][class*="to-emerald-"] {
+  background: var(--accent) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+}
+
+/* Botões solid gradientes → sólido amarelo */
+.bg-gradient-to-tr.from-cyan-600.to-emerald-500,
+.bg-gradient-to-r.from-cyan-500.to-emerald-500,
+[class*="from-cyan-500"][class*="to-emerald-500"],
+[class*="from-cyan-600"][class*="to-emerald-500"] {
+  background: var(--accent) !important;
+  color: #000 !important;
+  box-shadow: 0 4px 20px rgba(217,255,0,0.15) !important;
+}
+
+/* Pills de status (sucesso/aviso/erro já OK) */
+
+/* Links e selection */
+::selection { background: var(--accent); color: #000; }
+
+/* Logo mark no topbar → quadrado amarelo rotacionado */
+header .w-10.h-10.rounded-xl,
+header .w-10.h-10.rounded-xl.bg-gradient-to-tr {
+  background: var(--accent) !important;
+  color: #000 !important;
+  border-radius: 8px !important;
+  transform: rotate(-6deg);
+  box-shadow: none !important;
+}
+
+/* Scrollbar sutil */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 100px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+/* Inputs: padronizar borda */
+input[type="text"], input[type="email"], input[type="password"], input[type="number"], select, textarea {
+  font-family: var(--sans) !important;
+}
+input:focus, select:focus, textarea:focus { outline: none !important; border-color: var(--accent) !important; }
+
+/* Headers hero / stats dentro do app → fundo elev */
+.hover\:border-cyan-500\/50:hover { border-color: var(--accent-line) !important; }
+
+/* Admin dashboard embedded (admin-dashboard.html era cyan-500) */
+canvas { color-scheme: dark; }
+
+/* "v68 Enterprise" badge do topo */
+.bg-emerald-500\/10.text-emerald-400 { background: var(--accent-wash) !important; color: var(--accent) !important; border-color: var(--accent-line) !important; }

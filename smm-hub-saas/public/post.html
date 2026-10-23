@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title id="t">Artigo — SMM Hub</title>
+<meta id="d" name="description" content="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/brand.css">
+<style>
+body { max-width: 720px; margin: 0 auto; padding: 48px 24px 100px; }
+.back { color: var(--ink-dim); font-size: 13px; display: inline-flex; gap: 6px; align-items: center; margin-bottom: 32px; }
+.back:hover { color: var(--ink); }
+h1 { font-size: clamp(32px, 5vw, 48px); font-weight: 900; letter-spacing: -0.03em; line-height: 1.1; margin: 12px 0 16px; }
+.article-meta { color: var(--ink-dim); font-family: var(--mono); font-size: 13px; margin-bottom: 40px; }
+.article-body p { color: var(--ink-mute); font-size: 17px; line-height: 1.75; margin: 20px 0; }
+.article-body b { color: var(--ink); }
+.cta-footer { margin-top: 60px; padding: 40px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-elev); text-align: center; }
+.cta-footer h3 { font-size: 22px; margin: 0 0 8px; }
+.cta-footer p { color: var(--ink-mute); margin: 0 0 24px; }
+</style>
+</head>
+<body>
+<a href="/blog.html" class="back"><i class="fa-solid fa-arrow-left"></i> Todos os artigos</a>
+<article id="article"><div style="color: var(--ink-dim);">Carregando...</div></article>
+<script>
+function escapeText(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+const slug = new URLSearchParams(location.search).get('slug');
+fetch('/api/blog/' + encodeURIComponent(slug)).then(r => r.json()).then(({ post, error }) => {
+  if (!post) { document.getElementById('article').innerHTML = `<p>Artigo não encontrado.</p>`; return; }
+  document.getElementById('t').textContent = post.title;
+  document.getElementById('d').content = post.meta_description;
+  document.getElementById('article').innerHTML = `
+    <div class="brand-eyebrow">${escapeText(post.category)}</div>
+    <h1>${escapeText(post.title)}</h1>
+    <div class="article-meta">${post.read_time_minutes} min · ${post.author} · ${new Date(post.created_at).toLocaleDateString('pt-BR')}</div>
+    <div class="article-body">${post.content.split('\n').filter(Boolean).map(p => `<p>${p}</p>`).join('')}</div>
+    <div class="cta-footer">
+      <h3>Pronto pra aplicar?</h3>
+      <p>Começa com R$ 5 e vê funcionar no seu perfil hoje.</p>
+      <a href="/register.html" class="brand-btn brand-btn-solid brand-btn-lg">Criar minha conta <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+  `;
+});
+</script>
+<script src="/accessibility.js" defer></script>
+</body>
+</html>

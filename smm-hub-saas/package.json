@@ -1,0 +1,52 @@
+{
+  "name": "smm-hub-saas",
+  "version": "2.1.0",
+  "description": "SMM Hub Enterprise — Full stack reseller platform",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node scripts/test-runner.cjs",
+    "seed:catalog": "node server/seed-mega-catalog.js",
+    "reset:db": "node -e \"['./data.sqlite','./data.sqlite-wal','./data.sqlite-shm'].forEach(f=>{try{require('node:fs').rmSync(f,{force:true})}catch{}});console.log('DB resetado.')\"",
+    "snapshot:financial": "node server/jobs/financial-snapshot.js",
+    "setup:env": "node scripts/setup-env.cjs",
+    "test:e2e": "node scripts/e2e-runner.cjs",
+    "test:capacity": "node scripts/capacity-check.cjs",
+    "build:assets": "node scripts/build-assets.cjs",
+    "backup": "node scripts/backup.cjs",
+    "restore": "node scripts/restore.cjs"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-handlebars": "^8.0.1",
+    "express-rate-limit": "^7.4.1",
+    "graphql": "^16.14.2",
+    "helmet": "^8.0.0",
+    "i18next": "^23.16.2",
+    "i18next-fs-backend": "^2.3.2",
+    "i18next-http-middleware": "^3.6.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^10.2.1",
+    "pino": "^9.5.0",
+    "pino-pretty": "^11.3.0",
+    "qrcode": "^1.5.4",
+    "speakeasy": "^2.0.0",
+    "swagger-ui-express": "^5.0.1",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "@apidevtools/swagger-parser": "^13.1.0",
+    "@fortawesome/fontawesome-free": "^6.5.1",
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/cli": "^4.3.0",
+    "chart.js": "^4.4.1",
+    "prettier": "^3.6.2",
+    "tailwindcss": "^4.3.3"
+  }
+}

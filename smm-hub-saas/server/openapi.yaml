@@ -1,0 +1,794 @@
+openapi: 3.0.3
+info:
+  title: SMM Hub Enterprise API
+  version: 2.1.0
+  description: API de catálogo, pedidos e carteira. Recebimento depende de gateway
+    configurado. Subpainéis aguardam provisionamento e dripfeed está
+    indisponível para novas compras.
+servers:
+  - url: /
+    description: Origem atual do painel
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: Status OK
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                totp_code:
+                  type: string
+      responses:
+        "200":
+          description: Token JWT + user
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credenciais inválidas
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/auth/register:
+    post:
+      summary: Criar conta
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+                - consent_terms
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 12
+                  maxLength: 128
+                consent_terms:
+                  type: boolean
+                  enum:
+                    - true
+                consent_marketing:
+                  type: boolean
+                ref:
+                  type: string
+      responses:
+        "201":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/auth/me:
+    get:
+      summary: Dados do usuário logado
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dados user + stats afiliado
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/auth/logout:
+    post:
+      summary: Encerra sessão (blacklist JWT)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/services:
+    get:
+      summary: Lista serviços
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+        - name: platform
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/orders:
+    post:
+      summary: Criar pedido
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - service_id
+                - link
+                - quantity
+              properties:
+                service_id:
+                  type: integer
+                link:
+                  type: string
+                quantity:
+                  type: integer
+                  minimum: 1
+                comments:
+                  type: string
+                is_dripfeed:
+                  type: boolean
+                  enum:
+                    - false
+                  description: Novas compras em lotes estão indisponíveis.
+                coupon_code:
+                  type: string
+      responses:
+        "201":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+    get:
+      summary: Lista pedidos do usuário
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/orders/{id}:
+    get:
+      summary: Detalhe + progresso
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+  /api/sse/order/{id}:
+    get:
+      summary: SSE progresso ao vivo
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+  /api/wallet/pix/create:
+    post:
+      summary: Gera Pix pelo gateway configurado
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+      responses:
+        "201":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/wallet/pix/webhook:
+    post:
+      summary: Webhook Mercado Pago autenticado e conciliado com a API do provedor
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/wallet/crypto/create:
+    post:
+      summary: Gera invoice cripto
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/v2:
+    post:
+      summary: SMM API v2 compat (action=balance|services|add|status|refill)
+      security:
+        - apiKey: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                key:
+                  type: string
+                  description: Chave comercial; alternativa ao cabeçalho X-API-Key.
+                action:
+                  type: string
+                  enum:
+                    - balance
+                    - services
+                    - add
+                    - status
+                    - refill
+                service:
+                  type: integer
+                  minimum: 1
+                quantity:
+                  type: integer
+                  minimum: 1
+                link:
+                  type: string
+                  format: uri
+                order:
+                  type: integer
+                  minimum: 1
+                orders:
+                  type: string
+                  description: Até 100 IDs separados por vírgula.
+      description: A chave comercial é obrigatória no campo key do corpo POST ou no
+        cabeçalho X-API-Key. GET não é aceito.
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/ambassador:
+    get:
+      summary: Cupons do embaixador
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+    post:
+      summary: Criar cupom embaixador
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/lgpd/export:
+    get:
+      summary: Exporta todos os dados do usuário (LGPD)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/lgpd/delete-account:
+    post:
+      summary: Solicita exclusão (soft delete + anonimização)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/analytics/dashboard:
+    get:
+      summary: Dashboard do cliente (30d, por plataforma, top serviços)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/preferences:
+    get:
+      summary: Preferências UI
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+    put:
+      summary: Salvar preferências
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/currencies:
+    get:
+      summary: Moedas suportadas
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/currencies/convert:
+    get:
+      summary: Converte BRL → outra moeda
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /metrics:
+    get:
+      summary: Métricas Prometheus (requer token)
+      parameters:
+        - name: X-Metrics-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/graphql:
+    post:
+      summary: Consulta GraphQL com seleção de campos e orçamento de complexidade
+      description: Uma operação, até 100 campos e 10000 caracteres. Fragmentos
+        indisponíveis. me/myOrders exigem JWT de conta principal.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  maxLength: 10000
+                variables:
+                  type: object
+                operationName:
+                  type: string
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /health/live:
+    get:
+      summary: Processo em execução
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /health/ready:
+    get:
+      summary: Banco e fila prontos
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/auth/email-verification/request:
+    post:
+      summary: Enfileira confirmação de e-mail; SMTP e URL canônica precisam estar
+        configurados
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/auth/email-verification/confirm:
+    post:
+      summary: Confirma e-mail com token de uso único
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  pattern: ^[a-f0-9]{64}$
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível
+  /api/profile/sessions:
+    get:
+      summary: Lista sessões próprias e identifica sessão atual
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Operação concluída
+        "400":
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Credencial ausente, inválida ou revogada
+        "403":
+          description: Permissão insuficiente
+        "429":
+          description: Limite de requisições excedido
+        "503":
+          description: Dependência ou integração indisponível

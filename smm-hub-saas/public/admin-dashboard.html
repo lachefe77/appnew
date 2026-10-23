@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Analytics — SMM Hub</title>
+<link rel="stylesheet" href="/vendor/tailwind.css">
+<script src="/vendor/chart.umd.js"></script>
+<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+<script src="/browser-session.js" defer></script></head>
+<body class="bg-[#0b0f17] text-white">
+<header class="h-16 border-b border-gray-800 bg-[#111827]/80 px-4 lg:px-8 flex items-center justify-between sticky top-0 z-40">
+  <h1 class="text-xl font-black"><i class="fa-solid fa-chart-line mr-2 text-cyan-400"></i>Admin Analytics</h1>
+  <a href="/" class="text-sm text-gray-400 hover:text-white"><i class="fa-solid fa-arrow-left mr-1"></i>Painel</a>
+</header>
+<main class="max-w-7xl mx-auto px-4 py-8" id="main">
+  <div id="auth-gate" class="text-center py-20 hidden">
+    <p class="text-gray-400 mb-4">Faça login como admin para visualizar.</p>
+    <a href="/" class="px-6 py-3 bg-cyan-500 text-black font-bold rounded-lg">Login</a>
+  </div>
+  <div id="dashboard" class="hidden">
+    <div class="grid md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-[#111827] border border-gray-800 rounded-xl p-6"><div class="text-sm text-gray-400">Receita total</div><div id="kpi-rev" class="text-2xl font-black mt-2">—</div></div>
+      <div class="bg-[#111827] border border-gray-800 rounded-xl p-6"><div class="text-sm text-gray-400">Lucro</div><div id="kpi-profit" class="text-2xl font-black mt-2 text-emerald-400">—</div></div>
+      <div class="bg-[#111827] border border-gray-800 rounded-xl p-6"><div class="text-sm text-gray-400">Pedidos ativos</div><div id="kpi-active" class="text-2xl font-black mt-2">—</div></div>
+      <div class="bg-[#111827] border border-gray-800 rounded-xl p-6"><div class="text-sm text-gray-400">Usuários</div><div id="kpi-users" class="text-2xl font-black mt-2">—</div></div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-6 mb-8">
+      <div class="bg-[#111827] border border-gray-800 rounded-xl p-6"><h3 class="font-bold mb-4">Receita (últimos 30d)</h3><canvas id="chart-30d" height="200"></canvas></div>
+      <div class="bg-[#111827] border border-gray-800 rounded-xl p-6"><h3 class="font-bold mb-4">Lucro por plataforma</h3><canvas id="chart-platform" height="200"></canvas></div>
+    </div>
+    <div class="bg-[#111827] border border-gray-800 rounded-xl p-6">
+      <h3 class="font-bold mb-4">Performance por provedor</h3>
+      <div id="providers-table" class="overflow-x-auto"></div>
+    </div>
+  </div>
+</main>
+<script>
+function escapeText(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+const token = localStorage.getItem('smm_token');
+if (!token) document.getElementById('auth-gate').classList.remove('hidden');
+else loadDashboard();
+
+async function loadDashboard() {
+  const h = { 'Authorization': 'Bearer ' + token };
+  const [m, byP, byProv, snaps] = await Promise.all([
+    fetch('/api/admin/metrics', { headers: h }).then(r => r.json()),
+    fetch('/api/admin/metrics/by-platform', { headers: h }).then(r => r.json()),
+    fetch('/api/admin/metrics/by-provider', { headers: h }).then(r => r.json()),
+    fetch('/api/admin/snapshots?days=30', { headers: h }).then(r => r.json())
+  ]);
+  if (m.error) { document.getElementById('auth-gate').classList.remove('hidden'); return; }
+
+  document.getElementById('dashboard').classList.remove('hidden');
+  document.getElementById('kpi-rev').textContent = m.orders.total_revenue_formatted;
+  document.getElementById('kpi-profit').textContent = m.orders.total_profit_formatted + ` (${m.orders.margin_pct}%)`;
+  document.getElementById('kpi-active').textContent = m.orders.active;
+  document.getElementById('kpi-users').textContent = m.users.total;
+
+  const snapshots = snaps.snapshots || [];
+  new Chart(document.getElementById('chart-30d'), {
+    type: 'line',
+    data: { labels: snapshots.map(s => s.snapshot_date), datasets: [{ label: 'Receita (R$)', data: snapshots.map(s => s.revenue_cents / 100), borderColor: '#06b6d4', backgroundColor: 'rgba(6,182,212,0.1)', fill: true, tension: 0.3 }] },
+    options: { plugins: { legend: { labels: { color: '#9ca3af' } } }, scales: { x: { ticks: { color: '#9ca3af' } }, y: { ticks: { color: '#9ca3af' } } } }
+  });
+
+  const plat = byP.by_platform || [];
+  new Chart(document.getElementById('chart-platform'), {
+    type: 'bar',
+    data: { labels: plat.map(p => p.platform), datasets: [{ label: 'Lucro (R$)', data: plat.map(p => p.profit_cents / 100), backgroundColor: '#10b981' }] },
+    options: { plugins: { legend: { labels: { color: '#9ca3af' } } }, scales: { x: { ticks: { color: '#9ca3af' } }, y: { ticks: { color: '#9ca3af' } } } }
+  });
+
+  const provs = byProv.by_provider || [];
+  document.getElementById('providers-table').innerHTML = `
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-gray-400 border-b border-gray-800">
+        <th class="py-2">Provedor</th><th>Pedidos</th><th>Receita</th><th>Lucro</th><th>Falhas</th>
+      </tr></thead>
+      <tbody>${provs.map(p => `<tr class="border-b border-gray-800">
+        <td class="py-2">${escapeText(p.name)}</td><td>${p.orders}</td>
+        <td>R$ ${((p.revenue_cents||0)/100).toFixed(2)}</td>
+        <td class="text-emerald-400">R$ ${((p.profit_cents||0)/100).toFixed(2)}</td>
+        <td class="${p.failed_count > 0 ? 'text-red-400' : ''}">${p.failed_count || 0}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+}
+</script>
+<script src="/accessibility.js" defer></script>
+</body>
+</html>

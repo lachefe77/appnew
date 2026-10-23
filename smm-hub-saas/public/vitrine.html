@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
+<title>SMM Hub — a fila anda, suas métricas também</title>
+<meta name="description" content="Painel SMM brasileiro para quem já cansou de promessa de meia-boca. Pix cai, pedido voa, resultado aparece. Instagram, TikTok, YouTube e mais 14 plataformas.">
+<meta property="og:title" content="SMM Hub Brasil">
+<meta property="og:description" content="A fila anda. Suas métricas também.">
+<meta property="og:type" content="website">
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+<style>
+:root {
+  --bg: #0a0a0a;
+  --bg-elev: #141414;
+  --ink: #f5f5f5;
+  --ink-mute: #a3a3a3;
+  --ink-dim: #525252;
+  --border: #262626;
+  --accent: #d9ff00;
+  --accent-dim: #a3c700;
+  --warn: #ff6b35;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: 'Inter', system-ui, -apple-system, sans-serif; font-weight: 400; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { color: inherit; text-decoration: none; }
+.container { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+.mono { font-family: var(--mono); letter-spacing: -0.02em; }
+
+/* ============ NAV ============ */
+nav.top {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(10,10,10,0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+}
+nav.top .inner { display: flex; align-items: center; justify-content: space-between; }
+.logo { font-weight: 900; font-size: 20px; letter-spacing: -0.03em; display: flex; align-items: center; gap: 10px; }
+.logo .mark { width: 32px; height: 32px; background: var(--accent); color: #000; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; transform: rotate(-6deg); }
+.nav-links { display: flex; gap: 32px; font-size: 14px; color: var(--ink-mute); }
+.nav-links a:hover { color: var(--ink); }
+.cta-nav { display: flex; gap: 10px; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 14px; border: 1px solid transparent; cursor: pointer; transition: all .15s; }
+.btn-ghost { color: var(--ink-mute); border-color: var(--border); }
+.btn-ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
+.btn-solid { background: var(--accent); color: #000; }
+.btn-solid:hover { background: var(--ink); }
+.btn-lg { padding: 14px 24px; font-size: 15px; }
+
+/* ============ HERO ============ */
+.hero { padding: 80px 0 60px; position: relative; }
+.hero::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(217,255,0,0.08) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(255,107,53,0.05) 0%, transparent 40%);
+  pointer-events: none;
+}
+.hero-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--accent); padding: 6px 12px; border: 1px solid rgba(217,255,0,0.3); border-radius: 100px;
+  margin-bottom: 24px;
+}
+.hero-tag .live-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 100%; animation: pulse 1.6s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+h1.headline {
+  font-size: clamp(42px, 7vw, 92px);
+  font-weight: 900; line-height: 0.95; letter-spacing: -0.04em;
+  margin: 0 0 24px; max-width: 920px;
+}
+h1.headline em { font-style: normal; color: var(--accent); position: relative; display: inline-block; }
+h1.headline em::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 6%; height: 12%;
+  background: rgba(217,255,0,0.2); z-index: -1;
+}
+.lead { font-size: 20px; line-height: 1.5; color: var(--ink-mute); max-width: 620px; margin: 0 0 36px; }
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.hero-note { font-size: 13px; color: var(--ink-dim); margin-top: 20px; }
+.hero-note b { color: var(--ink-mute); font-weight: 500; }
+
+.hero-grid {
+  display: grid; grid-template-columns: 1.3fr 1fr; gap: 48px; align-items: center; margin-top: 60px;
+}
+@media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } }
+
+/* "receipt" mockup — original, não é card de template */
+.receipt {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  position: relative;
+  transform: rotate(1.5deg);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+}
+.receipt::before {
+  content: ''; position: absolute; left: -1px; right: -1px; bottom: -1px; height: 16px;
+  background: repeating-linear-gradient(135deg, var(--bg-elev) 0 10px, var(--bg) 10px 20px);
+  mask: linear-gradient(to bottom, transparent 0, black 60%);
+}
+.receipt .r-head { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border); padding-bottom: 12px; margin-bottom: 16px; }
+.receipt .r-head b { color: var(--accent); font-size: 11px; letter-spacing: 0.1em; }
+.receipt .r-row { display: flex; justify-content: space-between; color: var(--ink-mute); margin: 4px 0; }
+.receipt .r-row b { color: var(--ink); }
+.receipt .r-divider { border-top: 1px dashed var(--border); margin: 14px 0; }
+.receipt .r-total { color: var(--accent); font-weight: 700; font-size: 15px; }
+.receipt .r-stamp {
+  position: absolute; top: 20px; right: -8px; transform: rotate(12deg);
+  color: var(--accent); border: 2px solid var(--accent); padding: 4px 10px;
+  font-size: 10px; letter-spacing: 0.1em; font-weight: 700;
+  background: rgba(217,255,0,0.05);
+}
+
+/* ============ STATS BAND ============ */
+.stats {
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  background: var(--bg-elev);
+  padding: 32px 0;
+}
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+@media (max-width: 700px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+.stat { }
+.stat .big { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; font-family: var(--mono); }
+.stat .lbl { font-size: 12px; color: var(--ink-dim); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
+.stat.accent .big { color: var(--accent); }
+
+/* ============ MANIFESTO ============ */
+.manifesto { padding: 100px 0; }
+.manifesto-head { display: grid; grid-template-columns: 1fr 2fr; gap: 60px; align-items: start; }
+@media (max-width: 800px) { .manifesto-head { grid-template-columns: 1fr; gap: 24px; } }
+.section-eyebrow { font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+h2.section { font-size: clamp(32px, 4.5vw, 54px); font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; margin: 8px 0 0; }
+.manifesto p { font-size: 18px; line-height: 1.7; color: var(--ink-mute); margin: 20px 0; max-width: 620px; }
+.manifesto p b { color: var(--ink); font-weight: 500; }
+.manifesto p .strike { text-decoration: line-through; color: var(--ink-dim); }
+
+/* ============ PLATAFORMAS ============ */
+.platforms { padding: 80px 0; background: var(--bg-elev); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.plats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-top: 48px; }
+@media (max-width: 900px) { .plats-grid { grid-template-columns: repeat(2, 1fr); } }
+.plat {
+  background: var(--bg-elev); padding: 28px 22px; transition: all .2s;
+}
+.plat:hover { background: #1c1c1c; }
+.plat-icon { font-size: 28px; margin-bottom: 12px; }
+.plat-name { font-weight: 700; font-size: 16px; margin-bottom: 6px; letter-spacing: -0.01em; }
+.plat-desc { font-size: 13px; color: var(--ink-mute); line-height: 1.5; }
+
+/* ============ PAYMENTS ============ */
+.pay { padding: 100px 0; }
+.pay-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 40px; }
+@media (max-width: 1000px) { .pay-grid { grid-template-columns: repeat(2, 1fr); } }
+.pay-card {
+  background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px;
+  padding: 24px; position: relative; overflow: hidden; transition: all .2s;
+}
+.pay-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.pay-card .pc-icon { font-size: 28px; margin-bottom: 14px; }
+.pay-card .pc-name { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+.pay-card .pc-tag { position: absolute; top: 14px; right: 14px; font-size: 10px; color: var(--accent); font-weight: 700; letter-spacing: 0.1em; }
+.pay-card .pc-desc { font-size: 13px; color: var(--ink-mute); line-height: 1.5; }
+.pay-card .pc-fee { font-family: var(--mono); font-size: 11px; color: var(--ink-dim); margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
+
+/* ============ HOW IT WORKS ============ */
+.how { padding: 100px 0; background: var(--bg-elev); border-top: 1px solid var(--border); }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; }
+@media (max-width: 800px) { .steps { grid-template-columns: 1fr; } }
+.step { padding: 32px 24px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); position: relative; }
+.step .num {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--accent);
+  margin-bottom: 20px; display: inline-block; padding: 4px 10px;
+  background: rgba(217,255,0,0.08); border-radius: 100px;
+}
+.step h3 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 10px; }
+.step p { font-size: 14px; color: var(--ink-mute); line-height: 1.6; margin: 0; }
+
+/* ============ TICKER ============ */
+.ticker { padding: 60px 0; border-top: 1px solid var(--border); }
+.ticker-wrap { overflow: hidden; position: relative; mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); }
+.ticker-track { display: flex; gap: 48px; white-space: nowrap; animation: scroll 60s linear infinite; }
+@keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.ticker-item { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 14px; color: var(--ink-mute); }
+.ticker-item .dot { width: 6px; height: 6px; background: var(--accent); border-radius: 100%; }
+
+/* ============ FAQ ============ */
+.faq { padding: 100px 0; }
+.faq-list { margin-top: 48px; max-width: 820px; }
+details.q { border-bottom: 1px solid var(--border); padding: 20px 0; cursor: pointer; }
+details.q summary { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; display: flex; justify-content: space-between; align-items: center; }
+details.q summary::-webkit-details-marker { display: none; }
+details.q summary::after { content: '+'; font-size: 24px; color: var(--accent); transition: transform .2s; }
+details.q[open] summary::after { transform: rotate(45deg); }
+details.q p { color: var(--ink-mute); line-height: 1.7; margin: 12px 0 0; font-size: 15px; }
+
+/* ============ FOOTER ============ */
+footer { padding: 60px 0 40px; border-top: 1px solid var(--border); background: var(--bg-elev); }
+.foot-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
+@media (max-width: 700px) { .foot-grid { grid-template-columns: 1fr 1fr; } }
+.foot-brand p { color: var(--ink-mute); font-size: 14px; max-width: 320px; margin: 12px 0; line-height: 1.6; }
+.foot-col h4 { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink-dim); margin: 0 0 16px; }
+.foot-col a { display: block; font-size: 14px; color: var(--ink-mute); margin-bottom: 10px; }
+.foot-col a:hover { color: var(--ink); }
+.foot-bottom { border-top: 1px solid var(--border); padding-top: 24px; display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-dim); }
+.foot-bottom .mono { color: var(--ink-mute); }
+
+/* ============ CTA FINAL ============ */
+.cta-end { padding: 120px 0; text-align: center; }
+.cta-end h2 { font-size: clamp(36px, 6vw, 72px); font-weight: 900; letter-spacing: -0.04em; line-height: 1; margin: 0; }
+.cta-end h2 em { font-style: normal; color: var(--accent); }
+.cta-end p { font-size: 18px; color: var(--ink-mute); margin: 24px auto 36px; max-width: 540px; }
+
+/* ============ COOKIE BAR (LGPD) ============ */
+#lgpd { position: fixed; bottom: 20px; left: 20px; right: 20px; max-width: 480px; margin: auto; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; font-size: 13px; z-index: 100; box-shadow: 0 10px 40px rgba(0,0,0,0.5); display: none; }
+#lgpd.show { display: block; }
+#lgpd p { margin: 0 0 12px; color: var(--ink-mute); line-height: 1.5; }
+#lgpd .buttons { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ============ LIVE PROOF ============ */
+#proof-strip { position: fixed; bottom: 100px; left: 20px; background: var(--bg-elev); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; padding: 14px 18px; max-width: 320px; font-size: 13px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); display: none; z-index: 90; animation: slideIn .4s; }
+@keyframes slideIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+#proof-strip b { color: var(--ink); display: block; margin-bottom: 2px; }
+#proof-strip span { color: var(--ink-mute); font-size: 12px; }
+</style>
+<script src="/branding.js" defer></script></head>
+<body>
+
+<nav class="top">
+  <div class="container inner">
+    <div class="logo"><span class="mark">⚡</span> SMM Hub</div>
+    <div class="nav-links">
+      <a href="#plataformas">Plataformas</a>
+      <a href="#funciona">Como funciona</a>
+      <a href="#pagamento">Pagamento</a>
+      <a href="/blog.html">Blog</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div class="cta-nav">
+      <a href="/login.html" class="btn btn-ghost">Entrar</a>
+      <a href="/register.html" class="btn btn-solid">Criar conta <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+  </div>
+</nav>
+
+<!-- ====== HERO ====== -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div>
+        <div class="hero-tag"><span class="live-dot"></span><span id="live-count">41.300 pessoas usando agora</span></div>
+        <h1 class="headline">A fila anda. <em>Suas métricas</em> também.</h1>
+        <p class="lead">Painel brasileiro de performance em redes sociais. Pix cai, pedido voa, resultado aparece. É só isso.</p>
+        <div class="hero-actions">
+          <a href="/register.html" class="btn btn-solid btn-lg">Criar conta grátis <i class="fa-solid fa-arrow-right"></i></a>
+          <a href="#plataformas" class="btn btn-ghost btn-lg">Ver o cardápio</a>
+        </div>
+        <div class="hero-note"><b>Grátis pra começar</b> · Sem cartão · Mínimo de R$ 5 no primeiro Pix</div>
+      </div>
+
+      <div class="receipt">
+        <div class="r-head">
+          <b>PEDIDO #41307</b>
+          <span style="color: var(--ink-dim)">02:14</span>
+        </div>
+        <div class="r-row"><span>Serviço</span><b>IG Reels FYP</b></div>
+        <div class="r-row"><span>Link</span><b>@perfil.exemplo</b></div>
+        <div class="r-row"><span>Quantidade</span><b>10.000 views</b></div>
+        <div class="r-row"><span>Entrega</span><b>Prazo conforme o serviço</b></div>
+        <div class="r-divider"></div>
+        <div class="r-row"><span>Pagamento</span><b>Consulte métodos disponíveis</b></div>
+        <div class="r-row r-total"><span>Total</span><span>R$ 29,00</span></div>
+        <div class="r-stamp">ENTREGUE</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== STATS ====== -->
+<section class="stats">
+  <div class="container stats-grid">
+    <div class="stat accent"><div class="big" id="s-delivered">—</div><div class="lbl">métricas entregues</div></div>
+    <div class="stat"><div class="big" id="s-clients">—</div><div class="lbl">clientes ativos</div></div>
+    <div class="stat"><div class="big" id="s-uptime">Não medido</div><div class="lbl">Disponibilidade medida</div></div>
+    <div class="stat"><div class="big" id="s-start">—</div><div class="lbl">início médio por pedido</div></div>
+  </div>
+</section>
+
+<!-- ====== MANIFESTO ====== -->
+<section class="manifesto">
+  <div class="container">
+    <div class="manifesto-head">
+      <div>
+        <div class="section-eyebrow">O jeito da casa</div>
+        <h2 class="section">Seu catálogo e seus pedidos, em português.</h2>
+      </div>
+      <div>
+        <p>Interface <b>em português</b>, preços em reais e acompanhamento pelo painel. Consulte os métodos de pagamento disponíveis e abra um chamado quando precisar de ajuda.</p>
+        <p>Para agências e produtores: API de revenda e solicitações de subpainéis. A publicação de um domínio depende de verificação DNS, instalação e configuração da infraestrutura.</p>
+        <p>A gente trata o cliente como adulto: política de reposição clara, estorno automático em pedido parcial, extrato detalhado por centavo. É <b>pra funcionar</b>, não pra impressionar.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== PLATAFORMAS ====== -->
+<section class="platforms" id="plataformas">
+  <div class="container">
+    <div class="section-eyebrow">Onde a gente opera</div>
+    <h2 class="section">16 plataformas. 580+ serviços. Um lugar.</h2>
+    <div class="plats-grid" id="plats-grid"></div>
+    <p style="color: var(--ink-mute); margin-top: 32px; font-size: 14px;">Faltou alguma? <a href="/" style="color: var(--accent); text-decoration: underline;">Pede no suporte</a> — se o volume justifica, a gente adiciona em 48 horas.</p>
+  </div>
+</section>
+
+<!-- ====== PAYMENTS ====== -->
+<section class="pay" id="pagamento">
+  <div class="container">
+    <div class="section-eyebrow">Pagamento</div>
+    <h2 class="section">Cinco jeitos de pagar. Zero enrolação.</h2>
+    <p class="lead" style="margin: 20px 0 0;">Escolhe o que te servir. A gente aceita todos.</p>
+    <div class="pay-grid">
+      <div class="pay-card">
+        <span class="pc-tag">PADRÃO</span>
+        <div class="pc-icon" style="color: #32BCAD;"><i class="fa-solid fa-bolt"></i></div>
+        <div class="pc-name">Pix</div>
+        <div class="pc-desc">Cai em segundos. QR Code copia-e-cola. O jeito brasileiro de pagar.</div>
+        <div class="pc-fee">Taxa: 0% · Mín R$ 5</div>
+      </div>
+      <div class="pay-card">
+        <span class="pc-tag">ANÔNIMO</span>
+        <div class="pc-icon" style="color: #F7931A;"><i class="fa-brands fa-bitcoin"></i></div>
+        <div class="pc-name">Bitcoin</div>
+        <div class="pc-desc">BTC on-chain. Confirma em 1 bloco. Pra quem gosta de privacidade.</div>
+        <div class="pc-fee">Taxa de rede · Mín $5</div>
+      </div>
+      <div class="pay-card">
+        <div class="pc-icon" style="color: #26A17B;"><i class="fa-solid fa-coins"></i></div>
+        <div class="pc-name">USDT</div>
+        <div class="pc-desc">TRC20 ou BEP20. Valor fixo em dólar. Entrega em minutos.</div>
+        <div class="pc-fee">Taxa de rede baixa · Mín $5</div>
+      </div>
+      <div class="pay-card">
+        <div class="pc-icon"><i class="fa-solid fa-barcode"></i></div>
+        <div class="pc-name">Boleto</div>
+        <div class="pc-desc">Pra quem ainda prefere imprimir e levar no caixa. Nós não julgamos.</div>
+        <div class="pc-fee">Compensa 1-3 dias · Mín R$ 15</div>
+      </div>
+      <div class="pay-card">
+        <div class="pc-icon" style="color: #635BFF;"><i class="fa-solid fa-credit-card"></i></div>
+        <div class="pc-name">Cartão</div>
+        <div class="pc-desc">Visa, Master, Elo, Amex. Até 12x. Débito automático pra agência.</div>
+        <div class="pc-fee">Taxa gateway · Mín R$ 5</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== HOW IT WORKS ====== -->
+<section class="how" id="funciona">
+  <div class="container">
+    <div class="section-eyebrow">Como funciona</div>
+    <h2 class="section">Três passos. Nenhum deles complicado.</h2>
+    <div class="steps">
+      <div class="step">
+        <span class="num">01 · CRIAR CONTA</span>
+        <h3>E-mail e senha. Pronto.</h3>
+        <p>Nada de confirmação por SMS, nada de documento com selfie. Você entra e já pode comprar. Se quiser 2FA depois, tá no menu.</p>
+      </div>
+      <div class="step">
+        <span class="num">02 · PAGAR</span>
+        <h3>Pix de 1 real, se quiser.</h3>
+        <p>Carteira é interna — você deposita uma vez, usa quando quiser. Sem taxa escondida, sem conversão de câmbio esquisita, sem minimum charge mascarado.</p>
+      </div>
+      <div class="step">
+        <span class="num">03 · PEDIR</span>
+        <h3>Cola o link. Dá submit.</h3>
+        <p>Acompanhe os estados recebidos do fornecedor no painel. Prazos e elegibilidade para reposição dependem das condições do serviço contratado.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== TICKER (prova social autêntica) ====== -->
+<section class="ticker">
+  <div class="ticker-wrap">
+    <div class="ticker-track" id="ticker"></div>
+  </div>
+</section>
+
+<!-- ====== FAQ ====== -->
+<section class="faq" id="faq">
+  <div class="container">
+    <div class="section-eyebrow">Perguntas secas, respostas idem</div>
+    <h2 class="section">O que todo mundo pergunta antes de confiar.</h2>
+    <div class="faq-list">
+      <details class="q">
+        <summary>É seguro? Minha conta não vai cair?</summary>
+        <p>Redes sociais possuem regras próprias e podem restringir contas ou remover métricas. Não prometemos ausência de bloqueios ou retenção permanente. Confira as condições do serviço e as políticas da rede antes de comprar.</p>
+      </details>
+      <details class="q">
+        <summary>Como vocês entregam tão rápido?</summary>
+        <p>A gente tem contratos diretos com três provedores Tier-1 (sem revender revendedor) e roteamento automático que escolhe o mais rápido disponível naquele segundo. Se um atrasar, o pedido pula pro próximo sem você perceber.</p>
+      </details>
+      <details class="q">
+        <summary>Preciso dar senha da minha conta?</summary>
+        <p>Nunca. Só pedimos o link público do perfil, post ou vídeo. Qualquer painel que pedir sua senha pra entregar seguidor é golpe — bloqueia e sai.</p>
+      </details>
+      <details class="q">
+        <summary>Posso usar isso pra meu cliente de agência?</summary>
+        <p>Há API de revenda e solicitação de subpainel com domínio próprio. A ativação requer configuração e verificação da infraestrutura; o envio da solicitação não significa que o domínio já está publicado.</p>
+      </details>
+      <details class="q">
+        <summary>E se o pedido não entregar?</summary>
+        <p>Pedido parcial estorna automático na proporção do que faltou. Pedido que falhou de vez, você aperta um botão e o valor volta inteiro pra sua carteira em segundos. Zero papo com atendente, zero formulário, zero promessa vazia.</p>
+      </details>
+      <details class="q">
+        <summary>Vocês emitem nota fiscal?</summary>
+        <p>A emissão fiscal depende da identificação legal da empresa e da integração com o emissor autorizado. Um comprovante do painel não substitui uma nota fiscal. Consulte o suporte sobre a disponibilidade antes da contratação.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ====== CTA FINAL ====== -->
+<section class="cta-end">
+  <div class="container">
+    <h2>Começa com <em>R$ 5</em>.<br>Mede o resultado você mesmo.</h2>
+    <p>Sem contrato. Sem mensalidade. Sem call de vendas. Entra, deposita, pede, vê funcionar. Se não gostar, não volta. É essa a oferta.</p>
+    <a href="/register.html" class="btn btn-solid btn-lg">Criar minha conta <i class="fa-solid fa-arrow-right"></i></a>
+  </div>
+</section>
+
+<!-- ====== FOOTER ====== -->
+<footer>
+  <div class="container">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <div class="logo"><span class="mark">⚡</span> SMM Hub</div>
+        <p>Catálogo de serviços, acompanhamento de pedidos e API de revenda. Consulte condições, prazos e integrações disponíveis.</p>
+        <div style="display: flex; gap: 10px; margin-top: 16px;">
+          <a href="#"><i class="fa-brands fa-instagram" style="font-size: 20px;"></i></a>
+          <a href="#"><i class="fa-brands fa-telegram" style="font-size: 20px;"></i></a>
+          <a href="#"><i class="fa-brands fa-whatsapp" style="font-size: 20px;"></i></a>
+          <a href="#"><i class="fa-brands fa-x-twitter" style="font-size: 20px;"></i></a>
+        </div>
+      </div>
+      <div class="foot-col">
+        <h4>Produto</h4>
+        <a href="#plataformas">Plataformas</a>
+        <a href="#pagamento">Pagamento</a>
+        <a href="#faq">FAQ</a>
+        <a href="/blog.html">Blog</a>
+        <a href="/api/docs">API docs</a>
+      </div>
+      <div class="foot-col">
+        <h4>Empresa</h4>
+        <a href="/">Sobre nós</a>
+        <a href="/">Afiliados</a>
+        <a href="/">Agência / White-label</a>
+        <a href="/">Imprensa</a>
+        <a href="/">Carreiras</a>
+      </div>
+      <div class="foot-col">
+        <h4>Legal</h4>
+        <a href="/terms.html">Termos de uso</a>
+        <a href="/privacy.html">Privacidade</a>
+        <a href="/">Política de reposição</a>
+        <a href="/">LGPD · Seus direitos</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <div><span class="mono">SMM Hub Brasil</span> · Identificação empresarial a configurar antes da publicação</div>
+      <div>© <span class="mono">2026</span> · feito à mão em SP</div>
+    </div>
+  </div>
+</footer>
+
+<div id="proof-strip">
+  <b id="proof-name">—</b>
+  <span id="proof-text">—</span>
+</div>
+
+<div id="lgpd">
+  <p>Esse site usa cookies técnicos pra sessão e preferências. Sem rastreador de terceiros, sem venda de dado. Tá tudo na nossa <a href="/privacy.html" style="color: var(--accent); text-decoration: underline;">política</a>.</p>
+  <div class="buttons">
+    <button class="btn btn-ghost" onclick="dismissLGPD()">Entendi</button>
+  </div>
+</div>
+
+<script>
+function escapeText(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// LGPD
+if (!localStorage.getItem('lgpd_consent')) setTimeout(() => document.getElementById('lgpd').classList.add('show'), 1500);
+function dismissLGPD() { localStorage.setItem('lgpd_consent', '1'); document.getElementById('lgpd').classList.remove('show'); }
+
+// Carrega plataformas do backend (editáveis via admin)
+fetch('/api/site/platforms').then(r => r.json()).then(({ platforms }) => {
+  document.getElementById('plats-grid').innerHTML = platforms.map(p => `
+    <div class="plat">
+      <div class="plat-icon" style="color: ${/^#[a-f0-9]{6}$/i.test(p.color)?p.color:'#d9ff00'}"><i class="${escapeText(p.icon)}"></i></div>
+      <div class="plat-name">${escapeText(p.name)}</div>
+      <div class="plat-desc">${escapeText(p.description || '')}</div>
+    </div>
+  `).join('');
+}).catch(() => {});
+
+// Carrega textos editáveis
+fetch('/api/site/content').then(r => r.json()).then(({ content }) => {
+  if (content['stats.delivered_total']) document.getElementById('s-delivered').textContent = content['stats.delivered_total'];
+  if (content['stats.active_clients']) document.getElementById('s-clients').textContent = content['stats.active_clients'];
+  if (content['stats.uptime']) document.getElementById('s-uptime').textContent = content['stats.uptime'];
+  if (content['stats.avg_start_seconds']) document.getElementById('s-start').textContent = content['stats.avg_start_seconds'] + 's';
+}).catch(() => {});
+
+// Ticker de prova social real
+fetch('/api/social-proof/recent').then(r => r.json()).then(({ events }) => {
+  const items = (events || []).concat(events || []);
+  document.getElementById('ticker').innerHTML = items.map(e => `
+    <div class="ticker-item"><span class="dot"></span>${escapeText(e.user_name)} comprou ${e.quantity.toLocaleString('pt-BR')} ${escapeText(e.service_name)} · ${escapeText(e.time_ago)}</div>
+  `).join('');
+}).catch(() => {});
+
+// Prova social flutuante rotativa (eventos reais)
+let proofIdx = 0;
+async function rotateProof() {
+  try {
+    const { events } = await fetch('/api/social-proof/recent').then(r => r.json());
+    if (!events?.length) return;
+    const e = events[proofIdx % events.length];
+    proofIdx++;
+    const strip = document.getElementById('proof-strip');
+    document.getElementById('proof-name').textContent = e.user_name;
+    document.getElementById('proof-text').textContent = `${escapeText(e.service_name)} · ${e.time_ago}`;
+    strip.style.display = 'block';
+    setTimeout(() => strip.style.display = 'none', 5000);
+  } catch {}
+}
+setTimeout(rotateProof, 4000);
+setInterval(rotateProof, 15000);
+
+// PWA
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+</script>
+<script src="/accessibility.js" defer></script>
+</body>
+</html>
