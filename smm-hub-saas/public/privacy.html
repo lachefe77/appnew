@@ -27,7 +27,6 @@ code { font-family: var(--mono); background: var(--bg-elev); padding: 1px 6px; b
 <div class="brand-eyebrow">Privacidade e LGPD</div>
 <h1>Política de Privacidade</h1>
 <div class="meta">Última atualização: 23 de outubro de 2026 · Versão 2.1</div>
-<p id="company-legal">Identificação empresarial ainda não configurada.</p>
 
 <div class="highlight">
 <strong>Resumo rápido:</strong> a gente coleta o mínimo necessário pra operar sua conta, não vende seus dados pra ninguém, não planta rastreador de terceiros, e você pode exportar ou apagar tudo em 2 cliques.
@@ -107,15 +106,6 @@ code { font-family: var(--mono); background: var(--bg-elev); padding: 1px 6px; b
 <p>Reclamação em órgão regulador: <a href="https://www.gov.br/anpd" style="color: var(--accent);">ANPD — Autoridade Nacional de Proteção de Dados</a>.</p>
 
 <p style="margin-top: 60px; font-size: 13px; color: var(--ink-dim);">SMM Hub Brasil · Identificação empresarial a configurar</p>
-<script>
-fetch('/api/site/offer').then((response) => response.json()).then((offer) => {
-  const node = document.getElementById('company-legal');
-  if (!node || !offer.company) return;
-  node.textContent = offer.company.cnpj
-    ? offer.company.name + ' · CNPJ ' + offer.company.cnpj
-    : (offer.company.name || 'SMM Hub') + ' · identificação empresarial ainda não configurada.';
-}).catch(() => {});
-</script>
 <script src="/accessibility.js" defer></script>
 </body>
 </html>

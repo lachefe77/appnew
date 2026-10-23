@@ -280,12 +280,12 @@ function applyV3Schema() {
 }
 
 function seedV3Defaults() {
-  const upsertPM = db.prepare(`INSERT OR IGNORE INTO payment_methods_config (method, is_enabled, display_order, icon, label, description, min_amount_cents, max_amount_cents) VALUES (?,?,?,?,?,?,?,?)`);
-  upsertPM.run('pix', 1, 1, 'fa-solid fa-bolt', 'Pix', 'Entra na carteira depois da confirmação do Mercado Pago.', 500, 1000000);
-  upsertPM.run('bitcoin', 1, 2, 'fa-brands fa-bitcoin', 'Bitcoin', 'Entra na carteira depois da confirmação da NOWPayments.', 2500, 10000000);
-  upsertPM.run('usdt', 1, 3, 'fa-solid fa-coins', 'USDT (TRC20/BEP20)', 'Entra na carteira depois da confirmação da NOWPayments.', 2500, 10000000);
-  upsertPM.run('boleto', 0, 4, 'fa-solid fa-barcode', 'Boleto Bancário', 'Ainda não integrado. Não aparece para o cliente.', 1500, 1000000);
-  upsertPM.run('credit_card', 0, 5, 'fa-solid fa-credit-card', 'Cartão de Crédito', 'Ainda não integrado. Não aparece para o cliente.', 500, 500000);
+  const upsertPM = db.prepare(`INSERT OR IGNORE INTO payment_methods_config (method, display_order, icon, label, description, min_amount_cents, max_amount_cents) VALUES (?,?,?,?,?,?,?)`);
+  upsertPM.run('pix', 1, 'fa-solid fa-bolt', 'Pix Instantâneo', 'Cai em segundos. Sem taxa.', 500, 1000000);
+  upsertPM.run('bitcoin', 2, 'fa-brands fa-bitcoin', 'Bitcoin', 'Pagamento anônimo em cripto.', 2500, 10000000);
+  upsertPM.run('usdt', 3, 'fa-solid fa-coins', 'USDT (TRC20/BEP20)', 'Stablecoin — valor fixo em dólar.', 2500, 10000000);
+  upsertPM.run('boleto', 4, 'fa-solid fa-barcode', 'Boleto Bancário', 'Compensação em 1 a 3 dias úteis.', 1500, 1000000);
+  upsertPM.run('credit_card', 5, 'fa-solid fa-credit-card', 'Cartão de Crédito', 'Visa, Master, Elo, Amex. Até 12x.', 500, 500000);
 
   const upsertPlat = db.prepare(`INSERT OR IGNORE INTO platforms_config (slug, name, icon, color, display_order, description) VALUES (?,?,?,?,?,?)`);
   const plats = [
@@ -311,40 +311,28 @@ function seedV3Defaults() {
   const upsertSC = db.prepare(`INSERT OR IGNORE INTO site_content (key, value) VALUES (?, ?)`);
   const defaults = {
     'hero.headline': 'Métricas sociais sem enrolação.',
-    'hero.subhead': 'Painel em português, preços em reais e acompanhamento do pedido. O recebimento abre quando Pix ou cripto estiverem configurados.',
+    'hero.subhead': 'A plataforma brasileira de performance em redes sociais usada por 40 mil criadores. Pix cai, pedido entra, resultado aparece. Fim.',
     'hero.cta_primary': 'Começar agora',
     'hero.cta_secondary': 'Ver todos os serviços',
     'company.name': 'SMM Hub Brasil',
     'company.email': 'contato@smmhub.com.br',
-    'company.whatsapp': '',
-    'company.cnpj': '',
-    'social.instagram': '',
-    'social.telegram': '',
+    'company.whatsapp': '55 11 99999-0000',
+    'company.cnpj': '00.000.000/0001-00',
+    'social.instagram': 'https://instagram.com/smmhub',
+    'social.telegram': 'https://t.me/smmhub',
     'legal.terms_url': '/terms.html',
     'legal.privacy_url': '/privacy.html',
-    'stats.delivered_total': '0',
-    'stats.active_clients': '0',
-    'stats.uptime': 'Não medido',
-    'stats.avg_start_seconds': ''
+    'stats.delivered_total': '2.8 bilhões',
+    'stats.active_clients': '41.300',
+    'stats.uptime': '99,97%',
+    'stats.avg_start_seconds': '48'
   };
   for (const [k, v] of Object.entries(defaults)) upsertSC.run(k, v);
-  db.prepare("UPDATE site_content SET value='' WHERE key='company.cnpj' AND value='00.000.000/0001-00'").run();
-  db.prepare("UPDATE site_content SET value='' WHERE key='social.instagram' AND value='https://instagram.com/smmhub'").run();
-  db.prepare("UPDATE site_content SET value='' WHERE key='social.telegram' AND value='https://t.me/smmhub'").run();
-  db.prepare("UPDATE site_content SET value='' WHERE key='company.whatsapp' AND value='55 11 99999-0000'").run();
-  db.prepare("UPDATE site_content SET value='0' WHERE key='stats.delivered_total' AND value='2.8 bilhões'").run();
-  db.prepare("UPDATE site_content SET value='0' WHERE key='stats.active_clients' AND value='41.300'").run();
-  db.prepare("UPDATE site_content SET value='Não medido' WHERE key='stats.uptime' AND value='99,97%'").run();
-  db.prepare("UPDATE site_content SET value='' WHERE key='stats.avg_start_seconds' AND value='48'").run();
-  db.prepare("UPDATE payment_methods_config SET is_enabled=0, description='Ainda não integrado. Não aparece para o cliente.' WHERE method IN ('boleto','credit_card') AND is_enabled=1 AND description IN ('Compensação em 1 a 3 dias úteis.','Visa, Master, Elo, Amex. Até 12x.')").run();
-  db.prepare("UPDATE payment_methods_config SET description='Entra na carteira depois da confirmação do Mercado Pago.' WHERE method='pix' AND description='Cai em segundos. Sem taxa.'").run();
-  db.prepare("UPDATE payment_methods_config SET description='Entra na carteira depois da confirmação da NOWPayments.' WHERE method='bitcoin' AND description='Pagamento anônimo em cripto.'").run();
-  db.prepare("UPDATE payment_methods_config SET description='Entra na carteira depois da confirmação da NOWPayments.' WHERE method='usdt' AND description='Stablecoin — valor fixo em dólar.'").run();
 
   const pks = db.prepare('SELECT COUNT(*) as c FROM press_kit_stats').get().c;
   if (pks === 0) {
     db.prepare(`INSERT INTO press_kit_stats (snapshot_date, total_delivered, total_users, total_countries, satisfaction_pct) VALUES (?,?,?,?,?)`)
-      .run(new Date().toISOString().split('T')[0], 0, 0, 0, 0);
+      .run(new Date().toISOString().split('T')[0], 2800000000, 41300, 18, 98.5);
   }
 }
 

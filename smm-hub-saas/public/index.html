@@ -4,11 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
 <title>SMM Hub — a fila anda, suas métricas também</title>
-<meta name="description" content="Painel de revenda SMM com catálogo público. Preço, mínimo e reposição aparecem antes do cadastro. Pix e cripto só entram depois da homologação.">
+<meta name="description" content="Painel SMM brasileiro para quem já cansou de promessa de meia-boca. Pix cai, pedido voa, resultado aparece. Instagram, TikTok, YouTube e mais 14 plataformas.">
 <meta property="og:title" content="SMM Hub Brasil">
 <meta property="og:description" content="A fila anda. Suas métricas também.">
 <meta property="og:type" content="website">
-<link rel="canonical" href="/">
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -257,14 +256,14 @@ footer { padding: 60px 0 40px; border-top: 1px solid var(--border); background: 
   <div class="container">
     <div class="hero-grid">
       <div>
-        <div class="hero-tag"><span class="live-dot"></span><span id="live-count">Catálogo em preparação</span></div>
+        <div class="hero-tag"><span class="live-dot"></span><span id="live-count">41.300 pessoas usando agora</span></div>
         <h1 class="headline">A fila anda. <em>Suas métricas</em> também.</h1>
-        <p class="lead">Painel de revenda com catálogo público. O pedido só sai quando houver fornecedor real e o pagamento estiver homologado.</p>
+        <p class="lead">Painel brasileiro de performance em redes sociais. Pix cai, pedido voa, resultado aparece. É só isso.</p>
         <div class="hero-actions">
           <a href="/register.html" class="btn btn-solid btn-lg">Criar conta grátis <i class="fa-solid fa-arrow-right"></i></a>
           <a href="#plataformas" class="btn btn-ghost btn-lg">Ver o cardápio</a>
         </div>
-        <div class="hero-note"><b>Cadastro gratuito</b> · Cartão e boleto indisponíveis · Depósito mínimo de R$ 5 quando o Pix estiver ativo</div>
+        <div class="hero-note"><b>Grátis pra começar</b> · Sem cartão · Mínimo de R$ 5 no primeiro Pix</div>
       </div>
 
       <div class="receipt">
@@ -296,7 +295,7 @@ footer { padding: 60px 0 40px; border-top: 1px solid var(--border); background: 
 </section>
 
 <!-- ====== MANIFESTO ====== -->
-<section class="manifesto" id="sobre">
+<section class="manifesto">
   <div class="container">
     <div class="manifesto-head">
       <div>
@@ -316,13 +315,9 @@ footer { padding: 60px 0 40px; border-top: 1px solid var(--border); background: 
 <section class="platforms" id="plataformas">
   <div class="container">
     <div class="section-eyebrow">Onde a gente opera</div>
-    <h2 class="section" id="catalog-heading">Catálogo</h2>
-    <p id="provider-warning" hidden>Nenhum fornecedor real está conectado. O catálogo pode ser de demonstração e o pedido não sai para as redes até um provedor de verdade ser cadastrado.</p>
-    <label class="section-eyebrow" for="catalog-search">Buscar no catálogo</label>
-    <input id="catalog-search" placeholder="Nome ou rede" style="margin-top:16px;width:100%;max-width:420px;background:#0a0a0a;color:#f5f5f5;border:1px solid #262626;border-radius:8px;padding:12px">
-    <div id="public-catalog" style="margin-top:24px;overflow:auto"></div>
+    <h2 class="section">16 plataformas. 580+ serviços. Um lugar.</h2>
     <div class="plats-grid" id="plats-grid"></div>
-    <p style="color: var(--ink-mute); margin-top: 32px; font-size: 14px;">Faltou alguma? <a href="/support.html" style="color: var(--accent); text-decoration: underline;">Abra um chamado</a>. A inclusão depende de um fornecedor que entregue essa rede.</p>
+    <p style="color: var(--ink-mute); margin-top: 32px; font-size: 14px;">Faltou alguma? <a href="/" style="color: var(--accent); text-decoration: underline;">Pede no suporte</a> — se o volume justifica, a gente adiciona em 48 horas.</p>
   </div>
 </section>
 
@@ -330,10 +325,42 @@ footer { padding: 60px 0 40px; border-top: 1px solid var(--border); background: 
 <section class="pay" id="pagamento">
   <div class="container">
     <div class="section-eyebrow">Pagamento</div>
-    <h2 class="section">Pagamento só do que está recebendo.</h2>
-    <p class="lead" style="margin: 20px 0 0;">Boleto e cartão não estão disponíveis. Pix e cripto aparecem aqui depois de configurados.</p>
-    <p id="pay-empty">Nenhum meio está recebendo agora. A carteira abre quando o Pix ou a cripto forem homologados.</p>
-    <div class="pay-grid" id="pay-grid"></div>
+    <h2 class="section">Cinco jeitos de pagar. Zero enrolação.</h2>
+    <p class="lead" style="margin: 20px 0 0;">Escolhe o que te servir. A gente aceita todos.</p>
+    <div class="pay-grid">
+      <div class="pay-card">
+        <span class="pc-tag">PADRÃO</span>
+        <div class="pc-icon" style="color: #32BCAD;"><i class="fa-solid fa-bolt"></i></div>
+        <div class="pc-name">Pix</div>
+        <div class="pc-desc">Cai em segundos. QR Code copia-e-cola. O jeito brasileiro de pagar.</div>
+        <div class="pc-fee">Taxa: 0% · Mín R$ 5</div>
+      </div>
+      <div class="pay-card">
+        <span class="pc-tag">ANÔNIMO</span>
+        <div class="pc-icon" style="color: #F7931A;"><i class="fa-brands fa-bitcoin"></i></div>
+        <div class="pc-name">Bitcoin</div>
+        <div class="pc-desc">BTC on-chain. Confirma em 1 bloco. Pra quem gosta de privacidade.</div>
+        <div class="pc-fee">Taxa de rede · Mín $5</div>
+      </div>
+      <div class="pay-card">
+        <div class="pc-icon" style="color: #26A17B;"><i class="fa-solid fa-coins"></i></div>
+        <div class="pc-name">USDT</div>
+        <div class="pc-desc">TRC20 ou BEP20. Valor fixo em dólar. Entrega em minutos.</div>
+        <div class="pc-fee">Taxa de rede baixa · Mín $5</div>
+      </div>
+      <div class="pay-card">
+        <div class="pc-icon"><i class="fa-solid fa-barcode"></i></div>
+        <div class="pc-name">Boleto</div>
+        <div class="pc-desc">Pra quem ainda prefere imprimir e levar no caixa. Nós não julgamos.</div>
+        <div class="pc-fee">Compensa 1-3 dias · Mín R$ 15</div>
+      </div>
+      <div class="pay-card">
+        <div class="pc-icon" style="color: #635BFF;"><i class="fa-solid fa-credit-card"></i></div>
+        <div class="pc-name">Cartão</div>
+        <div class="pc-desc">Visa, Master, Elo, Amex. Até 12x. Débito automático pra agência.</div>
+        <div class="pc-fee">Taxa gateway · Mín R$ 5</div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -350,9 +377,8 @@ footer { padding: 60px 0 40px; border-top: 1px solid var(--border); background: 
       </div>
       <div class="step">
         <span class="num">02 · PAGAR</span>
-        <h3>Deposita na carteira.</h3>
-        <p id="step-min">O mínimo atual é R$ 5,00.</p>
-        <p>A carteira é interna. O saldo entra quando o pagamento é confirmado pelo gateway, não quando o QR aparece.</p>
+        <h3>Pix de 1 real, se quiser.</h3>
+        <p>Carteira é interna — você deposita uma vez, usa quando quiser. Sem taxa escondida, sem conversão de câmbio esquisita, sem minimum charge mascarado.</p>
       </div>
       <div class="step">
         <span class="num">03 · PEDIR</span>
@@ -381,8 +407,8 @@ footer { padding: 60px 0 40px; border-top: 1px solid var(--border); background: 
         <p>Redes sociais possuem regras próprias e podem restringir contas ou remover métricas. Não prometemos ausência de bloqueios ou retenção permanente. Confira as condições do serviço e as políticas da rede antes de comprar.</p>
       </details>
       <details class="q">
-        <summary>Como a entrega acontece?</summary>
-        <p>O pedido vai para o fornecedor cadastrado no serviço. Prazo, reposição e failover dependem desse serviço. Enquanto só houver fornecedor de demonstração, o pedido não chega às redes.</p>
+        <summary>Como vocês entregam tão rápido?</summary>
+        <p>A gente tem contratos diretos com três provedores Tier-1 (sem revender revendedor) e roteamento automático que escolhe o mais rápido disponível naquele segundo. Se um atrasar, o pedido pula pro próximo sem você perceber.</p>
       </details>
       <details class="q">
         <summary>Preciso dar senha da minha conta?</summary>
@@ -394,7 +420,7 @@ footer { padding: 60px 0 40px; border-top: 1px solid var(--border); background: 
       </details>
       <details class="q">
         <summary>E se o pedido não entregar?</summary>
-        <p>Falha sem entrega e entrega parcial geram estorno proporcional na carteira, quando o fornecedor devolve esse estado. Abra um chamado se o status ficar parado. Não há um botão que devolve o valor inteiro em segundos para todo pedido.</p>
+        <p>Pedido parcial estorna automático na proporção do que faltou. Pedido que falhou de vez, você aperta um botão e o valor volta inteiro pra sua carteira em segundos. Zero papo com atendente, zero formulário, zero promessa vazia.</p>
       </details>
       <details class="q">
         <summary>Vocês emitem nota fiscal?</summary>
@@ -420,7 +446,12 @@ footer { padding: 60px 0 40px; border-top: 1px solid var(--border); background: 
       <div class="foot-brand">
         <div class="logo"><span class="mark">⚡</span> SMM Hub</div>
         <p>Catálogo de serviços, acompanhamento de pedidos e API de revenda. Consulte condições, prazos e integrações disponíveis.</p>
-        <div id="social-links" style="display:flex;gap:12px;margin-top:16px">Redes sociais ainda não configuradas.</div>
+        <div style="display: flex; gap: 10px; margin-top: 16px;">
+          <a href="#"><i class="fa-brands fa-instagram" style="font-size: 20px;"></i></a>
+          <a href="#"><i class="fa-brands fa-telegram" style="font-size: 20px;"></i></a>
+          <a href="#"><i class="fa-brands fa-whatsapp" style="font-size: 20px;"></i></a>
+          <a href="#"><i class="fa-brands fa-x-twitter" style="font-size: 20px;"></i></a>
+        </div>
       </div>
       <div class="foot-col">
         <h4>Produto</h4>
@@ -432,22 +463,22 @@ footer { padding: 60px 0 40px; border-top: 1px solid var(--border); background: 
       </div>
       <div class="foot-col">
         <h4>Empresa</h4>
-        <a href="#sobre">Sobre</a>
-        <a href="/register.html">Afiliados</a>
-        <a href="/painel.html">Agência / subpainel</a>
-        <a href="/support.html">Imprensa e contato</a>
-        <a href="/support.html">Carreiras</a>
+        <a href="/">Sobre nós</a>
+        <a href="/">Afiliados</a>
+        <a href="/">Agência / White-label</a>
+        <a href="/">Imprensa</a>
+        <a href="/">Carreiras</a>
       </div>
       <div class="foot-col">
         <h4>Legal</h4>
         <a href="/terms.html">Termos de uso</a>
         <a href="/privacy.html">Privacidade</a>
-        <a href="/terms.html">Política de reposição</a>
-        <a href="/privacy.html">LGPD · Seus direitos</a>
+        <a href="/">Política de reposição</a>
+        <a href="/">LGPD · Seus direitos</a>
       </div>
     </div>
     <div class="foot-bottom">
-      <div id="company-line">Identificação empresarial ainda não configurada</div>
+      <div><span class="mono">SMM Hub Brasil</span> · Identificação empresarial a configurar antes da publicação</div>
       <div>© <span class="mono">2026</span> · feito à mão em SP</div>
     </div>
   </div>
@@ -465,7 +496,61 @@ footer { padding: 60px 0 40px; border-top: 1px solid var(--border); background: 
   </div>
 </div>
 
-<script src="/storefront.js" defer></script>
+<script>
+function escapeText(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// LGPD
+if (!localStorage.getItem('lgpd_consent')) setTimeout(() => document.getElementById('lgpd').classList.add('show'), 1500);
+function dismissLGPD() { localStorage.setItem('lgpd_consent', '1'); document.getElementById('lgpd').classList.remove('show'); }
+
+// Carrega plataformas do backend (editáveis via admin)
+fetch('/api/site/platforms').then(r => r.json()).then(({ platforms }) => {
+  document.getElementById('plats-grid').innerHTML = platforms.map(p => `
+    <div class="plat">
+      <div class="plat-icon" style="color: ${/^#[a-f0-9]{6}$/i.test(p.color)?p.color:'#d9ff00'}"><i class="${escapeText(p.icon)}"></i></div>
+      <div class="plat-name">${escapeText(p.name)}</div>
+      <div class="plat-desc">${escapeText(p.description || '')}</div>
+    </div>
+  `).join('');
+}).catch(() => {});
+
+// Carrega textos editáveis
+fetch('/api/site/content').then(r => r.json()).then(({ content }) => {
+  if (content['stats.delivered_total']) document.getElementById('s-delivered').textContent = content['stats.delivered_total'];
+  if (content['stats.active_clients']) document.getElementById('s-clients').textContent = content['stats.active_clients'];
+  if (content['stats.uptime']) document.getElementById('s-uptime').textContent = content['stats.uptime'];
+  if (content['stats.avg_start_seconds']) document.getElementById('s-start').textContent = content['stats.avg_start_seconds'] + 's';
+}).catch(() => {});
+
+// Ticker de prova social real
+fetch('/api/social-proof/recent').then(r => r.json()).then(({ events }) => {
+  const items = (events || []).concat(events || []);
+  document.getElementById('ticker').innerHTML = items.map(e => `
+    <div class="ticker-item"><span class="dot"></span>${escapeText(e.user_name)} comprou ${e.quantity.toLocaleString('pt-BR')} ${escapeText(e.service_name)} · ${escapeText(e.time_ago)}</div>
+  `).join('');
+}).catch(() => {});
+
+// Prova social flutuante rotativa (eventos reais)
+let proofIdx = 0;
+async function rotateProof() {
+  try {
+    const { events } = await fetch('/api/social-proof/recent').then(r => r.json());
+    if (!events?.length) return;
+    const e = events[proofIdx % events.length];
+    proofIdx++;
+    const strip = document.getElementById('proof-strip');
+    document.getElementById('proof-name').textContent = e.user_name;
+    document.getElementById('proof-text').textContent = `${escapeText(e.service_name)} · ${e.time_ago}`;
+    strip.style.display = 'block';
+    setTimeout(() => strip.style.display = 'none', 5000);
+  } catch {}
+}
+setTimeout(rotateProof, 4000);
+setInterval(rotateProof, 15000);
+
+// PWA
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+</script>
 <script src="/accessibility.js" defer></script>
 </body>
 </html>

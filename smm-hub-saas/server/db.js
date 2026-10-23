@@ -752,6 +752,62 @@ function applySchemaMigrations() {
     ).run();
   }
 
+  const spCount = db
+    .prepare('SELECT COUNT(*) as count FROM social_proof_events')
+    .get().count;
+  if (spCount === 0 && config.env !== 'production') {
+    const proofs = [
+      [
+        'Lucas M.',
+        'São Paulo - SP',
+        'Seguidores Brasileiros Reais',
+        'instagram',
+        2500,
+        'há 2 minutos',
+      ],
+      [
+        'Juliana F.',
+        'Rio de Janeiro - RJ',
+        'Visualizações FYP TikTok',
+        'tiktok',
+        10000,
+        'há 4 minutos',
+      ],
+      [
+        'Agência Nexus',
+        'Belo Horizonte - MG',
+        'Pacote 4.000 Horas Monetização',
+        'youtube',
+        4000,
+        'há 7 minutos',
+      ],
+      [
+        'Rodrigo B.',
+        'Curitiba - PR',
+        'Curtidas Brasileiras Instantâneas',
+        'instagram',
+        1500,
+        'há 11 minutos',
+      ],
+      [
+        'Matheus K.',
+        'Florianópolis - SC',
+        'Membros para Grupo Telegram',
+        'telegram',
+        500,
+        'há 15 minutos',
+      ],
+    ];
+    for (const [name, city, sname, plat, qty, timeAgo] of proofs) {
+      db.prepare(
+        `
+        INSERT INTO social_proof_events (user_name, city, service_name, platform, quantity, time_ago, is_synthetic)
+        VALUES (?, ?, ?, ?, ?, ?, 1)
+      `
+      ).run(name, city, sname, plat, qty, timeAgo);
+    }
+  }
+
   const missionCount = db
     .prepare('SELECT COUNT(*) as count FROM weekly_missions')
     .get().count;

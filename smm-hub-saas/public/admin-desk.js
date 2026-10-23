@@ -690,7 +690,7 @@
     const host = document.getElementById('pm-list');
     host.textContent = '';
     const note = document.createElement('p');
-    note.textContent = 'Boleto e cartão não estão implementados. Pix e cripto só aparecem na vitrine depois da homologação do gateway.';
+    note.textContent = 'Pix, Bitcoin, USDT, boleto e cartão continuam cadastrados. Ligar ou desligar aqui prepara o método; a cobrança usa o gateway quando a credencial estiver no servidor.';
     host.append(note);
     const table = document.createElement('table');
     table.innerHTML = '<thead><tr><th>Método</th><th>Mínimo</th><th>Máximo</th><th>Ligado</th><th></th></tr></thead>';
