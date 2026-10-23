@@ -114,6 +114,7 @@ async function bootstrap() {
 
   app.use(
     helmet({
+      strictTransportSecurity: config.env === 'production',
       contentSecurityPolicy: {
         useDefaults: true,
         directives: {
