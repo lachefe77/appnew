@@ -1,0 +1,1107 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Painel — SMM Hub</title><link rel="stylesheet" href="/vendor/tailwind.css"><link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css"><link rel="stylesheet" href="/brand.css"><link rel="stylesheet" href="/painel.css"><script src="/panel-session.js"></script><script src="/staff-return.js" defer></script><script src="/app.js?v=panel-fixed-1" defer></script><script src="/child-panels.js" defer></script><script src="/branding.js" defer></script><script src="/social.js" defer></script><script src="/panel-events.js" defer></script><script src="/painel.js" defer></script><script src="/accessibility.js" defer></script><script src="/captcha.js" defer></script><script src="/browser-session.js" defer></script></head><body class="panel-fixed"><a class="skip-link" href="#panel-main">Ir para o conteúdo</a><header class="panel-topbar"><div class="topbar-left"><button id="btn-toggle-sidebar" aria-label="Abrir menu" aria-controls="main-sidebar" aria-expanded="false"><i class="fa-solid fa-bars"></i></button><a class="brand-logo" href="/painel.html"><span class="mark">↗</span>SMM HUB<span class="panel-label">PAINEL</span></a></div><div class="topbar-right"><div class="header-balance"><span>Seu saldo <small id="topbar-tier-badge"></small></span><strong id="topbar-balance">R$ 0,00</strong></div><button class="brand-btn brand-btn-solid header-recharge" data-navigate="wallet">Adicionar saldo <span aria-hidden="true">↗</span></button><div class="account-menu"><button id="btn-user-menu" aria-expanded="false"><span class="user-avatar"><i class="fa-regular fa-user"></i></span><span id="topbar-user-name">Minha conta</span><i class="fa-solid fa-chevron-down"></i></button><div id="user-dropdown" class="hidden"><p id="dropdown-user-email"></p><small id="dropdown-user-tier"></small><a href="/profile.html">Meu perfil e segurança</a><a href="/vitrine.html">Ver vitrine</a><button id="panel-logout">Sair da conta</button></div></div></div></header><div class="panel-layout"><aside id="main-sidebar" class="-translate-x-full"><div class="sidebar-label">ÁREA DO CLIENTE</div><nav aria-label="Navegação do painel"><button type="button" class="nav-link" data-view="dashboard"><i class="fa-solid fa-chart-pie" aria-hidden="true"></i><span>Geral</span></button>
+<button type="button" class="nav-link" data-view="new-order"><i class="fa-solid fa-plus" aria-hidden="true"></i><span>Novo pedido</span></button>
+<button type="button" class="nav-link" data-view="mass-order"><i class="fa-solid fa-layer-group" aria-hidden="true"></i><span>Pedidos em massa</span></button>
+<button type="button" class="nav-link" data-view="subscriptions"><i class="fa-solid fa-robot" aria-hidden="true"></i><span>Auto-likes / Assinaturas</span></button>
+<button type="button" class="nav-link" data-view="orders"><i class="fa-solid fa-list-check" aria-hidden="true"></i><span>Meus pedidos</span></button>
+<button type="button" class="nav-link" data-view="services"><i class="fa-solid fa-tags" aria-hidden="true"></i><span>Serviços e preços</span></button>
+<button type="button" class="nav-link" data-view="combos"><i class="fa-solid fa-gift" aria-hidden="true"></i><span>Combos e promoções</span></button>
+<button type="button" class="nav-link" data-view="wallet"><i class="fa-solid fa-wallet" aria-hidden="true"></i><span>Carteira</span></button>
+<button type="button" class="nav-link" data-view="affiliates"><i class="fa-solid fa-users" aria-hidden="true"></i><span>Afiliados</span></button>
+<button type="button" class="nav-link" data-view="missions"><i class="fa-solid fa-bullseye" aria-hidden="true"></i><span>Missões e bônus</span></button>
+<button type="button" class="nav-link" data-view="agency"><i class="fa-solid fa-user-group" aria-hidden="true"></i><span>Subcontas / Agência</span></button>
+<button type="button" class="nav-link" data-view="child-panels"><i class="fa-solid fa-globe" aria-hidden="true"></i><span>Subpainéis</span></button>
+<button type="button" class="nav-link" data-view="api"><i class="fa-solid fa-code" aria-hidden="true"></i><span>API de revenda</span></button>
+<button type="button" class="nav-link" data-view="tickets"><i class="fa-solid fa-life-ring" aria-hidden="true"></i><span>Suporte</span></button>
+<button type="button" class="nav-link" data-view="track"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>Rastrear pedido</span></button>
+<button type="button" class="nav-link" data-view="blog"><i class="fa-solid fa-book-open" aria-hidden="true"></i><span>Conteúdos</span></button></nav><div id="admin-nav-section" class="hidden sidebar-staff"><div class="sidebar-label">GESTÃO</div><a href="/admin.html"><i class="fa-solid fa-sliders"></i> Administração ↗</a></div><div id="support-nav-section" class="hidden sidebar-staff"><a href="/support.html"><i class="fa-solid fa-headset"></i> Atendimento da equipe ↗</a></div><div class="sidebar-footer"><a href="/vitrine.html">Voltar à vitrine ↗</a><span>Conecte sua próxima campanha.</span></div></aside><main id="panel-main" tabindex="-1"><div id="announcement-banner" class="hidden panel-announcement"><span id="announcement-badge">Aviso</span><div><strong id="announcement-title"></strong><p id="announcement-message"></p></div></div><section id="view-dashboard" class="view-panel"><div class="panel-heading"><div><p class="eyebrow">SEU PAINEL, EM DIA</p><h1 id="dashboard-greeting">Visão geral</h1><p>Acompanhe seus pedidos e encontre a próxima campanha.</p></div><button class="brand-btn brand-btn-solid" data-navigate="new-order"><i class="fa-solid fa-plus" aria-hidden="true"></i> Novo pedido</button></div><div id="dashboard-feedback" role="status"></div><div class="dashboard-metrics"><article class="metric-card"><span>Meus pedidos</span><strong id="metric-my-orders">—</strong><small>Seu histórico de campanhas</small></article><article class="metric-card"><span>Em andamento</span><strong id="metric-active-orders">—</strong><small>Pedidos que você está acompanhando</small></article><article class="metric-card"><span>Pedidos no painel</span><strong id="metric-total-orders">—</strong><small id="metric-today">Dados registrados no sistema</small></article><article class="metric-card"><span>Serviços disponíveis</span><strong id="metric-services">—</strong><small>Explore o catálogo completo</small></article></div><div class="dashboard-columns"><div><section class="dashboard-block"><div class="block-heading"><div><p class="eyebrow">APROVEITE AGORA</p><h2>Combos e promoções</h2></div><button class="text-action" data-navigate="combos">Ver todos <span aria-hidden="true">↗</span></button></div><div id="dashboard-combos" class="combo-grid"><p class="empty-state">Carregando promoções…</p></div></section><section class="dashboard-block"><div class="block-heading"><h2>Seus últimos pedidos</h2><button class="text-action" data-navigate="orders">Ver histórico ↗</button></div><div id="dashboard-orders"></div></section></div><aside><section class="dashboard-block activity-block"><div class="block-heading"><div><p class="eyebrow"><span class="live-dot"></span> ATIVIDADE DO PAINEL</p><h2>Últimas compras</h2></div></div><p class="block-caption">Movimentações registradas, sem dados pessoais dos clientes.</p><div id="dashboard-activity"></div></section><section class="dashboard-help"><i class="fa-regular fa-life-ring" aria-hidden="true"></i><h2>Precisa de uma mão?</h2><p>Fale com a equipe e acompanhe seu atendimento pelo painel.</p><button class="brand-btn brand-btn-ghost" data-navigate="tickets">Abrir suporte ↗</button></section></aside></div></section><section id="view-combos" class="view-panel hidden"><div class="panel-heading"><div><p class="eyebrow">MAIS PARA SUA CAMPANHA</p><h1>Combos e promoções</h1><p>Pacotes ativos com preço e quantidades definidos. Consulte os itens antes de comprar.</p></div></div><div id="all-combos" class="combo-grid"></div></section><section id="view-new-order" class="view-panel hidden max-w-6xl mx-auto space-y-6">
+        <div class="card-cyber rounded-2xl p-6 sm:p-8 border border-gray-800 relative overflow-hidden">
+          <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="relative z-10">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Novo pedido</h1>
+                <p class="text-gray-400 text-sm mt-1">Escolha um serviço, informe o destino e acompanhe a execução em Meus pedidos.</p>
+              </div>
+              <div class="flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
+                <i class="fa-solid fa-clock text-emerald-400 text-xs"></i>
+                <span class="text-xs font-semibold text-emerald-400">Despacho Automático via API</span>
+              </div>
+            </div>
+
+            <!-- Platform Filters -->
+            <div class="flex flex-wrap gap-1.5 pt-2">
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;all&quot;]" class="platform-btn active px-3 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-700 border border-cyan-500/50 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="all">
+                <i class="fa-solid fa-layer-group text-cyan-400"></i>
+                <span>Todas</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;instagram&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="instagram">
+                <i class="fa-brands fa-instagram text-pink-500"></i>
+                <span>Instagram</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;tiktok&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="tiktok">
+                <i class="fa-brands fa-tiktok text-cyan-400"></i>
+                <span>TikTok</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;youtube&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="youtube">
+                <i class="fa-brands fa-youtube text-red-500"></i>
+                <span>YouTube</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;telegram&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="telegram">
+                <i class="fa-brands fa-telegram text-sky-400"></i>
+                <span>Telegram</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;spotify&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="spotify">
+                <i class="fa-brands fa-spotify text-emerald-400"></i>
+                <span>Spotify</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;deezer&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="deezer">
+                <i class="fa-solid fa-music text-amber-400"></i>
+                <span>Deezer</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;soundcloud&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="soundcloud">
+                <i class="fa-brands fa-soundcloud text-orange-500"></i>
+                <span>SoundCloud</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;linkedin&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="linkedin">
+                <i class="fa-brands fa-linkedin text-blue-500"></i>
+                <span>LinkedIn</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;reddit&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="reddit">
+                <i class="fa-brands fa-reddit text-orange-500"></i>
+                <span>Reddit</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;discord&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="discord">
+                <i class="fa-brands fa-discord text-indigo-400"></i>
+                <span>Discord</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;twitch&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="twitch">
+                <i class="fa-brands fa-twitch text-purple-400"></i>
+                <span>Twitch</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;kick&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="kick">
+                <i class="fa-solid fa-bolt text-emerald-400"></i>
+                <span>Kick</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;twitter&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="twitter">
+                <i class="fa-brands fa-x-twitter text-gray-200"></i>
+                <span>X / Twitter</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;threads&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="threads">
+                <i class="fa-brands fa-threads text-gray-300"></i>
+                <span>Threads</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;facebook&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="facebook">
+                <i class="fa-brands fa-facebook text-blue-600"></i>
+                <span>Facebook</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;pinterest&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="pinterest">
+                <i class="fa-brands fa-pinterest text-red-600"></i>
+                <span>Pinterest</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;web&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="web">
+                <i class="fa-solid fa-globe text-cyan-400"></i>
+                <span>Tráfego Web</span>
+              </button>
+              <button data-action="filterPlatform" data-event="click" data-args="[&quot;kwai&quot;]" class="platform-btn px-3 py-2 rounded-xl bg-gray-900/60 hover:bg-gray-800 border border-gray-800 flex items-center space-x-1.5 transition text-xs font-medium" data-platform="kwai">
+                <i class="fa-solid fa-play text-orange-400"></i>
+                <span>Kwai</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 card-cyber rounded-2xl p-6 border border-gray-800 space-y-5">
+            <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+              <i class="fa-solid fa-pen-to-square text-cyan-400"></i>
+              <span>Configurar Envio</span>
+            </h2>
+
+            <form id="form-new-order" data-action="handleCreateOrder" data-event="submit" data-args="[{&quot;event&quot;:true}]" class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Categoria</label>
+                <select id="order-category-select" data-action="onCategoryChanged" data-event="change" data-args="[]" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl px-4 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-cyan-500 transition"></select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Serviço Desejado</label>
+                <select id="order-service-select" data-action="onServiceChanged" data-event="change" data-args="[]" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl px-4 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-cyan-500 transition"></select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Link do Perfil / Publicação</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500 text-sm">
+                    <i class="fa-solid fa-link"></i>
+                  </span>
+                  <input type="url" id="order-link-input" required="" placeholder="https://instagram.com/seu_usuario ou link do post" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-cyan-500 transition font-mono">
+                </div>
+                <div id="link-preview-box" class="hidden mt-2 p-3 rounded-xl bg-gray-950/90 border border-emerald-500/30 text-xs flex items-center justify-between">
+                  <div class="flex items-center space-x-2.5">
+                    <div class="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                      <i class="fa-solid fa-user-check"></i>
+                    </div>
+                    <div>
+                      <span id="link-preview-username" class="font-bold text-white block">@perfil</span>
+                      <span id="link-preview-status" class="text-[10px] text-emerald-400 font-medium">Perfil Público &amp; Seguro para Envio</span>
+                    </div>
+                  </div>
+                  <span class="text-[10px] uppercase font-bold text-gray-500 font-mono bg-gray-900 px-2 py-0.5 rounded border border-gray-800">Verificado</span>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between items-center mb-1.5">
+                  <label class="text-xs font-semibold text-gray-300 uppercase tracking-wider">Quantidade Total</label>
+                  <span id="order-qty-limits" class="text-xs text-gray-400 font-mono">Mín: 100 | Máx: 50.000</span>
+                </div>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500 text-sm">
+                    <i class="fa-solid fa-arrow-up-9-1"></i>
+                  </span>
+                  <input type="number" id="order-qty-input" data-action="calculateOrderPrice" data-event="input" data-args="[]" required="" min="10" placeholder="Ex: 1000" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-cyan-500 transition font-mono">
+                </div>
+              </div>
+
+              <!-- Drip-Feed Toggle -->
+              <div class="p-4 bg-gray-900/60 rounded-xl border border-gray-800 space-y-3">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="order-dripfeed-toggle" data-action="toggleDripFeedInputs" data-event="change" data-args="[]" class="w-4 h-4 rounded bg-gray-800 border-gray-700 text-cyan-500 focus:ring-0">
+                    <label for="order-dripfeed-toggle" class="text-xs font-bold text-gray-200 cursor-pointer flex items-center space-x-1.5">
+                      <span>Entrega parcelada (lotes com intervalo)</span>
+                      <span class="px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-400 text-[10px] font-normal">Intervalo em minutos</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div id="order-dripfeed-inputs" class="hidden grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-gray-400 mb-1">Divisões / Execuções (Runs)</label>
+                    <input type="number" id="order-drip-runs" min="2" max="50" value="5" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs font-mono text-gray-200">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-gray-400 mb-1">Intervalo (Minutos)</label>
+                    <input type="number" id="order-drip-interval" min="10" max="1440" value="60" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs font-mono text-gray-200">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Promotional Coupon Input -->
+              <div>
+                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Cupom Promocional</label>
+                <div class="flex items-center space-x-2">
+                  <input type="text" id="order-coupon-input" placeholder="Ex: BEMVINDO10" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl px-4 py-2 text-xs text-amber-400 font-mono uppercase focus:outline-none focus:border-amber-500">
+                  <button type="button" data-action="applyCoupon" data-event="click" data-args="[]" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-xs font-bold text-gray-200 shrink-0">
+                    Aplicar
+                  </button>
+                </div>
+                <span id="coupon-feedback" class="text-[11px] text-emerald-400 mt-1 block hidden"></span>
+              </div>
+
+              <!-- Comments Box -->
+              <div id="order-comments-box" class="hidden">
+                <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Comentários (1 por linha)</label>
+                <textarea id="order-comments-input" rows="4" placeholder="Excelente conteúdo!
+Muito top!
+Já comecei a seguir!" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-3 text-sm text-gray-200 focus:outline-none focus:border-cyan-500 transition font-mono"></textarea>
+              </div>
+
+              <div class="pt-4 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                  <span class="text-xs text-gray-400 uppercase tracking-wider block">Custo Total (c/ Descontos):</span>
+                  <div id="order-total-preview" class="text-2xl font-black text-cyan-400 font-mono">R$ 0,00</div>
+                </div>
+
+                <button type="submit" id="btn-submit-order" class="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-black font-extrabold text-sm rounded-xl shadow-lg shadow-cyan-500/20 active:scale-95 transition flex items-center justify-center space-x-2">
+                  <i class="fa-solid fa-paper-plane"></i>
+                  <span>Enviar Pedido Imediato</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Specs Sidebar -->
+          <div class="space-y-4">
+            <div class="card-cyber rounded-2xl p-6 border border-gray-800 space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+                  <i class="fa-solid fa-circle-info text-cyan-400"></i>
+                  <span>Detalhes do Serviço</span>
+                </h3>
+                <button id="btn-favorite-service" data-action="toggleFavoriteCurrentService" data-event="click" data-args="[]" class="text-gray-500 hover:text-amber-400 text-sm">
+                  <i class="fa-regular fa-star"></i>
+                </button>
+              </div>
+
+              <div id="service-spec-empty" class="text-xs text-gray-500 text-center py-6">
+                Selecione um serviço para visualizar os prazos e garantias.
+              </div>
+
+              <div id="service-spec-content" class="hidden space-y-3 text-xs">
+                <div class="flex justify-between items-center py-2 border-b border-gray-800">
+                  <span class="text-gray-400">Preço / 1.000:</span>
+                  <span id="spec-rate" class="font-bold text-emerald-400 font-mono text-sm">R$ 0,00</span>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-800">
+                  <span class="text-gray-400">Avaliação Média:</span>
+                  <span id="spec-rating" class="font-bold text-amber-400 flex items-center">
+                    <i class="fa-solid fa-star text-xs mr-1"></i>Sem avaliações consolidadas
+                  </span>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-800">
+                  <span class="text-gray-400">Tempo Médio:</span>
+                  <span id="spec-time" class="font-medium text-gray-200">5 a 30 min</span>
+                </div>
+                <div class="flex justify-between items-center py-2 border-b border-gray-800">
+                  <span class="text-gray-400">Garantia / Reposição:</span>
+                  <span id="spec-refill" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400">Ativa</span>
+                </div>
+                <div class="pt-2">
+                  <span class="text-gray-400 block mb-1 font-semibold">Orientações do Servidor:</span>
+                  <p id="spec-desc" class="text-gray-300 leading-relaxed bg-gray-900/60 p-3 rounded-lg border border-gray-800 text-[11px]"></p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-cyber rounded-2xl p-4 border border-emerald-500/20 bg-emerald-950/10 flex items-start space-x-3">
+              <i class="fa-solid fa-shield-halved text-emerald-400 text-lg mt-0.5"></i>
+              <div class="text-xs">
+                <span class="font-bold text-emerald-300 block mb-0.5">Acompanhamento do pedido</span>
+                <p class="text-gray-400 text-[11px]">O status será atualizado conforme o retorno do fornecedor. Em caso de divergência, abra um chamado com o número do pedido.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+<section id="view-subscriptions" class="view-panel hidden max-w-5xl mx-auto space-y-6">
+        <div>
+          <h1 class="text-2xl font-extrabold text-white">Assinaturas de Perfil (Auto-Likes &amp; Auto-Views)</h1>
+          <p class="text-gray-400 text-xs sm:text-sm">Cadastre o seu @perfil e envie métricas automaticamente para suas próximas publicações.</p>
+        </div>
+
+        <div class="card-cyber rounded-2xl p-6 border border-gray-800 space-y-4">
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider">Criar Nova Assinatura Automática</h3><div id="social-connections"><p>Instagram: conecte o perfil autorizado antes de ativar a assinatura.</p><button type="button" id="connect-instagram">Conectar Instagram</button><button type="button" id="disconnect-instagram">Desconectar</button><p id="social-feedback" role="status"></p></div>
+          <form data-action="handleCreateSubscription" data-event="submit" data-args="[{&quot;event&quot;:true}]" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label class="block font-semibold text-gray-300 mb-1">Serviço</label>
+              <select id="sub-service-select" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-gray-200"></select>
+            </div>
+            <div>
+              <label class="block font-semibold text-gray-300 mb-1">@Usuário do Perfil</label>
+              <input type="text" id="sub-username" required="" placeholder="Ex: seunome_oficial" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-gray-200">
+            </div>
+            <div>
+              <label class="block font-semibold text-gray-300 mb-1">Limite de Próximos Posts</label>
+              <input type="number" id="sub-posts-limit" min="1" max="100" value="10" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-gray-200 font-mono">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">Qtd Mínima</label>
+                <input type="number" id="sub-min-qty" min="50" value="500" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-gray-200 font-mono">
+              </div>
+              <div>
+                <label class="block font-semibold text-gray-300 mb-1">Qtd Máxima</label>
+                <input type="number" id="sub-max-qty" min="50" value="1000" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-gray-200 font-mono">
+              </div>
+            </div>
+            <div class="md:col-span-2 pt-2">
+              <button type="submit" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-sky-500 hover:from-cyan-400 hover:to-sky-400 text-black font-extrabold text-sm rounded-xl transition shadow-lg shadow-cyan-500/20">
+                Ativar Assinatura Automática
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card-cyber rounded-2xl border border-gray-800 overflow-hidden">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-gray-900/80 border-b border-gray-800 text-gray-400 uppercase font-bold text-[10px]">
+                <th class="p-4">ID</th>
+                <th class="p-4">Perfil</th>
+                <th class="p-4">Serviço</th>
+                <th class="p-4">Posts Entregues</th>
+                <th class="p-4">Faixa de Qtd</th>
+                <th class="p-4">Status</th>
+                <th class="p-4 text-right">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="subscriptions-table-body" class="divide-y divide-gray-800/60 font-medium"></tbody>
+          </table>
+        </div>
+      </section>
+<section id="view-child-panels" class="view-panel hidden max-w-5xl mx-auto space-y-6">
+        <div>
+          <h1 class="text-2xl font-extrabold text-white">Aluguel de Sub-Painéis White-Label</h1>
+          <p class="text-gray-400 text-xs sm:text-sm">Solicite um painel com sua marca. A ativação depende de infraestrutura, validação do domínio e certificado TLS.</p>
+        </div>
+
+        <div class="card-cyber rounded-2xl p-6 border border-gray-800 space-y-4">
+          <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+            <div>
+              <h3 class="text-base font-bold text-white">Criar Seu Sub-Painel Próprio</h3>
+              <p class="text-xs text-gray-400">Preço previsto: R$ 49,90 / mês. Solicitação sem cobrança; contratação após disponibilização.</p>
+            </div>
+            <span class="px-2.5 py-1 rounded bg-purple-500/10 text-purple-400 text-xs font-bold border border-purple-500/30">100% White-Label</span>
+          </div>
+
+          <form data-action="handleCreateChildPanel" data-event="submit" data-args="[{&quot;event&quot;:true}]" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label class="block font-semibold text-gray-300 mb-1">Seu Domínio Próprio</label>
+              <input type="text" id="cp-domain" required="" placeholder="Ex: meupainelsmm.com" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-gray-200 font-mono">
+            </div>
+            <div>
+              <label class="block font-semibold text-gray-300 mb-1">Nome da Sua Marca / Painel</label>
+              <input type="text" id="cp-name" required="" placeholder="Ex: Impulso Social BR" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-gray-200">
+            </div>
+            <div>
+              <label class="block font-semibold text-gray-300 mb-1">E-mail do Seu Administrador</label>
+              <input type="email" id="cp-admin" required="" placeholder="admin@seusite.com" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-gray-200">
+            </div>
+            <div>
+              <label class="block font-semibold text-gray-300 mb-1">Moeda Padrão de Venda</label>
+              <select id="cp-currency" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-gray-200">
+                <option value="BRL">Real Brasileiro (BRL)</option>
+              </select>
+            </div>
+            <div class="md:col-span-2 pt-2">
+              <button type="submit" class="w-full py-3 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-extrabold text-sm rounded-xl transition shadow-lg shadow-purple-500/20">
+                Solicitar Sub-Painel (sem cobrança)
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card-cyber rounded-2xl border border-gray-800 overflow-hidden">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-gray-900/80 border-b border-gray-800 text-gray-400 uppercase font-bold text-[10px]">
+                <th class="p-4">ID</th>
+                <th class="p-4">Domínio</th>
+                <th class="p-4">Nome da Marca</th>
+                <th class="p-4">Moeda</th>
+                <th class="p-4">Status</th>
+                <th class="p-4 text-right">DNS / Nameservers</th>
+              </tr>
+            </thead>
+            <tbody id="child-panels-table-body" class="divide-y divide-gray-800/60 font-medium"></tbody>
+          </table>
+        </div>
+      </section>
+<section id="view-mass-order" class="view-panel hidden max-w-4xl mx-auto space-y-6">
+        <div>
+          <h1 class="text-2xl font-extrabold text-white">Envio de Pedidos em Massa (Mass Order)</h1>
+          <p class="text-gray-400 text-xs sm:text-sm">Ideal para agências que atendem dezenas de perfis em lote. 1 pedido por linha.</p>
+        </div>
+
+        <div class="card-cyber rounded-2xl p-6 border border-gray-800 space-y-4">
+          <div class="bg-gray-900/80 p-3 rounded-xl border border-gray-800 text-xs text-gray-300 space-y-1">
+            <span class="font-bold text-cyan-400 block">Formato Obrigatório:</span>
+            <code class="font-mono text-gray-400 block">ID_DO_SERVIÇO | QUANTIDADE | LINK_DO_PERFIL_OU_POST</code>
+          </div>
+
+          <form data-action="handleMassOrderSubmit" data-event="submit" data-args="[{&quot;event&quot;:true}]" class="space-y-4">
+            <textarea id="mass-order-textarea" rows="10" required="" placeholder="1 | 1000 | https://instagram.com/perfil1
+1 | 2000 | https://instagram.com/perfil2
+3 | 5000 | https://tiktok.com/@user/video/123" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl p-4 text-xs font-mono text-gray-200 focus:outline-none focus:border-cyan-500"></textarea>
+
+            <button type="submit" id="btn-submit-mass" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-black font-extrabold text-sm rounded-xl transition shadow-lg shadow-cyan-500/20 flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-bolt"></i>
+              <span>Processar Todos os Pedidos em Lote</span>
+            </button>
+          </form>
+        </div>
+      </section>
+<section id="view-affiliates" class="view-panel hidden max-w-4xl mx-auto space-y-6">
+        <div>
+          <h1 class="text-2xl font-extrabold text-white">Programa de Afiliados (Indique &amp; Ganhe)</h1>
+          <p class="text-gray-400 text-xs sm:text-sm">Ganhe 5% de comissão direta no seu saldo sobre cada recarga Pix realizada por quem você indicar.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="card-cyber rounded-2xl p-6 border border-gray-800 space-y-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Amigos Indicados</span>
+            <div id="affiliate-total-referred" class="text-3xl font-black text-white font-mono">0</div>
+          </div>
+
+          <div class="card-cyber rounded-2xl p-6 border border-pink-500/20 bg-pink-950/10 space-y-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-pink-300">Comissões Acumuladas</span>
+            <div id="affiliate-total-commissions" class="text-3xl font-black text-pink-400 font-mono">R$ 0,00</div>
+          </div>
+        </div>
+
+        <div class="card-cyber rounded-2xl p-6 border border-gray-800 space-y-4">
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider">Seu Link de Convite Único</h3>
+          <div class="flex items-center space-x-2">
+            <input type="text" id="affiliate-link-input" readonly="" value="http://localhost:3000/?ref=REFDEMO77" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl px-4 py-2.5 text-xs font-mono text-cyan-400 font-bold focus:outline-none">
+            <button data-action="copyAffiliateLink" data-event="click" data-args="[]" class="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold rounded-xl border border-gray-700 shrink-0">
+              <i class="fa-regular fa-copy mr-1"></i>Copiar
+            </button>
+          </div>
+        </div>
+      </section>
+<section id="view-orders" class="view-panel hidden max-w-6xl mx-auto space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-extrabold text-white">Histórico de Pedidos</h1>
+            <p class="text-gray-400 text-xs sm:text-sm">Acompanhe a entrega, início e status de cada solicitação em tempo real.</p>
+          </div>
+          <div class="flex items-center space-x-3">
+            <button data-action="loadUserOrders" data-event="click" data-args="[]" class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs px-3 py-2 rounded-xl border border-gray-700 flex items-center space-x-1.5 transition">
+              <i class="fa-solid fa-rotate"></i>
+              <span>Atualizar</span>
+            </button>
+            <button data-action="navigateTo" data-event="click" data-args="[&quot;new-order&quot;]" class="bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs px-4 py-2 rounded-xl transition">
+              + Novo Pedido
+            </button>
+          </div>
+        </div>
+
+        <div class="card-cyber rounded-2xl p-4 border border-gray-800 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button data-action="filterOrdersStatus" data-event="click" data-args="[&quot;all&quot;]" class="order-filter-btn active px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-800 text-white" data-status="all">Todos</button>
+            <button data-action="filterOrdersStatus" data-event="click" data-args="[&quot;pending&quot;]" class="order-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:bg-gray-800" data-status="pending">Pendentes</button>
+            <button data-action="filterOrdersStatus" data-event="click" data-args="[&quot;in_progress&quot;]" class="order-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:bg-gray-800" data-status="in_progress">Em Andamento</button>
+            <button data-action="filterOrdersStatus" data-event="click" data-args="[&quot;completed&quot;]" class="order-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:bg-gray-800" data-status="completed">Concluídos</button>
+            <button data-action="filterOrdersStatus" data-event="click" data-args="[&quot;canceled&quot;]" class="order-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:bg-gray-800" data-status="canceled">Cancelados</button>
+          </div>
+          <div class="relative w-full sm:w-64">
+            <input type="text" id="order-search-input" data-action="onOrderSearchChanged" data-event="input" data-args="[]" placeholder="Buscar por ID ou link..." class="w-full bg-gray-900 border border-gray-700/80 rounded-xl pl-9 pr-3 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-cyan-500">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-500 text-xs"></i>
+          </div>
+        </div>
+
+        <div class="card-cyber rounded-2xl border border-gray-800 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-gray-900/80 border-b border-gray-800 text-gray-400 uppercase font-bold text-[10px] tracking-wider">
+                  <th class="p-4">ID</th>
+                  <th class="p-4">Serviço</th>
+                  <th class="p-4">Link Destino</th>
+                  <th class="p-4">Qtd</th>
+                  <th class="p-4">Valor</th>
+                  <th class="p-4">Status</th>
+                  <th class="p-4 text-right">Comprovante / Ações</th>
+                </tr>
+              </thead>
+              <tbody id="orders-table-body" class="divide-y divide-gray-800/60 font-medium"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+<section id="view-services" class="view-panel hidden max-w-6xl mx-auto space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-extrabold text-white">Catálogo Completo de Serviços</h1>
+            <p class="text-gray-400 text-xs sm:text-sm">Tabela atualizada com todos os serviços e taxas por 1.000 unidades.</p>
+          </div>
+          <div class="flex items-center space-x-3">
+            <a href="/api/services/export-csv" target="_blank" class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs px-3 py-2 rounded-xl border border-gray-700 flex items-center space-x-1.5 transition">
+              <i class="fa-solid fa-file-csv text-emerald-400"></i>
+              <span>Baixar CSV</span>
+            </a>
+            <div class="w-full sm:w-64 relative">
+              <input type="text" id="services-catalog-search" data-action="filterCatalogTable" data-event="input" data-args="[]" placeholder="Buscar serviço..." class="w-full bg-gray-900 border border-gray-700/80 rounded-xl pl-9 pr-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-cyan-500">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-500 text-xs"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-cyber rounded-2xl border border-gray-800 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-gray-900/80 border-b border-gray-800 text-gray-400 uppercase font-bold text-[10px] tracking-wider">
+                  <th class="p-4">ID</th>
+                  <th class="p-4">Plataforma</th>
+                  <th class="p-4">Nome do Serviço</th>
+                  <th class="p-4">Preço / 1k</th>
+                  <th class="p-4">Avaliação</th>
+                  <th class="p-4">Mín / Máx</th>
+                  <th class="p-4">Tempo Médio</th>
+                  <th class="p-4 text-center">Garantia</th>
+                </tr>
+              </thead>
+              <tbody id="catalog-table-body" class="divide-y divide-gray-800/60"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+<section id="view-wallet" class="view-panel hidden max-w-4xl mx-auto space-y-6">
+        <div>
+          <h1 class="text-2xl font-extrabold text-white">Adicionar Saldo em Conta</h1>
+          <p class="text-gray-400 text-xs sm:text-sm">Escolha entre Pix Instantâneo (BRL) ou Criptomoedas (USDT, BTC, SOL).</p>
+        </div>
+
+        <!-- Explanatory Architecture Banner -->
+        <div class="card-cyber rounded-2xl p-5 border border-cyan-500/30 bg-gradient-to-r from-cyan-950/30 to-gray-900/60 flex items-start space-x-4">
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center text-lg shrink-0 mt-0.5">
+            <i class="fa-solid fa-vault"></i>
+          </div>
+          <div class="text-xs space-y-1">
+            <div class="flex items-center space-x-2">
+              <h3 class="font-black text-white text-sm">Carteira Segura &amp; Saldo Não-Sacável</h3>
+              <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">100% Protegido</span>
+            </div>
+            <p class="text-gray-300 leading-relaxed">
+              O seu dinheiro depositado via Pix fica custodiado com segurança em nossa conta bancária do gateway e é creditado instantaneamente na sua carteira na forma de <strong>saldo de compras</strong>. Os créditos são permanentes, nunca expiram e você pode utilizá-los para contratar seguidores, curtidas e visualizações a qualquer hora.
+            </p>
+            <p class="text-[11px] text-amber-300 font-semibold pt-0.5">
+              <i class="fa-solid fa-circle-info mr-1"></i>Atenção: Os valores adicionados destinam-se exclusivamente para compras de serviços dentro da plataforma, não sendo permitido o saque financeiro.
+            </p>
+          </div>
+        </div>
+
+        <!-- Payment Method Tabs -->
+        <div class="flex border-b border-gray-800 text-xs font-bold">
+          <button id="tab-pay-pix" data-action="togglePaymentMethod" data-event="click" data-args="[&quot;pix&quot;]" class="px-6 py-2.5 border-b-2 border-emerald-400 text-emerald-400 flex items-center space-x-2">
+            <i class="fa-brands fa-pix text-base"></i>
+            <span>Pix Instantâneo</span>
+          </button>
+          <button id="tab-pay-crypto" data-action="togglePaymentMethod" data-event="click" data-args="[&quot;crypto&quot;]" class="px-6 py-2.5 text-gray-400 hover:text-white flex items-center space-x-2">
+            <i class="fa-brands fa-bitcoin text-base text-amber-400"></i>
+            <span>Criptomoedas (USDT / BTC / SOL)</span>
+          </button>
+        </div>
+
+        <!-- PIX PAYMENT CONTAINER -->
+        <div id="container-pay-pix" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="card-cyber rounded-2xl p-6 border border-gray-800 space-y-5">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl">
+                <i class="fa-brands fa-pix"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-white text-base">Gerar QR Code Pix</h3>
+                <span class="text-xs text-gray-400">Depósitos &gt; R$ 100 ganham +5% bônus</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Valores Rápidos</label>
+              <div class="grid grid-cols-4 gap-2">
+                <button type="button" data-action="setDepositAmount" data-event="click" data-args="[20]" class="py-2 bg-gray-900 hover:bg-gray-800 border border-gray-700/80 rounded-xl text-xs font-bold font-mono text-gray-200 transition">R$ 20</button>
+                <button type="button" data-action="setDepositAmount" data-event="click" data-args="[50]" class="py-2 bg-gray-900 hover:bg-gray-800 border border-gray-700/80 rounded-xl text-xs font-bold font-mono text-gray-200 transition">R$ 50</button>
+                <button type="button" data-action="setDepositAmount" data-event="click" data-args="[100]" class="py-2 bg-gray-900 hover:bg-gray-800 border border-gray-700/80 rounded-xl text-xs font-bold font-mono text-gray-200 transition">R$ 100</button>
+                <button type="button" data-action="setDepositAmount" data-event="click" data-args="[500]" class="py-2 bg-gray-900 hover:bg-gray-800 border border-gray-700/80 rounded-xl text-xs font-bold font-mono text-gray-200 transition">R$ 500</button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Ou Digite Outro Valor (R$)</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-400 font-bold text-sm">R$</span>
+                <input type="number" id="deposit-amount-input" step="1" min="5" max="10000" placeholder="50,00" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl pl-12 pr-4 py-3 text-base text-gray-100 font-mono font-bold focus:outline-none focus:border-emerald-500 transition">
+              </div>
+            </div>
+
+            <button type="button" data-action="generatePixInvoice" data-event="click" data-args="[]" class="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-extrabold text-sm rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-qrcode"></i>
+              <span>Gerar QR Code Pix</span>
+            </button>
+          </div>
+
+          <div id="pix-active-card" class="card-cyber rounded-2xl p-6 border border-gray-800 flex flex-col items-center justify-center text-center space-y-4">
+            <div id="pix-placeholder" class="py-12 space-y-3">
+              <div class="w-16 h-16 rounded-2xl bg-gray-900 border border-gray-800 text-gray-600 flex items-center justify-center text-2xl mx-auto">
+                <i class="fa-solid fa-qrcode"></i>
+              </div>
+              <p class="text-xs text-gray-500 max-w-xs">Gere uma cobrança ao lado para exibir o QR Code e a chave Copia e Cola.</p>
+            </div>
+
+            <div id="pix-result" class="hidden w-full space-y-4">
+              <div class="flex items-center justify-between border-b border-gray-800 pb-3 w-full text-xs">
+                <span class="text-gray-400 font-medium">Valor a Pagar:</span>
+                <span id="pix-amount-badge" class="font-extrabold text-emerald-400 text-base font-mono">R$ 50,00</span>
+              </div>
+
+              <div class="p-3 bg-white rounded-2xl inline-block shadow-xl">
+                <img id="pix-qrcode-img" src="" alt="QR Code Pix" class="w-48 h-48 mx-auto">
+              </div>
+
+              <div class="w-full text-left">
+                <label class="block text-[11px] font-semibold text-gray-400 uppercase mb-1">Pix Copia e Cola</label>
+                <div class="flex items-center space-x-2">
+                  <input type="text" id="pix-copia-cola-input" readonly="" class="w-full bg-gray-900 border border-gray-800 rounded-lg p-2 text-xs font-mono text-gray-300">
+                  <button data-action="copyPixCode" data-event="click" data-args="[]" class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs px-3 py-2 rounded-lg border border-gray-700 shrink-0">
+                    <i class="fa-regular fa-copy"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="pt-2 w-full">
+                
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CRYPTO PAYMENT CONTAINER -->
+        <div id="container-pay-crypto" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="card-cyber rounded-2xl p-6 border border-gray-800 space-y-5">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-xl">
+                <i class="fa-brands fa-bitcoin"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-white text-base">Depósito em Criptomoeda</h3>
+                <span class="text-xs text-gray-400">USDT (TRC20), Bitcoin ou Solana</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Moeda Desejada</label>
+              <select id="crypto-currency-select" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-xs text-gray-200 font-mono">
+                <option value="USDT_TRC20">USDT (Tether - Rede Tron TRC20)</option>
+                <option value="BTC">Bitcoin (BTC - Rede Nativa)</option>
+                <option value="SOL">Solana (SOL - Rede Rápida)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-400 uppercase mb-1.5">Valor em Dólar ($ USD)</label>
+              <input type="number" id="crypto-amount-usd" step="1" min="5" value="20" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-sm text-gray-200 font-mono font-bold">
+            </div>
+
+            <button type="button" data-action="generateCryptoInvoice" data-event="click" data-args="[]" class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-extrabold text-xs rounded-xl shadow-lg transition">
+              Gerar Endereço de Depósito Cripto
+            </button>
+          </div>
+
+          <div id="crypto-result-card" class="card-cyber rounded-2xl p-6 border border-gray-800 flex flex-col items-center justify-center text-center space-y-4">
+            <div id="crypto-placeholder" class="py-12 space-y-3">
+              <i class="fa-brands fa-ethereum text-3xl text-gray-600"></i>
+              <p class="text-xs text-gray-500 max-w-xs">Escolha a moeda e gere a carteira para pagamento.</p>
+            </div>
+
+            <div id="crypto-result" class="hidden w-full space-y-4">
+              <div class="flex items-center justify-between border-b border-gray-800 pb-2 text-xs">
+                <span class="text-gray-400">Total Creditado:</span>
+                <span id="crypto-brl-preview" class="font-bold text-emerald-400 font-mono">R$ 112,00</span>
+              </div>
+              <div class="p-3 bg-white rounded-2xl inline-block">
+                <img id="crypto-qrcode-img" src="" alt="QR Code Cripto" class="w-44 h-44 mx-auto">
+              </div>
+              <div class="text-left w-full">
+                <label class="block text-[10px] text-gray-400 font-semibold mb-1">Endereço da Carteira</label>
+                <input type="text" id="crypto-wallet-input" readonly="" class="w-full bg-gray-900 border border-gray-800 p-2 rounded text-[11px] font-mono text-cyan-400">
+              </div>
+              
+            </div>
+          </div>
+        </div>
+
+        <div class="card-cyber rounded-2xl p-6 border border-gray-800 space-y-4">
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+            <i class="fa-solid fa-receipt text-cyan-400"></i>
+            <span>Extrato Financeiro Recente</span>
+          </h3>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="text-gray-500 text-[10px] uppercase font-bold border-b border-gray-800 pb-2">
+                  <th class="py-2">Data / Hora</th>
+                  <th class="py-2">Tipo</th>
+                  <th class="py-2">Descrição</th>
+                  <th class="py-2 text-right">Valor</th>
+                  <th class="py-2 text-right">Saldo Final</th>
+                </tr>
+              </thead>
+              <tbody id="wallet-transactions-body" class="divide-y divide-gray-800/60 font-mono"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+<section id="view-api" class="view-panel hidden max-w-5xl mx-auto space-y-6">
+        <div>
+          <h1 class="text-2xl font-extrabold text-white">API de Revenda (SMM Standard v2)</h1>
+          <p class="text-gray-400 text-xs sm:text-sm">Conecte outros painéis SMM, lojas WooCommerce ou scripts de automação diretamente ao seu painel.</p>
+        </div>
+
+        <div class="card-cyber rounded-2xl p-6 border border-gray-800 space-y-4">
+          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Sua Chave de Autenticação</h3>
+          <div class="flex flex-col sm:flex-row items-center gap-3">
+            <input type="text" id="api-key-display" readonly="" value="smm_..." class="w-full bg-gray-900 border border-gray-700/80 rounded-xl px-4 py-2.5 text-xs text-cyan-400 font-mono font-bold focus:outline-none">
+            <button data-action="copyApiKey" data-event="click" data-args="[]" class="w-full sm:w-auto px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold rounded-xl border border-gray-700 shrink-0">
+              <i class="fa-regular fa-copy mr-1"></i>Copiar
+            </button>
+            <button data-action="regenerateApiKey" data-event="click" data-args="[]" class="w-full sm:w-auto px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold rounded-xl border border-red-500/30 shrink-0">
+              <i class="fa-solid fa-arrows-rotate mr-1"></i>Regenerar
+            </button>
+          </div>
+          <div class="text-[11px] text-gray-500">
+            Endpoint Universal: <code class="text-gray-300 bg-gray-900 px-2 py-0.5 rounded font-mono">http://localhost:3000/api/v2</code>
+          </div>
+        </div>
+
+        <div class="card-cyber rounded-2xl p-6 border border-gray-800 space-y-6">
+          <h2 class="text-base font-bold text-white">Documentação da API v2</h2>
+          <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 text-xs font-mono text-gray-300 overflow-x-auto">
+# Criar Pedido via cURL
+curl -X POST http://localhost:3000/api/v2 \
+  -d "key=SUA_CHAVE_API" \
+  -d "action=add" \
+  -d "service=1" \
+  -d "link=https://instagram.com/perfil" \
+  -d "quantity=1000"
+          </div>
+        </div>
+      </section>
+<section id="view-tickets" class="view-panel hidden max-w-5xl mx-auto space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-extrabold text-white">Central de Atendimento</h1>
+            <p class="text-gray-400 text-xs sm:text-sm">Abra chamados para dúvidas, reposição de seguidores ou suporte operacional.</p>
+          </div>
+          <button data-action="openNewTicketModal" data-event="click" data-args="[]" class="bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center space-x-1.5">
+            <i class="fa-solid fa-plus"></i>
+            <span>Novo Ticket</span>
+          </button>
+        </div>
+
+        <div class="card-cyber rounded-2xl border border-gray-800 overflow-hidden">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-gray-900/80 border-b border-gray-800 text-gray-400 uppercase font-bold text-[10px] tracking-wider">
+                <th class="p-4">ID</th>
+                <th class="p-4">Assunto</th>
+                <th class="p-4">Status</th>
+                <th class="p-4">Atualizado</th>
+                <th class="p-4 text-right">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="tickets-table-body" class="divide-y divide-gray-800/60 font-medium"></tbody>
+          </table>
+        </div>
+      </section>
+<section id="view-leaderboard" class="view-panel hidden max-w-4xl mx-auto space-y-6">
+        <div class="text-center space-y-2">
+          <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500/20 to-yellow-500/30 border border-amber-500/40 text-amber-400 text-3xl flex items-center justify-center mx-auto mb-2 shadow-lg shadow-amber-500/20">
+            <i class="fa-solid fa-trophy"></i>
+          </div>
+          <h1 class="text-2xl font-black text-white">Ranking dos Maiores Compradores</h1>
+          <p class="text-xs sm:text-sm text-gray-400">O Top 3 clientes do mês ganham até <strong class="text-amber-400">R$ 250,00 de crédito</strong> na virada do mês.</p>
+        </div>
+
+        <!-- Top 3 Podium Cards -->
+        <div id="leaderboard-podium" class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+          <!-- Loaded dynamically -->
+        </div>
+
+        <!-- Remaining Top 10 Table -->
+        <div class="card-cyber rounded-2xl border border-gray-800 overflow-hidden">
+          <div class="p-4 bg-gray-900/60 border-b border-gray-800 flex items-center justify-between">
+            <span class="text-xs font-bold text-gray-300 uppercase tracking-wider">Top 10 Clientes do Mês</span>
+            <span id="leaderboard-month-label" class="text-xs text-amber-400 font-mono font-bold">Mês Atual</span>
+          </div>
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-gray-900/80 border-b border-gray-800 text-gray-400 uppercase font-bold text-[10px] tracking-wider">
+                <th class="p-4">Posição</th>
+                <th class="p-4">Cliente</th>
+                <th class="p-4">Nível VIP</th>
+                <th class="p-4">Total de Pedidos</th>
+                <th class="p-4 text-right">Volume Comprado</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-table-body" class="divide-y divide-gray-800/60 font-medium"></tbody>
+          </table>
+        </div>
+      </section>
+<section id="view-lootbox" class="view-panel hidden max-w-xl mx-auto space-y-6 text-center">
+        <div class="space-y-2">
+          <h1 class="text-2xl font-black text-white flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-box-open text-orange-400"></i>
+            <span>Caixa Misteriosa (Lootbox)</span>
+          </h1>
+          <p class="text-xs sm:text-sm text-gray-400">Abra por <strong class="text-emerald-400 font-mono">R$ 10,00</strong> e concorra instantaneamente a até <strong class="text-amber-400 font-mono">R$ 50,00</strong> creditados no seu saldo.</p>
+        </div>
+
+        <!-- Lootbox Visual & Interactive Container -->
+        <div class="card-cyber rounded-3xl p-8 border border-orange-500/40 relative space-y-6 glow-cyan overflow-hidden">
+          <div id="lootbox-anim-box" class="w-36 h-36 mx-auto rounded-3xl bg-gradient-to-tr from-amber-600 via-orange-500 to-yellow-400 border-4 border-yellow-300 text-black text-6xl flex items-center justify-center shadow-2xl transition-all duration-700 cursor-pointer hover:scale-105 active:scale-95" data-action="handleOpenLootbox" data-event="click" data-args="[]">
+            <i class="fa-solid fa-gift animate-pulse"></i>
+          </div>
+
+          <div id="lootbox-result-banner" class="hidden p-4 rounded-2xl bg-gray-900/90 border border-amber-400/40 text-center space-y-1">
+            <span class="text-[10px] uppercase font-bold text-gray-400">Prêmio Sorteado:</span>
+            <div id="lootbox-prize-display" class="text-xl font-black text-amber-400 font-mono">R$ 0,00</div>
+            <p id="lootbox-prize-desc" class="text-xs text-gray-300"></p>
+          </div>
+
+          <button id="btn-open-lootbox" data-action="handleOpenLootbox" data-event="click" data-args="[]" class="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-black font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl transition active:scale-95 flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-key"></i>
+            <span>Abrir Caixa Misteriosa (R$ 10,00)</span>
+          </button>
+
+          <!-- Probabilities Transparency Table -->
+          <div class="p-3 bg-gray-950/80 rounded-xl border border-gray-800 text-[11px] text-gray-400 space-y-1 text-left">
+            <div class="font-bold text-gray-300 mb-1 flex items-center space-x-1">
+              <i class="fa-solid fa-chart-pie text-cyan-400 text-xs"></i>
+              <span>Probabilidades Transparentes:</span>
+            </div>
+            <div class="flex justify-between"><span>🔥 Jackpot Mítico (R$ 50,00):</span><span class="text-amber-400 font-mono">5%</span></div>
+            <div class="flex justify-between"><span>⚡ Raro 2X (R$ 20,00):</span><span class="text-cyan-400 font-mono">15%</span></div>
+            <div class="flex justify-between"><span>✨ Especial (R$ 12,00):</span><span class="text-emerald-400 font-mono">30%</span></div>
+            <div class="flex justify-between"><span>📦 Comum (R$ 8,00):</span><span class="text-gray-400 font-mono">50%</span></div>
+          </div>
+        </div>
+      </section>
+<section id="view-missions" class="view-panel hidden max-w-4xl mx-auto space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-extrabold text-white flex items-center space-x-2">
+              <i class="fa-solid fa-bullseye text-amber-400"></i>
+              <span>Missões da Semana &amp; Recompensas</span>
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-400">Complete os objetivos para ganhar créditos de saldo direto na sua carteira.</p>
+          </div>
+          <button data-action="loadMissions" data-event="click" data-args="[]" class="text-xs text-amber-400 hover:text-amber-300">
+            <i class="fa-solid fa-rotate mr-1"></i>Atualizar
+          </button>
+        </div>
+
+        <div id="missions-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Loaded dynamically -->
+        </div>
+      </section>
+<section id="view-agency" class="view-panel hidden max-w-5xl mx-auto space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-extrabold text-white flex items-center space-x-2">
+              <i class="fa-solid fa-users-gear text-emerald-400"></i>
+              <span>Gestão de Equipe &amp; Agência B2B</span>
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-400">Crie subcontas para sua equipe gerenciar pedidos sem ver seu extrato financeiro.</p>
+          </div>
+          <button data-action="openSubAccountModal" data-event="click" data-args="[]" class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center space-x-1.5 shadow-md shadow-emerald-500/20">
+            <i class="fa-solid fa-user-plus"></i>
+            <span>Adicionar Membro</span>
+          </button>
+        </div>
+
+        <!-- Sub-accounts Table -->
+        <div class="card-cyber rounded-2xl border border-gray-800 overflow-hidden">
+          <div class="p-4 bg-gray-900/60 border-b border-gray-800 flex items-center justify-between">
+            <span class="text-xs font-bold text-gray-300 uppercase tracking-wider">Subcontas Vinculadas</span>
+            <span id="sub-accounts-count" class="text-xs text-emerald-400 font-mono">0 ativas</span>
+          </div>
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-gray-900/80 border-b border-gray-800 text-gray-400 uppercase font-bold text-[10px] tracking-wider">
+                <th class="p-4">Nome</th>
+                <th class="p-4">E-mail</th>
+                <th class="p-4">Permissão Pedidos</th>
+                <th class="p-4">Ver Saldo</th>
+                <th class="p-4">Status</th>
+                <th class="p-4 text-right">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="sub-accounts-table-body" class="divide-y divide-gray-800/60 font-medium"></tbody>
+          </table>
+        </div>
+
+        <!-- White-Label Report Generator Card -->
+        <div class="card-cyber rounded-2xl p-6 border border-gray-800 space-y-4">
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+            <i class="fa-solid fa-file-pdf text-cyan-400"></i>
+            <span>Gerador de Relatórios White-Label para Seus Clientes</span>
+          </h3>
+          <p class="text-xs text-gray-400">Gere um documento timbrado com a marca da sua agência e envie para o seu cliente final comprovando a entrega das métricas.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <input type="text" id="report-agency-name" placeholder="Nome da Sua Agência" class="bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white">
+            <input type="text" id="report-client-brand" placeholder="Nome do Cliente Final" class="bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white">
+            <input type="number" id="report-order-id" placeholder="ID da Ordem Concluída" class="bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white">
+          </div>
+          <button data-action="generateAgencyReport" data-event="click" data-args="[]" class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs rounded-xl transition flex items-center space-x-2">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            <span>Gerar Relatório Timbrado em Nova Aba</span>
+          </button>
+        </div>
+      </section>
+<section id="view-track" class="view-panel hidden max-w-3xl mx-auto space-y-6">
+        <div class="text-center space-y-2">
+          <div class="w-14 h-14 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 text-2xl flex items-center justify-center mx-auto mb-2">
+            <i class="fa-solid fa-magnifying-glass-location"></i>
+          </div>
+          <h1 class="text-2xl font-extrabold text-white">Rastreador Público de Pedidos</h1>
+          <p class="text-xs sm:text-sm text-gray-400">Acompanhe o andamento da sua ordem em tempo real sem precisar fazer login.</p>
+        </div>
+
+        <div class="card-cyber rounded-2xl p-6 border border-gray-800 space-y-4">
+          <div class="flex gap-2">
+            <input type="text" id="public-track-input" placeholder="Cole o UUID, ID da ordem ou o link do perfil..." class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500">
+            <button data-action="handlePublicTrack" data-event="click" data-args="[]" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-xl transition flex items-center space-x-2">
+              <i class="fa-solid fa-search"></i>
+              <span>Rastrear</span>
+            </button>
+          </div>
+          <div id="public-track-result" class="hidden space-y-4 pt-4 border-t border-gray-800"></div>
+        </div>
+      </section>
+<section id="view-blog" class="view-panel hidden max-w-4xl mx-auto space-y-6">
+        <div class="space-y-1">
+          <h1 class="text-2xl font-extrabold text-white flex items-center space-x-2">
+            <i class="fa-solid fa-newspaper text-purple-400"></i>
+            <span>Central de Conhecimento &amp; Algoritmos</span>
+          </h1>
+          <p class="text-xs sm:text-sm text-gray-400">Guias estratégicos sobre retenção, monetização e aceleração de prova social.</p>
+        </div>
+
+        <div id="blog-articles-container" class="space-y-4">
+          <!-- Loaded dynamically -->
+        </div>
+      </section><footer class="panel-footer"><span>SMM HUB · Seu próximo movimento.</span><a href="/tickets.html">Central de ajuda ↗</a></footer></main></div><div id="modal-lucky-wheel" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="card-cyber rounded-3xl max-w-sm w-full p-6 border border-amber-500/40 text-center space-y-4 relative glow-emerald">
+      <button data-action="closeLuckyWheelModal" data-event="click" data-args="[]" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="space-y-1">
+        <div class="w-16 h-16 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-3xl flex items-center justify-center mx-auto mb-2 animate-bounce">
+          <i class="fa-solid fa-dice"></i>
+        </div>
+        <h3 class="text-xl font-black text-white">Roleta da Sorte Diária</h3>
+        <p class="text-xs text-gray-400">Roleta, sequência diária e missões compartilham um limite acumulado de bônus de 10% dos depósitos confirmados. O prêmio fica limitado ao valor disponível. Giro a cada 24 horas, após depósito mínimo de R$ 5.</p>
+        <p class="text-xs text-gray-400">Gire todo dia para concorrer a até R$ 10,00 de saldo grátis na sua conta.</p>
+      </div>
+
+      <!-- Wheel Graphic -->
+      <div id="wheel-visual" class="w-48 h-48 rounded-full border-4 border-amber-400 bg-gradient-to-tr from-amber-600 via-orange-500 to-yellow-400 mx-auto flex items-center justify-center shadow-2xl relative transition-transform duration-3000">
+        <div class="w-16 h-16 rounded-full bg-black text-amber-400 font-extrabold text-sm flex items-center justify-center border-2 border-amber-400">
+          SPIN
+        </div>
+      </div>
+
+      <button id="btn-spin-wheel" data-action="handleSpinWheel" data-event="click" data-args="[]" class="w-full py-3.5 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-black font-black text-sm rounded-xl shadow-lg transition active:scale-95">
+        Girar Agora Gratuitamente
+      </button>
+      <span id="wheel-status-msg" class="text-[11px] text-gray-400 block"></span>
+    </div>
+  </div>
+<div id="modal-auth" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="card-cyber rounded-2xl max-w-md w-full p-6 sm:p-8 border border-gray-800 relative space-y-6">
+      <div class="text-center space-y-1">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-600 to-emerald-500 flex items-center justify-center font-black text-2xl text-black mx-auto mb-3 shadow-lg shadow-cyan-500/20">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+        <h3 id="auth-modal-title" class="text-xl font-extrabold text-white">Acesse o SMM HUB</h3>
+        <p class="text-xs text-gray-400">Faça login para gerenciar pedidos e recarregar saldo via Pix.</p>
+      </div>
+
+      <div class="flex border-b border-gray-800 text-xs">
+        <button id="tab-login" data-action="toggleAuthTab" data-event="click" data-args="[&quot;login&quot;]" class="flex-1 pb-2 font-bold text-cyan-400 border-b-2 border-cyan-400">Entrar</button>
+        <button id="tab-register" data-action="toggleAuthTab" data-event="click" data-args="[&quot;register&quot;]" class="flex-1 pb-2 font-bold text-gray-400 hover:text-white">Criar Conta</button>
+      </div>
+
+      <form id="form-login" data-action="handleLogin" data-event="submit" data-args="[{&quot;event&quot;:true}]" class="space-y-4"><label class="hidden">Código 2FA ou recuperação<input id="login-factor" class="brand-input" maxlength="20" autocomplete="one-time-code"></label>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">E-mail</label>
+          <input type="email" id="login-email" required="" placeholder="demo@smmhub.com" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl px-4 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Senha</label>
+          <input type="password" id="login-password" required="" placeholder="••••••••" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl px-4 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-cyan-500">
+        </div>
+        <button type="submit" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-emerald-500 text-black font-extrabold text-sm rounded-xl transition shadow-lg shadow-cyan-500/20">
+          Acessar Painel
+        </button>
+      </form>
+
+      <form id="form-register" data-action="handleRegister" data-event="submit" data-args="[{&quot;event&quot;:true}]" class="hidden space-y-4">
+<label><input type="checkbox" id="reg-consent-terms" required=""> Aceito os <a href="/terms.html">Termos de Uso</a> e a <a href="/privacy.html">Política de Privacidade</a>.</label>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Nome Completo</label>
+          <input type="text" id="reg-name" required="" placeholder="Seu Nome ou Agência" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl px-4 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">E-mail</label>
+          <input type="email" id="reg-email" required="" placeholder="seuemail@provedor.com" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl px-4 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Senha</label>
+          <input type="password" id="reg-password" required="" minlength="6" placeholder="••••••••" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl px-4 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Código de Indicação (Opcional)</label>
+          <input type="text" id="reg-ref" placeholder="Ex: REFDEMO77" class="w-full bg-gray-900 border border-gray-700/80 rounded-xl px-4 py-2 text-sm text-cyan-400 font-mono uppercase focus:outline-none focus:border-cyan-500">
+        </div>
+        <button type="submit" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-emerald-500 text-black font-extrabold text-sm rounded-xl transition shadow-lg shadow-cyan-500/20">
+          Cadastrar e Começar
+        </button>
+      </form>
+    </div>
+  </div>
+<div id="modal-terms" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="card-cyber rounded-2xl max-w-2xl w-full p-6 sm:p-8 border border-gray-800 space-y-4 max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+          <i class="fa-solid fa-scale-balanced text-cyan-400"></i>
+          <span>Termos de Uso, Isenção &amp; Política de Reembolso</span>
+        </h3>
+        <button data-action="closeTermsModal" data-event="click" data-args="[]" class="text-gray-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="text-xs text-gray-300 space-y-3 leading-relaxed">
+        <h4 class="font-bold text-cyan-400">1. Natureza da Plataforma</h4>
+        <p>O SMM HUB atua exclusivamente como uma plataforma SaaS de intermediação e roteamento de automação para testes de visibilidade e prova social. Não possuímos vínculo societário, representação ou afiliação oficial com Meta Platforms (Instagram), ByteDance (TikTok), Google (YouTube), Telegram Messenger ou Spotify.</p>
+        <h4 class="font-bold text-cyan-400">2. Política de Reembolso &amp; Saldos</h4>
+        <p>Valores depositados via Pix ou Cripto são convertidos em créditos virtuais no painel para consumo imediato. Caso uma ordem seja cancelada ou falhe por perfil privado, o valor debitado é automaticamente estornado para o saldo em conta do usuário no painel.</p>
+      </div>
+
+      <div class="pt-4 border-t border-gray-800 text-right">
+        <button data-action="closeTermsModal" data-event="click" data-args="[]" class="px-5 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-xs font-bold transition">
+          Entendido e Aceito
+        </button>
+      </div>
+    </div>
+  </div>
+<div id="modal-sub-account" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="card-cyber rounded-2xl max-w-md w-full p-6 border border-gray-800 space-y-4 relative">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-2">
+        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+          <i class="fa-solid fa-user-plus text-emerald-400"></i>
+          <span>Nova Subconta de Equipe</span>
+        </h3>
+        <button data-action="closeSubAccountModal" data-event="click" data-args="[]" class="text-gray-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Nome do Membro</label>
+          <input type="text" id="sub-name" placeholder="Ex: Gestor de Tráfego" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">E-mail de Acesso</label>
+          <input type="email" id="sub-email" placeholder="membro@agencia.com" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Senha Inicial</label>
+          <input type="password" id="sub-password" placeholder="••••••••" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-xs text-white">
+        </div>
+        <div class="space-y-2 pt-2 border-t border-gray-800 text-xs text-gray-300">
+          <label class="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" id="sub-perm-order" checked="" class="rounded border-gray-700 bg-gray-900 text-emerald-500">
+            <span>Pode criar novos pedidos consumindo o saldo da agência</span>
+          </label>
+          <label class="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" id="sub-perm-history" checked="" class="rounded border-gray-700 bg-gray-900 text-emerald-500">
+            <span>Pode visualizar histórico de pedidos</span>
+          </label>
+          <label class="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" id="sub-perm-balance" class="rounded border-gray-700 bg-gray-900 text-emerald-500">
+            <span>Pode visualizar o valor total do saldo da conta</span>
+          </label>
+        </div>
+        <button data-action="handleCreateSubAccount" data-event="click" data-args="[]" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs rounded-xl transition">
+          Salvar Membro da Equipe
+        </button>
+      </div>
+    </div>
+  </div><div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none" role="status" aria-live="polite"></div></body></html>

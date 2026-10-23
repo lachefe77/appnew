@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Termos de Uso — SMM Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/brand.css">
+<style>
+body { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; line-height: 1.7; }
+h1 { font-size: 40px; font-weight: 900; letter-spacing: -0.03em; margin: 24px 0 8px; }
+h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 40px 0 12px; }
+p, li { color: var(--ink-mute); font-size: 15px; }
+li { margin: 6px 0; }
+.meta { color: var(--ink-dim); font-family: var(--mono); font-size: 13px; margin-bottom: 32px; }
+.back { color: var(--ink-dim); font-size: 13px; display: inline-flex; gap: 6px; align-items: center; margin-bottom: 32px; }
+.back:hover { color: var(--ink); }
+code { font-family: var(--mono); background: var(--bg-elev); padding: 1px 6px; border-radius: 4px; font-size: 13px; color: var(--accent); }
+</style>
+</head>
+<body>
+<a href="/vitrine.html" class="back"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
+<div class="brand-eyebrow">Documento legal</div>
+<h1>Termos de Uso</h1>
+<div class="meta">Última atualização: 23 de outubro de 2026 · Versão 3.0</div>
+<p id="company-legal">Identificação empresarial ainda não configurada.</p>
+
+<p>Esse texto rege o uso da plataforma SMM Hub (daqui pra frente, "SMM Hub", "a gente", "nós"). Lê até o fim antes de criar conta. Se você não concordar com algum ponto, não registra — simples assim.</p>
+
+<h2>1. O que a gente faz</h2>
+<p>SMM Hub é uma plataforma de intermediação de serviços de métricas digitais em redes sociais. O pedido segue para o fornecedor cadastrado naquele serviço. Enquanto o fornecedor for de demonstração, nada é publicado na rede. Pagamento em reais só fica disponível depois que o gateway correspondente estiver configurado.</p>
+<p>A gente <strong>não é</strong> rede social. A gente <strong>não garante</strong> que uma métrica entregue vai permanecer indefinidamente se a plataforma de destino (Instagram, TikTok etc.) resolver removê-la por critérios próprios. A gente garante o que está escrito na política de reposição de cada serviço.</p>
+
+<h2>2. Quem pode usar</h2>
+<ul>
+  <li>Pessoa física maior de 18 anos ou pessoa jurídica regularmente constituída.</li>
+  <li>Você se compromete a usar a plataforma apenas em perfis, páginas e links que são seus ou dos quais você tem autorização expressa.</li>
+  <li>Comprar métricas pra conta de terceiro sem autorização é problema seu, não nosso — e dá direito à gente de encerrar a conta sem reembolso de saldo residual quando houver prova.</li>
+</ul>
+
+<h2>3. Carteira, saldo e reembolso</h2>
+<ul>
+  <li>Todo depósito vira saldo interno em reais. Esse saldo é usado só pra comprar serviços na plataforma. Saldo <strong>não é sacável</strong> — se não for consumido em 180 dias de inatividade, pode ser revertido pra conta operacional após notificação por e-mail.</li>
+  <li>Pedido parcial estorna automaticamente a proporção não entregue.</li>
+  <li>Pedido cancelado pela gente devolve 100% pra sua carteira em segundos.</li>
+  <li>Depósito via Pix é confirmado após leitura do webhook da operadora. Em caso de retenção bancária por antifraude do seu banco, o prazo pode se estender por até 2 dias úteis.</li>
+</ul>
+
+<h2>4. Política de reposição</h2>
+<p>Serviços marcados com <code>reposição ativa</code> têm garantia de 30 dias contados a partir da conclusão do pedido. Se a métrica entregue cair nesse período, você aperta "Pedir Reposição" dentro do pedido e a gente repõe automaticamente, sem papo.</p>
+<p>Reposição não cobre: queda causada por bloqueio da conta do contratante, mudança de visibilidade do post (público → privado), remoção do post, mudança da plataforma de regra de contagem de métrica.</p>
+
+<h2>5. Afiliado e indicação</h2>
+<ul>
+  <li>Todo usuário tem link de indicação. Depósitos do seu indicado geram comissão de 5% (nível 1), 2% (nível 2), 1% (nível 3) e 0,5% (nível 4) em cascata.</li>
+  <li>Comissão é creditada automaticamente no saldo do indicador, no mesmo momento da confirmação do depósito.</li>
+  <li><strong>Antifraude:</strong> indicados cuja conta tenha menos de 24 horas de criação não geram comissão. Isso evita auto-indicação com e-mails temporários.</li>
+  <li>Se a gente identificar fraude (criação de contas em massa, uso coordenado de IPs, chargeback após recebimento de comissão), as comissões podem ser estornadas e a conta encerrada.</li>
+</ul>
+
+<h2>6. API e automação</h2>
+<p>A gente oferece API documentada em <code>/api/docs</code>. Uso automatizado é bem-vindo, dentro de limites razoáveis: 30 requisições por minuto na API v2 pública, mais que isso pede fila dedicada (fala com o suporte).</p>
+
+<h2>7. Suspensão de conta</h2>
+<p>A gente pode suspender ou encerrar sua conta em caso de: fraude de pagamento, uso automatizado abusivo que degrade o serviço de outros clientes, violação dos termos de uso das redes sociais de destino em bloco, uso coordenado pra manipulação ilegal (compra de voto, difamação organizada, assédio).</p>
+
+<h2>8. Limitação de responsabilidade</h2>
+<p>A gente responde pelo serviço contratado. A gente não responde por: decisões de algoritmo de rede social, bloqueio da sua conta por fatores externos aos nossos serviços, lucros cessantes de campanhas publicitárias que você rodou em cima das métricas.</p>
+
+<h2>9. Mudanças nesses termos</h2>
+<p>Se alterar algo material (preço, política de reposição, programa de afiliado), a gente avisa por e-mail e banner no painel com no mínimo 7 dias de antecedência. Alterações menores (correção de texto, novos serviços adicionados) são publicadas aqui sem aviso.</p>
+
+<h2>10. Foro</h2>
+<p>Dúvidas, divergências e litígios: foro da comarca de São Paulo/SP, com renúncia expressa a qualquer outro.</p>
+
+<h2>11. Contato</h2>
+<p>Chamados técnicos pelo painel em "Suporte". O e-mail e o WhatsApp públicos só aparecem quando a empresa os configurar.</p>
+
+<p style="margin-top: 60px; font-size: 13px; color: var(--ink-dim);">SMM Hub Brasil · Identificação empresarial a configurar</p>
+<script>
+fetch('/api/site/offer').then((response) => response.json()).then((offer) => {
+  const node = document.getElementById('company-legal');
+  if (!node || !offer.company) return;
+  node.textContent = offer.company.cnpj
+    ? offer.company.name + ' · CNPJ ' + offer.company.cnpj
+    : (offer.company.name || 'SMM Hub') + ' · identificação empresarial ainda não configurada.';
+}).catch(() => {});
+</script>
+<script src="/accessibility.js" defer></script>
+</body>
+</html>

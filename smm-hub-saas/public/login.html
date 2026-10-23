@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<script src="/post-login.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Entrar — SMM Hub</title>
+<meta name="description" content="Entre na sua conta SMM Hub">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/brand.css">
+<style>
+body { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
+.auth-wrap { display: grid; grid-template-columns: 1fr 1fr; min-height: 70vh; }
+@media (max-width: 900px) { .auth-wrap { grid-template-columns: 1fr; } .auth-side { display: none; } }
+.auth-form-col { display: flex; align-items: center; justify-content: center; padding: 60px 32px; }
+.auth-form { width: 100%; max-width: 420px; }
+.auth-side {
+  background: var(--bg-elev);
+  border-left: 1px solid var(--border);
+  padding: 60px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: relative; overflow: hidden;
+}
+.auth-side::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 70% 30%, rgba(217,255,0,0.1), transparent 50%);
+  pointer-events: none;
+}
+.auth-quote { font-size: 24px; line-height: 1.4; font-weight: 600; letter-spacing: -0.02em; max-width: 420px; z-index: 1; }
+.auth-quote em { color: var(--accent); font-style: normal; }
+.auth-sign { font-size: 13px; color: var(--ink-dim); margin-top: 16px; font-family: var(--mono); z-index: 1; }
+.auth-stats { display: flex; gap: 24px; z-index: 1; }
+.auth-stats .n { font-family: var(--mono); font-size: 24px; font-weight: 700; color: var(--accent); }
+.auth-stats .l { font-size: 11px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+.auth-footer { padding: 24px; text-align: center; font-size: 12px; color: var(--ink-dim); border-top: 1px solid var(--border); }
+.switch-link { font-size: 14px; color: var(--ink-mute); margin-top: 20px; text-align: center; }
+.switch-link a { color: var(--accent); font-weight: 600; }
+.hint { font-size: 11px; color: var(--ink-dim); text-align: right; margin-top: 4px; }
+.hint a { color: var(--accent); }
+.input-group { position: relative; }
+.input-group .eye { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-dim); cursor: pointer; background: none; border: none; }
+#totp-field { display: none; }
+#totp-field.show { display: block; }
+</style>
+<script src="/browser-session.js" defer></script></head>
+<body>
+
+<header class="brand-topbar">
+  <a href="/vitrine.html" class="brand-logo"><span class="mark">⚡</span> SMM Hub</a>
+  <div style="display:flex; gap:10px;">
+    <a href="/vitrine.html" class="brand-btn brand-btn-ghost brand-btn-sm"><i class="fa-solid fa-arrow-left"></i> Voltar ao site</a>
+  </div>
+</header>
+
+<main class="auth-wrap">
+  <div class="auth-form-col">
+    <div class="auth-form">
+      <div class="brand-eyebrow">Acesso</div>
+      <h1 class="brand-h1" style="font-size:36px; margin: 8px 0 8px;">Entrar na conta</h1>
+      <p class="brand-sub" style="margin-bottom: 32px;">Use seu e-mail e senha. Se tiver 2FA ativo, o código será pedido depois.</p>
+
+      <form id="login-form" autocomplete="on">
+        <div id="alert"></div>
+
+        <div class="brand-field">
+          <label class="brand-label" for="email">E-mail</label>
+          <input id="email" type="email" class="brand-input" placeholder="voce@email.com" required autocomplete="email">
+        </div>
+
+        <div class="brand-field">
+          <label class="brand-label" for="password">Senha</label>
+          <div class="input-group">
+            <input id="password" type="password" class="brand-input" placeholder="••••••••" required autocomplete="current-password" minlength="6">
+            <button type="button" class="eye" onclick="togglePwd()"><i id="eye-icon" class="fa-solid fa-eye"></i></button>
+          </div>
+          <div class="hint"><a href="#" onclick="askReset(event)">Esqueci a senha</a></div>
+        </div>
+
+        <div class="brand-field" id="totp-field">
+          <label class="brand-label" for="totp">Código 2FA</label>
+          <input id="totp" type="text" class="brand-input brand-mono" placeholder="000000" maxlength="20" inputmode="text" autocomplete="one-time-code">
+        </div>
+
+        <button id="submit" class="brand-btn brand-btn-solid brand-btn-lg brand-btn-block" type="submit">
+          <span id="submit-text">Entrar</span>
+          <i id="submit-spin" class="fa-solid fa-circle-notch fa-spin" style="display:none"></i>
+        </button>
+
+        <div class="switch-link">
+          Ainda não tem conta? <a href="/register.html">Criar grátis</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <aside class="auth-side">
+    <div>
+      <div class="brand-eyebrow">O que falam</div>
+      <p class="auth-quote">"Pix cai, pedido voa, resultado aparece. É <em>só isso</em> que eu precisava."</p>
+      <p class="auth-sign">— Mariana P., social media de agência SP</p>
+    </div>
+    <div class="auth-stats">
+      <div><div class="n" id="s-users">—</div><div class="l">clientes</div></div>
+      <div><div class="n" id="s-up">Não medido</div><div class="l">uptime</div></div>
+      <div><div class="n" id="s-start">Não medido</div><div class="l">início médio</div></div>
+    </div>
+  </aside>
+</main>
+
+<footer class="auth-footer">
+  <span class="brand-mono">SMM Hub Brasil</span> · <a href="/terms.html" style="color: var(--ink-mute)">Termos</a> · <a href="/privacy.html" style="color: var(--ink-mute)">Privacidade</a>
+</footer>
+
+<script>
+function togglePwd() {
+  const p = document.getElementById('password'), i = document.getElementById('eye-icon');
+  if (p.type === 'password') { p.type = 'text'; i.className = 'fa-solid fa-eye-slash'; }
+  else { p.type = 'password'; i.className = 'fa-solid fa-eye'; }
+}
+
+async function askReset(e) {
+  e.preventDefault();
+  const email = document.getElementById('email').value;
+  if (!email) { showAlert('Preencha o e-mail primeiro.', 'bad'); return; }
+  const r = await fetch('/api/auth/password-reset/request', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Session-Transport':'cookie' }, body: JSON.stringify({ email }) });
+  const d = await r.json();
+  showAlert(d.message, 'ok');
+}
+
+function showAlert(msg, type) {
+  document.getElementById('alert').innerHTML = `<div class="brand-alert brand-alert-${type}">${msg}</div>`;
+}
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submit');
+  const txt = document.getElementById('submit-text'), spin = document.getElementById('submit-spin');
+  btn.disabled = true; txt.textContent = 'Entrando...'; spin.style.display = 'inline-block';
+  document.getElementById('alert').innerHTML = '';
+
+  const body = {
+    email: document.getElementById('email').value.trim(),
+    password: document.getElementById('password').value
+  };
+  const totp = document.getElementById('totp').value;
+  if (totp) body.totp_code = totp;
+
+  try {
+    const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Session-Transport':'cookie' }, body: JSON.stringify(body) });
+    const d = await r.json();
+
+    if (d.needs_2fa) {
+      document.getElementById('totp-field').classList.add('show');
+      showAlert('Digite o código do seu app autenticador.', 'info');
+    } else if (d.token) {
+      localStorage.setItem('smm_token', d.token);
+      localStorage.setItem('smm_user', JSON.stringify(d.user));
+      location.href = window.panelDestination();
+    } else {
+      showAlert(d.error || 'Falha ao entrar.', 'bad');
+    }
+  } catch (err) {
+    showAlert('Erro de conexão. Tenta de novo.', 'bad');
+  } finally {
+    btn.disabled = false; txt.textContent = 'Entrar'; spin.style.display = 'none';
+  }
+});
+
+// Já logado → redireciona pro painel
+if (localStorage.getItem('smm_token')) {
+  fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('smm_token') } })
+    .then(r => r.ok ? location.href = window.panelDestination() : null);
+}
+</script>
+<script src="/accessibility.js" defer></script>
+<script>fetch('/api/site/stats').then(r=>r.json()).then(s=>{document.getElementById('s-users').textContent=s.total_users;}).catch(()=>{});</script>
+</body>
+</html>

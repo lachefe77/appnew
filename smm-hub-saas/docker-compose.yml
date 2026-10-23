@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: smmhub-app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TRUST_PROXY: 172.30.90.3/32
+    expose:
+      - "3000"
+    volumes:
+      - ./data:/app/data
+      - ./backups:/app/backups
+    depends_on:
+      - redis
+    networks:
+      smmhub:
+        ipv4_address: 172.30.90.2
+
+  redis:
+    image: redis:7-alpine
+    container_name: smmhub-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks: [smmhub]
+
+  nginx:
+    image: nginx:alpine
+    container_name: smmhub-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on: [app]
+    networks:
+      smmhub:
+        ipv4_address: 172.30.90.3
+
+networks:
+  smmhub:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.90.0/24
+
+volumes:
+  redis-data:

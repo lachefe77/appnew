@@ -1,0 +1,1 @@
+window.panelDestination=()=>{const target=sessionStorage.getItem('smm_panel_target');sessionStorage.removeItem('smm_panel_target');return target&&/^\/painel\.html(?:[?#]|$)/.test(target)?target:'/painel.html';};

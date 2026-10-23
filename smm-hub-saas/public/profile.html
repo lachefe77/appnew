@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meu perfil — SMM Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/brand.css">
+<style>
+body { min-height: 100vh; }
+.wrap { max-width: 920px; margin: 0 auto; padding: 32px 24px 80px; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 28px; overflow-x: auto; }
+.tab { padding: 12px 18px; color: var(--ink-mute); font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+.tab:hover { color: var(--ink); }
+.tab.active { color: var(--accent); border-color: var(--accent); }
+.section { display: none; }
+.section.active { display: block; }
+.row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+@media (max-width: 700px) { .row { grid-template-columns: 1fr; } }
+.kv { display: grid; grid-template-columns: 180px 1fr; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: center; }
+.kv:last-child { border-bottom: none; }
+.kv .k { color: var(--ink-dim); font-size: 13px; }
+.kv .v { font-family: var(--mono); font-size: 13px; }
+.danger-zone { border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.03); border-radius: 12px; padding: 20px; margin-top: 20px; }
+.pill-role { padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.role-ceo { background: var(--accent); color: #000; }
+.role-admin { background: #a855f7; color: #fff; }
+.role-support { background: #3b82f6; color: #fff; }
+.role-vip { background: #f59e0b; color: #000; }
+.role-user { background: var(--bg-elev-2); color: var(--ink-mute); }
+.qr-box { padding: 20px; background: #fff; border-radius: 12px; display: inline-block; }
+.qr-box img { display: block; }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+@media (max-width: 700px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+.stat-mini { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.stat-mini .l { font-size: 11px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+.stat-mini .n { font-size: 20px; font-weight: 700; margin-top: 4px; font-family: var(--mono); }
+</style>
+<script src="/browser-session.js" defer></script></head>
+<body>
+
+<header class="brand-topbar">
+  <a href="/" class="brand-logo"><span class="mark">⚡</span> SMM Hub</a>
+  <a href="/" class="brand-btn brand-btn-ghost brand-btn-sm"><i class="fa-solid fa-arrow-left"></i> Painel</a>
+</header>
+
+<div class="wrap">
+  <div class="brand-eyebrow">Conta</div>
+  <h1 style="font-size: 32px; font-weight: 800; letter-spacing: -0.02em; margin: 8px 0 4px;" id="user-name">—</h1>
+  <div style="color: var(--ink-mute); margin-bottom: 24px;"><span id="user-email">—</span> · <span id="user-role" class="pill-role role-user">—</span></div>
+
+  <div class="stat-grid">
+    <div class="stat-mini"><div class="l">Saldo</div><div class="n" id="s-bal" style="color:var(--accent)">—</div></div>
+    <div class="stat-mini"><div class="l">Depositado total</div><div class="n" id="s-dep">—</div></div>
+    <div class="stat-mini"><div class="l">Pedidos</div><div class="n" id="s-ord">—</div></div>
+    <div class="stat-mini"><div class="l">Indicados</div><div class="n" id="s-ref">—</div></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="info">Dados</div>
+    <div class="tab" data-tab="security">Segurança · 2FA</div>
+    <div class="tab" data-tab="api">Chave API</div>
+    <div class="tab" data-tab="affiliate">Indicação</div>
+    <div class="tab" data-tab="activity">Atividade</div>
+    <div class="tab" data-tab="lgpd">LGPD · Dados</div>
+  </div>
+
+  <section class="section active" id="s-info">
+    <div class="brand-card">
+      <h3 class="brand-h2">Dados pessoais</h3>
+      <div class="row">
+        <div class="brand-field"><label class="brand-label">Nome</label><input id="f-name" class="brand-input"></div>
+        <div class="brand-field"><label class="brand-label">WhatsApp</label><input id="f-wpp" class="brand-input" placeholder="(11) 90000-0000"></div>
+      </div>
+      <div class="brand-field"><label class="brand-label">E-mail</label><input class="brand-input" id="f-email" disabled></div>
+      <button class="brand-btn brand-btn-solid" onclick="saveProfile()">Salvar dados</button>
+    </div>
+
+    <div class="brand-card" style="margin-top: 16px;">
+      <h3 class="brand-h2">Trocar senha</h3>
+      <div class="row">
+        <div class="brand-field"><label class="brand-label">Senha atual</label><input id="pw-cur" type="password" class="brand-input"></div>
+        <div class="brand-field"><label class="brand-label">Nova senha</label><input id="pw-new" type="password" class="brand-input" minlength="6"></div>
+      </div>
+      <button class="brand-btn brand-btn-solid" onclick="changePassword()">Trocar senha</button>
+    </div>
+  </section>
+
+  <section class="section" id="s-security">
+    <div class="brand-card">
+      <h3 class="brand-h2">Autenticação em dois fatores</h3>
+      <p class="brand-sub" style="margin-bottom: 20px;">Protege sua conta com um código temporário de 6 dígitos gerado no seu celular.</p>
+      <label for="factor-password">Senha atual para configurar 2FA</label><input id="factor-password" type="password" autocomplete="current-password" class="brand-input"><div id="2fa-status"></div>
+    </div>
+    <div class="brand-card" style="margin-top: 16px;">
+      <h3 class="brand-h2">Sessões ativas</h3>
+      <p class="brand-sub">Encerra todos os dispositivos conectados — útil se perder o celular.</p>
+      <button class="brand-btn brand-btn-ghost" style="margin-top:12px" onclick="revokeAll()">Encerrar todas as sessões</button>
+    </div>
+  </section>
+
+  <section class="section" id="s-api">
+    <div class="brand-card">
+      <h3 class="brand-h2">Chave de API</h3>
+      <p class="brand-sub" style="margin-bottom: 14px;">Envie a chave no campo <code>key</code> do corpo POST para <code>/api/v2</code>. Evite credenciais em URLs.</p>
+      <input id="api-key" class="brand-input brand-mono" readonly style="margin-bottom:12px">
+      <button class="brand-btn brand-btn-ghost" onclick="copyKey()"><i class="fa-solid fa-copy"></i> Copiar</button>
+      <button class="brand-btn brand-btn-danger" onclick="regenKey()" style="margin-left:8px"><i class="fa-solid fa-rotate"></i> Regenerar</button>
+      <div class="brand-help">Regenerar invalida a chave anterior imediatamente. Qualquer integração que use a antiga vai parar de funcionar.</div>
+    </div>
+  </section>
+
+  <section class="section" id="s-affiliate">
+    <div class="brand-card">
+      <h3 class="brand-h2">Programa de indicação</h3>
+      <p class="brand-sub" style="margin-bottom:20px;">Compartilhe seu código e ganhe <b style="color:var(--accent)">5% + 2% + 1% + 0,5%</b> em comissão sobre todo depósito dos indicados (quatro níveis).</p>
+      <div class="kv"><div class="k">Seu código</div><div class="v" id="aff-code" style="color:var(--accent);font-weight:700">—</div></div>
+      <div class="kv"><div class="k">Link direto</div><div class="v" id="aff-link">—</div></div>
+      <div class="kv"><div class="k">Total de indicados</div><div class="v" id="aff-count">—</div></div>
+      <div class="kv"><div class="k">Comissões recebidas</div><div class="v" id="aff-commissions" style="color:var(--accent)">—</div></div>
+      <button class="brand-btn brand-btn-ghost" style="margin-top:16px" onclick="copyLink()"><i class="fa-solid fa-link"></i> Copiar link</button>
+    </div>
+  </section>
+
+  <section class="section" id="s-activity">
+    <div class="brand-card">
+      <h3 class="brand-h2">Últimas movimentações</h3>
+      <div id="activity-list" style="margin-top:16px"></div>
+    </div>
+  </section>
+
+  <section class="section" id="s-lgpd">
+    <div class="brand-card">
+      <h3 class="brand-h2">Seus dados</h3>
+      <p class="brand-sub">Direito garantido pela LGPD. Faça download de tudo em JSON ou solicite exclusão da conta.</p>
+      <button class="brand-btn brand-btn-ghost" style="margin:14px 8px 0 0" onclick="exportData()"><i class="fa-solid fa-download"></i> Baixar meus dados</button>
+    </div>
+    <div class="danger-zone">
+      <h3 class="brand-h2" style="color:#fca5a5">Zona de perigo</h3>
+      <p class="brand-sub">Excluir a conta é irreversível. Dados são anonimizados após a solicitação.</p>
+      <button class="brand-btn brand-btn-danger" style="margin-top:12px" onclick="deleteAccount()"><i class="fa-solid fa-trash"></i> Excluir minha conta</button>
+    </div>
+  </section>
+</div>
+
+<script>
+function escapeText(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+const token = localStorage.getItem('smm_token');
+if (!token) location.href = '/login.html';
+const H = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { ...H, ...(opts.headers || {}) } });
+  return r.json();
+}
+
+const ROLE_LABEL = { ceo: 'CEO', admin: 'Admin', support: 'Suporte', vip: 'VIP', user: 'Cliente' };
+
+async function load() {
+  const d = await api('/api/profile');
+  const u = d.user;
+  document.getElementById('user-name').textContent = u.name;
+  document.getElementById('user-email').textContent = u.email;
+  const roleEl = document.getElementById('user-role');
+  roleEl.textContent = ROLE_LABEL[u.role] || u.role;
+  roleEl.className = 'pill-role role-' + u.role;
+  document.getElementById('s-bal').textContent = 'R$ ' + (u.balance_cents / 100).toFixed(2).replace('.', ',');
+  document.getElementById('s-dep').textContent = 'R$ ' + (u.total_deposited_cents / 100).toFixed(2).replace('.', ',');
+  document.getElementById('s-ord').textContent = d.stats.orders_total;
+  document.getElementById('s-ref').textContent = d.stats.referrals;
+  document.getElementById('f-name').value = u.name;
+  document.getElementById('f-wpp').value = u.whatsapp || '';
+  document.getElementById('f-email').value = u.email;
+  document.getElementById('api-key').value = u.api_key;
+  document.getElementById('aff-code').textContent = u.ref_code;
+  document.getElementById('aff-link').textContent = location.origin + '/register.html?ref=' + u.ref_code;
+
+  const stats = await api('/api/auth/me');
+  document.getElementById('aff-count').textContent = stats.affiliate.total_referred;
+  document.getElementById('aff-commissions').textContent = stats.affiliate.total_commissions_formatted;
+
+  renderTwoFA(u.two_factor_enabled);
+}
+
+function renderTwoFA(enabled) {
+  const el = document.getElementById('2fa-status');
+  if (enabled) {
+    el.innerHTML = `<div class="brand-alert brand-alert-ok">2FA está <b>ativo</b>. Login agora pede código do app autenticador.</div>
+      <input id="disable-code" class="brand-input brand-mono" placeholder="Código do app ou recuperação" maxlength="20" style="max-width:200px;display:inline-block">
+      <button class="brand-btn brand-btn-danger" onclick="disable2FA()">Desativar 2FA</button>`;
+  } else {
+    el.innerHTML = `<button class="brand-btn brand-btn-solid" onclick="setup2FA()">Configurar 2FA</button>`;
+  }
+}
+
+async function setup2FA() {
+  const r = await api('/api/auth/2fa/setup', { method: 'POST', body: JSON.stringify({ current_password: document.getElementById('factor-password').value }) });
+  document.getElementById('2fa-status').innerHTML = `
+    <div class="brand-alert brand-alert-info">Escaneie o QR Code com Google Authenticator, Authy ou 1Password:</div>
+    <div class="qr-box"><img src="${r.qr_data_url}" alt="QR 2FA"></div>
+    <p style="margin:16px 0 8px;font-size:13px;color:var(--ink-mute)">Ou digite esse código manualmente:</p>
+    <code style="font-family:var(--mono);background:var(--bg);padding:6px 12px;border-radius:6px;color:var(--accent);display:inline-block;margin-bottom:16px">${r.secret}</code>
+    <div class="brand-field" style="max-width:300px">
+      <label class="brand-label">Digite o código do app pra confirmar</label>
+      <input id="confirm-code" class="brand-input brand-mono" placeholder="000000" maxlength="6">
+    </div>
+    <button class="brand-btn brand-btn-solid" onclick="enable2FA()">Ativar</button>`;
+}
+
+async function enable2FA() {
+  const r = await api('/api/auth/2fa/enable', { method: 'POST', body: JSON.stringify({ code: document.getElementById('confirm-code').value }) });
+  if (r.error) { alert(r.error); return; }
+  renderTwoFA(1);
+  if(r.recovery_codes){const box=document.createElement('pre');box.textContent='Guarde estes códigos em local seguro. Cada código só funciona uma vez.\n'+r.recovery_codes.join('\n');document.getElementById('2fa-status').append(box);}
+  alert('2FA ativado. Salve os códigos de recuperação exibidos.');
+}
+
+async function disable2FA() {
+  const r = await api('/api/auth/2fa/disable', { method: 'POST', body: JSON.stringify({ code: document.getElementById('disable-code').value }) });
+  if (r.error) { alert(r.error); return; }
+  renderTwoFA(0);
+}
+
+async function saveProfile() {
+  const r = await api('/api/profile', { method: 'PUT', body: JSON.stringify({ name: document.getElementById('f-name').value, whatsapp: document.getElementById('f-wpp').value }) });
+  alert(r.message || 'Salvo.');
+}
+
+async function changePassword() {
+  const r = await api('/api/auth/change-password', { method: 'POST', body: JSON.stringify({ current_password: document.getElementById('pw-cur').value, new_password: document.getElementById('pw-new').value }) });
+  alert(r.message || r.error);
+  if(r.reauth_required){localStorage.removeItem('smm_token');location.href='/login.html';}
+  if (r.message) { document.getElementById('pw-cur').value = ''; document.getElementById('pw-new').value = ''; }
+}
+
+function copyKey() { navigator.clipboard.writeText(document.getElementById('api-key').value); alert('Copiado!'); }
+function copyLink() { navigator.clipboard.writeText(document.getElementById('aff-link').textContent); alert('Link copiado!'); }
+
+async function regenKey() {
+  if (!confirm('Isso invalida sua chave atual. Confirmar?')) return;
+  const r = await api('/api/auth/regenerate-api-key', { method: 'POST' });
+  document.getElementById('api-key').value = r.api_key;
+  alert('Nova chave gerada.');
+}
+
+async function revokeAll() {
+  if (!confirm('Isso desconecta você também. Confirmar?')) return;
+  await api('/api/profile/sessions/revoke-all', { method: 'POST' });
+  localStorage.removeItem('smm_token');
+  location.href = '/login.html';
+}
+
+async function exportData() {
+  const r = await fetch('/api/lgpd/export', { headers: H });
+  const blob = await r.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'meus-dados-smmhub.json'; a.click();
+}
+
+async function deleteAccount() {
+  const confirm1 = prompt('Pra confirmar, digite exatamente: DELETAR MINHA CONTA');
+  if (confirm1 !== 'DELETAR MINHA CONTA') return;
+  const pw = prompt('Confirme sua senha:');
+  if (!pw) return;
+  const r = await api('/api/lgpd/delete-account', { method: 'POST', body: JSON.stringify({ confirm: confirm1, password: pw }) });
+  alert(r.message || r.error);
+  if (r.message) { localStorage.removeItem('smm_token'); location.href = '/vitrine.html'; }
+}
+
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('s-' + t.dataset.tab).classList.add('active');
+  if (t.dataset.tab === 'activity') loadActivity();
+});
+
+async function loadActivity() {
+  const r = await api('/api/profile/activity');
+  document.getElementById('activity-list').innerHTML = r.activity.map(a => `
+    <div class="kv">
+      <div class="k">${new Date(a.created_at).toLocaleString('pt-BR')}</div>
+      <div class="v" style="font-family:var(--sans);font-size:14px"><b style="color:${a.amount_cents > 0 ? 'var(--ok)' : '#fca5a5'}">${a.amount_cents > 0 ? '+' : ''}R$ ${(a.amount_cents / 100).toFixed(2)}</b> · ${escapeText(a.description)}</div>
+    </div>`).join('');
+}
+
+load();
+</script>
+<script src="/accessibility.js" defer></script>
+<script src="/profile-sessions.js" defer></script>
+<script src="/profile-verification.js" defer></script>
+</body>
+</html>

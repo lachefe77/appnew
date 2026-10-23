@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Política de Privacidade — SMM Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/brand.css">
+<style>
+body { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; line-height: 1.7; }
+h1 { font-size: 40px; font-weight: 900; letter-spacing: -0.03em; margin: 24px 0 8px; }
+h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 40px 0 12px; }
+p, li { color: var(--ink-mute); font-size: 15px; }
+li { margin: 6px 0; }
+.meta { color: var(--ink-dim); font-family: var(--mono); font-size: 13px; margin-bottom: 32px; }
+.back { color: var(--ink-dim); font-size: 13px; display: inline-flex; gap: 6px; align-items: center; margin-bottom: 32px; }
+.back:hover { color: var(--ink); }
+code { font-family: var(--mono); background: var(--bg-elev); padding: 1px 6px; border-radius: 4px; font-size: 13px; color: var(--accent); }
+.highlight { background: var(--accent-wash); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 20px 0; border-radius: 0 8px 8px 0; color: var(--ink); }
+</style>
+<script src="/browser-session.js" defer></script></head>
+<body>
+<a href="/vitrine.html" class="back"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
+<div class="brand-eyebrow">Privacidade e LGPD</div>
+<h1>Política de Privacidade</h1>
+<div class="meta">Última atualização: 23 de outubro de 2026 · Versão 2.1</div>
+<p id="company-legal">Identificação empresarial ainda não configurada.</p>
+
+<div class="highlight">
+<strong>Resumo rápido:</strong> a gente coleta o mínimo necessário pra operar sua conta, não vende seus dados pra ninguém, não planta rastreador de terceiros, e você pode exportar ou apagar tudo em 2 cliques.
+</div>
+
+<h2>1. Quem é o controlador</h2>
+<p>O operador da plataforma, cuja identificação deve ser configurada antes da publicação, é a controladora dos dados coletados por esse site e pela plataforma. O canal de privacidade deve ser informado pelo operador antes da publicação.</p>
+
+<h2>2. Dados que a gente coleta</h2>
+<ul>
+  <li><strong>Cadastro:</strong> nome, e-mail, senha (armazenada com hash scrypt + salt — nem a gente consegue ver sua senha).</li>
+  <li><strong>Operação:</strong> links que você submete em pedidos (perfis, posts), quantidades, histórico de pedidos.</li>
+  <li><strong>Financeiro:</strong> depósitos, saldos, transações, comprovantes Pix (via webhook da operadora). Não armazenamos número de cartão — isso fica com o gateway (Mercado Pago/Pagar.me).</li>
+  <li><strong>Técnico:</strong> IP de acesso, user-agent, timestamps de login. Serve pra segurança (detecção de intrusão) e nada mais.</li>
+  <li><strong>Opcional:</strong> WhatsApp (se você informar), CNPJ e razão social (se emitir NF).</li>
+</ul>
+
+<h2>3. O que a gente NÃO faz</h2>
+<ul>
+  <li>Não vende seus dados pra ninguém. Nem agregado, nem anonimizado.</li>
+  <li>Não planta rastreador de terceiros (Facebook Pixel, Google Analytics com dado pessoal, Hotjar etc.). O site usa só cookies técnicos de sessão.</li>
+  <li>Não pede acesso à sua conta das redes sociais. Qualquer serviço aqui precisa só do link público.</li>
+  <li>Não compartilha com o governo exceto mediante ordem judicial expressa e específica.</li>
+</ul>
+
+<h2>4. Com quem a gente compartilha</h2>
+<p>A gente só compartilha o estritamente necessário:</p>
+<ul>
+  <li><strong>Provedores upstream</strong> de métricas: recebem o link e a quantidade do pedido. Não recebem seu nome, e-mail ou documento.</li>
+  <li><strong>Gateway de pagamento</strong> (Mercado Pago, NOWPayments): recebem seu nome e e-mail pra emitir recibo da transação, nada mais.</li>
+  <li><strong>Serviço de e-mail transacional</strong> (quando configurado): recebe seu e-mail pra entregar notificações da plataforma.</li>
+</ul>
+
+<h2>5. Seus direitos (LGPD, artigos 17 e 18)</h2>
+<p>Você tem direito a tudo isso, e a gente deixou automático dentro do painel:</p>
+<ul>
+  <li><strong>Acesso:</strong> consulte seus dados em "Perfil" ou faça download completo em "LGPD → Exportar dados".</li>
+  <li><strong>Correção:</strong> edite nome, e-mail, WhatsApp direto no perfil.</li>
+  <li><strong>Exclusão:</strong> botão "Excluir minha conta" em "LGPD" — anonimiza tudo em segundos e envia confirmação.</li>
+  <li><strong>Portabilidade:</strong> o export vem em JSON estruturado, aceito por outras plataformas.</li>
+  <li><strong>Revogação de consentimento:</strong> opt-out de e-mails de marketing em "Preferências" a qualquer momento.</li>
+</ul>
+
+<h2>6. Retenção</h2>
+<ul>
+  <li>Dados de conta: enquanto a conta estiver ativa + 5 anos após encerramento (obrigação fiscal brasileira — Lei 10.406/02, art. 206).</li>
+  <li>Logs de acesso: 6 meses (prazo legal Marco Civil da Internet, art. 15).</li>
+  <li>Dados anonimizados após solicitação de exclusão: mantidos indefinidamente, mas sem conexão com você.</li>
+</ul>
+
+<h2>7. Segurança</h2>
+<ul>
+  <li>Senhas com hash <code>scrypt</code> (padrão NIST SP 800-132).</li>
+  <li>Comunicação sempre em HTTPS (TLS 1.3).</li>
+  <li>2FA via TOTP disponível e recomendado em contas com saldo > R$ 500.</li>
+  <li>Infraestrutura rodando em VPS brasileiro com backup diário cifrado.</li>
+  <li>Auditoria interna automatizada registra toda ação administrativa.</li>
+</ul>
+
+<h2>8. Cookies</h2>
+<p>Usamos só cookies técnicos essenciais:</p>
+<ul>
+  <li><code>smm_token</code> — mantém você logado (localStorage, não cookie — não sai do seu browser).</li>
+  <li><code>lgpd_consent</code> — lembra que você já viu o aviso.</li>
+  <li><code>lng</code> — idioma selecionado.</li>
+</ul>
+<p>Zero cookie de rastreamento. Zero cookie de terceiros.</p>
+
+<h2>9. Transferência internacional</h2>
+<p>Os provedores de métricas são globais. Dados técnicos (link, quantidade) podem ser processados fora do Brasil. Dados pessoais (nome, e-mail, documento) <strong>nunca saem</strong> da nossa infraestrutura brasileira.</p>
+
+<h2>10. Mudanças nessa política</h2>
+<p>Alterações materiais são comunicadas por e-mail e banner no painel com no mínimo 15 dias de antecedência. Alterações redacionais são publicadas aqui com atualização da data de versão no topo do documento.</p>
+
+<h2>11. Contato</h2>
+<p>Dúvidas de privacidade, exercício de direitos ou reclamação formal: <code>dpo@smmhub.com.br</code>.</p>
+<p>Reclamação em órgão regulador: <a href="https://www.gov.br/anpd" style="color: var(--accent);">ANPD — Autoridade Nacional de Proteção de Dados</a>.</p>
+
+<p style="margin-top: 60px; font-size: 13px; color: var(--ink-dim);">SMM Hub Brasil · Identificação empresarial a configurar</p>
+<script>
+fetch('/api/site/offer').then((response) => response.json()).then((offer) => {
+  const node = document.getElementById('company-legal');
+  if (!node || !offer.company) return;
+  node.textContent = offer.company.cnpj
+    ? offer.company.name + ' · CNPJ ' + offer.company.cnpj
+    : (offer.company.name || 'SMM Hub') + ' · identificação empresarial ainda não configurada.';
+}).catch(() => {});
+</script>
+<script src="/accessibility.js" defer></script>
+</body>
+</html>

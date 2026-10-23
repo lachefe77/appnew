@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Administração — SMM Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vendor/tailwind.css">
+<script src="/vendor/chart.umd.js"></script>
+<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="/brand.css">
+<style>
+  body { background: var(--bg); font-family: var(--sans); }
+  .ink { color: var(--ink); }
+  .ink-strong { color: var(--ink); }
+  .ink-dim { color: var(--ink-dim); }
+  .side-item { display:flex; gap:12px; align-items:center; padding:10px 14px; border-radius:8px; cursor:pointer; color:var(--ink-mute); font-size:14px; transition:all .15s; }
+  .side-item:hover { background:var(--bg-elev); color:var(--ink); }
+  .side-item.active { background:var(--accent-wash); color:var(--accent); border-left:2px solid var(--accent); padding-left:12px; font-weight:600; }
+  .side-group { font-size:10px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.12em; padding:16px 14px 6px; font-weight:700; }
+  .pane { display:none; }
+  .pane.active { display:block; }
+  .card { background:var(--bg-elev); border:1px solid var(--border); border-radius:12px; padding:20px; }
+  .input, .select, .textarea { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--ink); border-radius:8px; padding:10px 12px; font-size:14px; font-family: var(--sans); }
+  .input:focus, .select:focus, .textarea:focus { outline:none; border-color:var(--accent); }
+  .btn { padding:9px 16px; border-radius:8px; font-weight:600; font-size:14px; cursor:pointer; border:none; font-family: var(--sans); }
+  .btn-primary { background:var(--accent); color:#000; }
+  .btn-primary:hover { background:#e8ff33; }
+  .btn-ghost { background:transparent; color:var(--ink-mute); border:1px solid var(--border); }
+  .btn-ghost:hover { color: var(--ink); border-color: var(--border-strong); }
+  .btn-danger { background:var(--danger); color:#fff; }
+  .label { font-size:11px; color:var(--ink-mute); margin-bottom:4px; display:block; font-weight:500; text-transform: uppercase; letter-spacing: 0.05em; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:100px; font-size:11px; font-weight:600; }
+  .pill-ok { background:rgba(34,197,94,0.15); color:#86efac; border: 1px solid rgba(34,197,94,0.3); }
+  .pill-warn { background:rgba(251,191,36,0.15); color:#fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+  .pill-bad { background:rgba(239,68,68,0.15); color:#fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+  table { width:100%; font-size:13px; }
+  th { text-align:left; color:var(--ink-dim); font-weight:600; padding:10px; border-bottom:1px solid var(--border); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; }
+  td { padding:12px 10px; border-bottom:1px solid var(--border); color:var(--ink); }
+  tr:hover td { background:var(--bg-elev-2); }
+  .font-mono { font-family: var(--mono); }
+  aside { background: #070707 !important; border-color: var(--border) !important; }
+  main header { background: rgba(10,10,10,0.85) !important; border-color: var(--border) !important; }
+  .side-item .w-4 { color: inherit; }
+  #admin-feedback { min-height: 1.25em; margin: 4px 0 0; color: var(--warn); }
+  .menu-toggle { display: none; background: transparent; color: var(--ink); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  @media (max-width: 860px) {
+    aside { transform: translateX(-105%); transition: transform .2s ease; z-index: 50; }
+    aside.open { transform: none; }
+    main { margin-left: 0 !important; }
+    .menu-toggle { display: inline-flex; }
+  }
+</style>
+<script src="/browser-session.js" defer></script></head>
+<body class="min-h-screen flex ink">
+
+<aside class="w-64 border-r flex flex-col fixed h-full">
+  <div class="h-16 border-b border-slate-800 flex items-center px-5 gap-3">
+    <div class="w-9 h-9 rounded-lg flex items-center justify-center text-black font-black text-xl" style="background: var(--accent); transform: rotate(-6deg);">
+      ⚡
+    </div>
+    <div>
+      <div class="font-black text-sm" style="color: var(--ink); letter-spacing: -0.03em;">SMM HUB</div>
+      <div class="text-[10px] font-mono tracking-wider" style="color: var(--accent);">ADMIN · v2.1</div>
+    </div>
+  </div>
+
+  <nav class="flex-1 overflow-y-auto py-2 px-2">
+    <div class="side-group">Visão geral</div>
+    <div class="side-item active" data-pane="dashboard"><i class="fa-solid fa-chart-line w-4"></i>Dashboard</div>
+    <div class="side-item" data-pane="analytics"><i class="fa-solid fa-chart-pie w-4"></i>Analytics avançado</div>
+    <div class="side-item" data-pane="press"><i class="fa-solid fa-newspaper w-4"></i>Press kit</div>
+
+    <div class="side-group">Operação</div>
+    <div class="side-item" data-pane="orders"><i class="fa-solid fa-cart-shopping w-4"></i>Pedidos</div>
+    <div class="side-item" data-pane="services"><i class="fa-solid fa-list w-4"></i>Serviços</div>
+    <div class="side-item" data-pane="providers"><i class="fa-solid fa-server w-4"></i>Provedores</div>
+    <div class="side-item" data-pane="anomalies"><i class="fa-solid fa-triangle-exclamation w-4"></i>Anomalias</div>
+    <div class="side-item" data-pane="scheduled"><i class="fa-solid fa-clock w-4"></i>Agendamentos</div>
+
+    <div class="side-group">Clientes</div>
+    <div class="side-item" data-pane="users"><i class="fa-solid fa-users w-4"></i>Usuários</div>
+    <div class="side-item" data-pane="tickets"><i class="fa-solid fa-life-ring w-4"></i>Tickets</div>
+    <div class="side-item" data-pane="affiliates"><i class="fa-solid fa-share-nodes w-4"></i>Afiliados</div>
+    <div class="side-item" data-pane="lgpd"><i class="fa-solid fa-shield-halved w-4"></i>LGPD</div>
+
+    <div class="side-group">Marketing</div>
+    <div class="side-item" data-pane="coupons"><i class="fa-solid fa-ticket w-4"></i>Cupons</div>
+    <div class="side-item" data-pane="announcements"><i class="fa-solid fa-bullhorn w-4"></i>Anúncios</div>
+    <div class="side-item" data-pane="giveaways"><i class="fa-solid fa-gift w-4"></i>Sorteios</div>
+    <div class="side-item" data-pane="challenges"><i class="fa-solid fa-trophy w-4"></i>Desafios</div>
+    <a class="side-link" style="display:block;padding:12px 18px;color:inherit" href="/operations.html"><i class="fa-solid fa-gears w-4"></i>Central de operações</a>
+    <div class="side-item" data-pane="combos"><i class="fa-solid fa-boxes-stacked w-4"></i>Combos</div>
+
+    <div class="side-group">Conteúdo do site</div>
+    <div class="side-item" data-pane="content"><i class="fa-solid fa-file-pen w-4"></i>Textos & SEO</div>
+    <div class="side-item" data-pane="platforms"><i class="fa-solid fa-grid-2 w-4"></i>Plataformas</div>
+    <div class="side-item" data-pane="payments"><i class="fa-solid fa-wallet w-4"></i>Formas de pagamento</div>
+    <div class="side-item" data-pane="blog"><i class="fa-solid fa-blog w-4"></i>Blog</div>
+
+    <div class="side-group">Finanças</div>
+    <div class="side-item" data-pane="pricing"><i class="fa-solid fa-tag w-4"></i>Preço dinâmico</div>
+    <div class="side-item" data-pane="snapshots"><i class="fa-solid fa-camera w-4"></i>Snapshots</div>
+    <div class="side-item" data-pane="invoices"><i class="fa-solid fa-receipt w-4"></i>Notas fiscais</div>
+
+    <div class="side-group">Governança (CEO)</div>
+    <div class="side-item" data-pane="team"><i class="fa-solid fa-user-tie w-4"></i>Equipe</div>
+
+    <div class="side-group">Segurança</div>
+    <div class="side-item" data-pane="blocked"><i class="fa-solid fa-ban w-4"></i>Links bloqueados</div>
+    <div class="side-item" data-pane="audit"><i class="fa-solid fa-clipboard-list w-4"></i>Audit log</div>
+    <div class="side-item" data-pane="settings"><i class="fa-solid fa-gears w-4"></i>Configurações</div>
+  </nav>
+
+  <div class="border-t border-slate-800 p-3">
+    <div class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-slate-800 cursor-pointer" onclick="logout()">
+      <i class="fa-solid fa-right-from-bracket text-slate-500"></i>
+      <span class="text-sm text-slate-400">Sair</span>
+    </div>
+  </div>
+</aside>
+
+<main class="flex-1 ml-64 min-h-screen">
+  <header class="h-16 border-b border-slate-800 bg-[#050810]/80 backdrop-blur px-8 flex items-center justify-between sticky top-0 z-30">
+    <div>
+      <button type="button" class="menu-toggle" id="menu-toggle" aria-label="Abrir menu">Menu</button>
+      <h1 id="pane-title" class="text-xl font-bold ink-strong">Dashboard</h1>
+      <div id="pane-sub" class="text-xs ink-dim">Visão geral da operação em tempo real</div>
+      <p id="admin-feedback" role="status"></p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="/" class="text-xs ink-dim hover:text-slate-100"><i class="fa-solid fa-arrow-up-right-from-square"></i> Ver site</a>
+      <span id="who" class="text-sm ink"></span>
+    </div>
+  </header>
+
+  <div class="p-8">
+    <div id="auth-gate" class="hidden text-center py-20">
+      <i class="fa-solid fa-lock text-5xl text-slate-700 mb-4"></i>
+      <h2 class="text-xl ink-strong mb-2">Acesso restrito</h2>
+      <p class="ink-dim mb-6">Entre com uma conta admin para gerenciar a plataforma.</p>
+      <a href="/" class="btn btn-primary">Fazer login</a>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="pane-dashboard" class="pane active">
+      <div class="grid md:grid-cols-4 gap-4 mb-6">
+        <div class="card"><div class="label">Receita total</div><div id="k-rev" class="text-2xl font-black ink-strong">—</div></div>
+        <div class="card"><div class="label">Lucro estimado</div><div id="k-prof" class="text-2xl font-black text-emerald-400">—</div><div class="text-xs ink-dim">Sem a taxa real do fornecedor</div></div>
+        <div class="card"><div class="label">Pedidos ativos</div><div id="k-act" class="text-2xl font-black ink-strong">—</div></div>
+        <div class="card"><div class="label">Usuários</div><div id="k-usr" class="text-2xl font-black ink-strong">—</div></div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4 mb-6">
+        <div class="card"><h3 class="font-bold ink-strong mb-4">Receita (30 dias)</h3><canvas id="c-30d" height="150"></canvas></div>
+        <div class="card"><h3 class="font-bold ink-strong mb-4">Por plataforma</h3><canvas id="c-plat" height="150"></canvas></div>
+      </div>
+    </div>
+
+    <div id="pane-analytics" class="pane"><div class="card"><h3 class="font-bold ink-strong mb-4">Performance por provedor</h3><div id="provs-tbl"></div></div></div>
+
+    <div id="pane-press" class="pane"><div class="card"><h3 class="font-bold ink-strong mb-4">Press kit — números públicos</h3><pre id="press-json" class="text-xs text-slate-400 overflow-auto"></pre></div></div>
+
+    <!-- ORDERS -->
+    <div id="pane-orders" class="pane">
+      <div class="flex gap-2 mb-4">
+        <select id="o-filter" class="select max-w-xs">
+          <option value="">Todos os status</option><option value="pending">Pendentes</option>
+          <option value="processing">Processando</option><option value="completed">Concluídos</option>
+          <option value="failed">Falhados</option><option value="canceled">Cancelados</option>
+        </select>
+        <button class="btn btn-primary" onclick="loadOrders()">Filtrar</button>
+      </div>
+      <div class="card"><div id="o-tbl"></div></div>
+    </div>
+
+    <!-- SERVICES -->
+    <div id="pane-services" class="pane"><div class="card"><h3 class="font-bold ink-strong mb-4">Catálogo</h3><div id="s-tbl" style="max-height:70vh;overflow:auto"></div></div></div>
+
+    <!-- PROVIDERS -->
+    <div id="pane-providers" class="pane">
+      <div class="card mb-4">
+        <h3 class="font-bold ink-strong mb-4">Novo provedor</h3>
+        <div class="grid md:grid-cols-3 gap-3">
+          <input id="p-name" class="input" placeholder="Nome">
+          <input id="p-url" class="input" placeholder="API URL">
+          <input id="p-key" class="input" placeholder="API key">
+        </div>
+        <button class="btn btn-primary mt-3" onclick="addProvider()">Cadastrar</button>
+      </div>
+      <div class="card"><div id="p-tbl"></div></div>
+    </div>
+
+    <div id="pane-anomalies" class="pane"><div class="card"><div id="an-tbl"></div></div></div>
+    <div id="pane-scheduled" class="pane"><div class="card"><div id="sch-tbl"></div></div></div>
+
+    <!-- USERS -->
+    <div id="pane-users" class="pane">
+      <input id="u-search" class="input max-w-md mb-4" placeholder="Buscar nome ou e-mail..." oninput="loadUsers()">
+      <div class="card"><div id="u-tbl"></div></div>
+    </div>
+
+    <div id="pane-tickets" class="pane"><div class="card"><div id="t-tbl"></div></div></div>
+    <div id="pane-affiliates" class="pane"><div class="card"><div id="af-tbl"></div></div></div>
+    <div id="pane-lgpd" class="pane"><div class="card"><div id="lg-tbl"></div></div></div>
+
+    <!-- COUPONS -->
+    <div id="pane-coupons" class="pane">
+      <div class="card mb-4">
+        <h3 class="font-bold ink-strong mb-4">Novo cupom</h3>
+        <div class="grid md:grid-cols-5 gap-3">
+          <input id="cp-code" class="input" placeholder="Código">
+          <input id="cp-pct" class="input" placeholder="% desc" type="number">
+          <input id="cp-fix" class="input" placeholder="Desconto fixo (R$)" type="number" step="0.01">
+          <input id="cp-min" class="input" placeholder="Pedido mínimo (R$)" type="number" step="0.01">
+          <input id="cp-max" class="input" placeholder="Usos máx" type="number">
+        </div>
+        <button class="btn btn-primary mt-3" onclick="addCoupon()">Criar</button>
+      </div>
+      <div class="card"><div id="cp-tbl"></div></div>
+    </div>
+
+    <!-- ANNOUNCEMENTS -->
+    <div id="pane-announcements" class="pane">
+      <div class="card mb-4">
+        <h3 class="font-bold ink-strong mb-4">Novo anúncio</h3>
+        <input id="an-title" class="input mb-3" placeholder="Título">
+        <textarea id="an-msg" class="textarea mb-3" placeholder="Mensagem"></textarea>
+        <input id="an-badge" class="input mb-3" placeholder="Badge (ex: HOT)" value="NOVIDADE">
+        <button class="btn btn-primary" onclick="addAnnouncement()">Publicar</button>
+      </div>
+      <div class="card"><div id="an-list"></div></div>
+    </div>
+
+    <!-- GIVEAWAYS -->
+    <div id="pane-giveaways" class="pane">
+      <div class="card mb-4">
+        <h3 class="font-bold ink-strong mb-4">Novo sorteio</h3>
+        <div class="grid md:grid-cols-2 gap-3">
+          <input id="gv-title" class="input" placeholder="Título">
+          <input id="gv-prize" class="input" placeholder="Prêmio (R$)" type="number" step="0.01">
+          <input id="gv-min" class="input" placeholder="Depósito mínimo (R$)" type="number" step="0.01">
+          <input id="gv-start" class="input" type="datetime-local">
+          <input id="gv-end" class="input" type="datetime-local">
+        </div>
+        <button class="btn btn-primary mt-3" onclick="addGiveaway()">Criar sorteio</button>
+      </div>
+    </div>
+
+    <div id="pane-challenges" class="pane"><div class="card">Desafios mensais ativos listados aqui.</div></div>
+    <div id="pane-combos" class="pane"><div class="card">Pacotes combo (edite via API /api/engagement/combos)</div></div>
+
+    <!-- SITE CONTENT -->
+    <div id="pane-content" class="pane">
+      <div class="card">
+        <h3 class="font-bold ink-strong mb-4">Textos editáveis do site</h3>
+        <div class="grid md:grid-cols-2 gap-4" id="ct-form"></div>
+        <button class="btn btn-primary mt-4" onclick="saveContent()">Salvar textos</button>
+      </div>
+    </div>
+
+    <div id="pane-platforms" class="pane"><div class="card"><div id="pf-list"></div></div></div>
+    <div id="pane-payments" class="pane"><div class="card"><div id="pm-list"></div></div></div>
+    <div id="pane-blog" class="pane"><div class="card"><div id="bl-list"></div></div></div>
+
+    <div id="pane-pricing" class="pane">
+      <div class="card mb-4">
+        <h3 class="font-bold ink-strong mb-4">Regra de preço dinâmico</h3>
+        <div class="grid md:grid-cols-5 gap-3">
+          <input id="dp-plat" class="input" placeholder="Platform (opcional)">
+          <input id="dp-dow" class="input" placeholder="Dia (0-6)" type="number">
+          <input id="dp-hf" class="input" placeholder="Hora de" type="number">
+          <input id="dp-ht" class="input" placeholder="Hora até" type="number">
+          <input id="dp-mult" class="input" placeholder="Multiplicador (1.2 = +20%)" type="number" step="0.1">
+        </div>
+        <button class="btn btn-primary mt-3" onclick="addPricing()">Adicionar</button>
+      </div>
+      <div class="card"><div id="dp-tbl"></div></div>
+    </div>
+
+    <div id="pane-snapshots" class="pane"><div class="card"><div id="sn-tbl"></div></div></div>
+    <div id="pane-invoices" class="pane"><div class="card">Faturas de NF emitidas (via /api/b2b/invoices-nf)</div></div>
+
+    <!-- BLOCKED LINKS -->
+    <div id="pane-blocked" class="pane">
+      <div class="card mb-4">
+        <input id="bl-pat" class="input mb-2" placeholder="Padrão (texto ou regex)">
+        <input id="bl-reas" class="input mb-2" placeholder="Motivo">
+        <button class="btn btn-primary" onclick="addBlocked()">Bloquear</button>
+      </div>
+      <div class="card"><div id="bl-tbl"></div></div>
+    </div>
+
+    <div id="pane-audit" class="pane"><div class="card"><div id="au-tbl"></div></div></div>
+    <div id="pane-settings" class="pane"><div class="card"><div id="st-form"></div><button class="btn btn-primary mt-4" onclick="saveSettings()">Salvar</button></div></div>
+
+    <!-- EQUIPE (CEO only) -->
+    <div id="pane-team" class="pane">
+      <div class="card mb-4">
+        <h3 class="font-bold ink-strong mb-4">Adicionar membro</h3>
+        <div class="grid md:grid-cols-5 gap-3">
+          <input id="tm-name" class="input" placeholder="Nome">
+          <input id="tm-email" class="input" placeholder="E-mail" type="email">
+          <input id="tm-pw" class="input" placeholder="Senha inicial" type="password">
+          <select id="tm-role" class="select">
+            <option value="admin">Admin</option>
+            <option value="support">Suporte</option>
+            <option value="vip">VIP</option>
+          </select>
+          <button class="btn btn-primary" onclick="addTeam()">Criar</button>
+        </div>
+        <label style="color:var(--ink-mute);font-size:13px;margin-top:12px;display:inline-block">
+          <input type="checkbox" id="tm-welcome" checked> Enviar e-mail de boas-vindas
+        </label>
+      </div>
+      <div class="card"><div id="tm-tbl"></div></div>
+    </div>
+  </div>
+</main>
+
+<script>
+function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const token = localStorage.getItem('smm_token');
+const H = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+if (!token) { document.getElementById('auth-gate').classList.remove('hidden'); document.querySelectorAll('.pane').forEach(p => p.classList.remove('active')); }
+
+async function logout() { try{await fetch('/api/auth/logout',{method:'POST',headers:H,signal:AbortSignal.timeout(3000)});}finally{localStorage.removeItem('smm_token');location.href='/login.html';} }
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { ...H, ...(opts.headers || {}) } });
+  if (r.status === 401 || r.status === 403) { document.getElementById('auth-gate').classList.remove('hidden'); document.querySelectorAll('.pane').forEach(p => p.classList.remove('active')); throw new Error('auth'); }
+  const data=await r.json();if(!r.ok)throw new Error(data.error||'Falha na operação.');return data;
+}
+
+const titles = {
+  dashboard: ['Dashboard', 'Visão geral da operação em tempo real'],
+  analytics: ['Analytics avançado', 'Performance por provedor e plataforma'],
+  press: ['Press kit', 'Números para imprensa e parceiros'],
+  orders: ['Pedidos', 'Todas as ordens do sistema'],
+  services: ['Serviços', 'Catálogo completo editável'],
+  providers: ['Provedores', 'APIs upstream SMM v2'],
+  anomalies: ['Anomalias', 'Serviços com alta taxa de falha nas últimas 24h'],
+  scheduled: ['Agendamentos', 'Pedidos agendados por clientes'],
+  users: ['Usuários', 'Gerenciar contas'],
+  tickets: ['Tickets', 'Suporte ao cliente'],
+  affiliates: ['Afiliados', 'Comissões multinível pagas'],
+  lgpd: ['LGPD', 'Pedidos de exportação e exclusão de dados'],
+  coupons: ['Cupons', 'Códigos promocionais'],
+  announcements: ['Anúncios', 'Mensagens no topo do painel'],
+  giveaways: ['Sorteios', 'Giveaways com prêmio em saldo'],
+  challenges: ['Desafios', 'Metas mensais com prêmios'],
+  combos: ['Combos', 'Pacotes promocionais'],
+  content: ['Textos do site', 'Edite títulos, CTAs e informações'],
+  platforms: ['Plataformas', 'Redes sociais exibidas na vitrine'],
+  payments: ['Formas de pagamento', 'Habilitar/desabilitar métodos'],
+  blog: ['Blog', 'Posts SEO'],
+  pricing: ['Preço dinâmico', 'Multiplicadores por horário/dia'],
+  snapshots: ['Snapshots', 'Fotografias financeiras diárias'],
+  invoices: ['Notas fiscais', 'Emissão NFe'],
+  blocked: ['Links bloqueados', 'Padrões rejeitados em pedidos'],
+  audit: ['Audit log', 'Ações administrativas registradas'],
+  settings: ['Configurações', 'Variáveis globais da plataforma'],
+  team: ['Equipe', 'Gerir cargos operacionais da plataforma (só CEO)']
+};
+
+document.querySelectorAll('.side-item').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('.side-item').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.pane').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+    const pane = el.dataset.pane;
+    document.getElementById('pane-' + pane).classList.add('active');
+    const [t, s] = titles[pane] || [pane, ''];
+    document.getElementById('pane-title').textContent = t;
+    document.getElementById('pane-sub').textContent = s;
+    loaders[pane] && loaders[pane]();
+  };
+});
+
+const loaders = {
+  dashboard: loadDash,
+  analytics: loadAnalytics,
+  press: async () => { const r = await api('/api/engagement/press-kit'); document.getElementById('press-json').textContent = JSON.stringify(r, null, 2); },
+  orders: loadOrders,
+  services: loadServices,
+  providers: loadProviders,
+  anomalies: loadAnomalies,
+  users: loadUsers,
+  tickets: loadTickets,
+  affiliates: loadAffiliates,
+  lgpd: loadLGPD,
+  coupons: loadCoupons,
+  announcements: loadAnnouncements,
+  content: loadContent,
+  platforms: loadPlatforms,
+  payments: loadPayments,
+  blog: loadBlog,
+  pricing: loadPricing,
+  snapshots: loadSnapshots,
+  blocked: loadBlocked,
+  audit: loadAudit,
+  settings: loadSettings,
+  team: loadTeam
+};
+
+async function loadTeam() {
+  const r = await api('/api/team');
+  const roleColors = { ceo: 'style="background:var(--accent);color:#000"', admin: 'style="background:#a855f7;color:#fff"', support: 'style="background:#3b82f6;color:#fff"', vip: 'style="background:#f59e0b;color:#000"' };
+  document.getElementById('tm-tbl').innerHTML = `<table><thead><tr><th>#</th><th>Nome</th><th>E-mail</th><th>Cargo</th><th>Status</th><th>Criado</th><th></th></tr></thead><tbody>${r.team.map(m=>`<tr>
+    <td>${m.id}</td><td>${escapeHtml(m.name)}</td><td>${escapeHtml(m.email)}</td>
+    <td><span class="pill" ${roleColors[m.role]||''}>${m.role.toUpperCase()}</span></td>
+    <td><span class="pill pill-${m.status==='active'?'ok':'bad'}">${escapeHtml(m.status)}</span></td>
+    <td class="font-mono text-xs">${new Date(m.created_at).toLocaleDateString('pt-BR')}</td>
+    <td>
+      ${m.status==='active'?`<button class="btn btn-ghost text-xs" onclick="suspendMember(${m.id})">Suspender</button>`:`<button class="btn btn-ghost text-xs" onclick="activateMember(${m.id})">Reativar</button>`}
+      <button class="btn btn-ghost text-xs" onclick="resetMemberPw(${m.id})">Reset senha</button>
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+async function addTeam() {
+  const r = await api('/api/team', { method: 'POST', body: JSON.stringify({
+    name: document.getElementById('tm-name').value, email: document.getElementById('tm-email').value,
+    password: document.getElementById('tm-pw').value, role: document.getElementById('tm-role').value,
+    send_welcome: document.getElementById('tm-welcome').checked
+  }) });
+  alert(r.message || r.error);
+  if (r.message) { ['tm-name','tm-email','tm-pw'].forEach(id => document.getElementById(id).value = ''); loadTeam(); }
+}
+async function suspendMember(id) { await api(`/api/team/${id}/status`, { method: 'POST', body: JSON.stringify({ status: 'suspended' }) }); loadTeam(); }
+async function activateMember(id) { await api(`/api/team/${id}/status`, { method: 'POST', body: JSON.stringify({ status: 'active' }) }); loadTeam(); }
+async function resetMemberPw(id) {
+  const p = prompt('Nova senha (mín 6 chars):'); if (!p || p.length < 6) return;
+  const r = await api(`/api/team/${id}/reset-password`, { method: 'POST', body: JSON.stringify({ new_password: p }) });
+  alert(r.message || r.error);
+}
+
+async function loadDash() {
+  const [m, byP, snaps] = await Promise.all([api('/api/admin/metrics'), api('/api/admin/metrics/by-platform'), api('/api/admin/snapshots?days=30')]);
+  const u = await api('/api/auth/me');
+  document.getElementById('who').textContent = u.user.name;
+  document.getElementById('k-rev').textContent = m.orders.total_revenue_formatted;
+  document.getElementById('k-prof').textContent = m.orders.total_profit_formatted + ` (${m.orders.margin_pct}%)`;
+  document.getElementById('k-act').textContent = m.orders.active;
+  document.getElementById('k-usr').textContent = m.users.total;
+
+  const sn = snaps.snapshots || [];
+  new Chart(document.getElementById('c-30d'), {
+    type: 'line', data: { labels: sn.map(s => s.snapshot_date), datasets: [{ label: 'R$', data: sn.map(s => s.revenue_cents / 100), borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.1)', fill: true, tension: 0.3 }] },
+    options: { plugins: { legend: { labels: { color: '#94a3b8' } } }, scales: { x: { ticks: { color: '#64748b' } }, y: { ticks: { color: '#64748b' } } } }
+  });
+  const plat = byP.by_platform || [];
+  new Chart(document.getElementById('c-plat'), {
+    type: 'bar', data: { labels: plat.map(p => p.platform), datasets: [{ label: 'Lucro', data: plat.map(p => p.profit_cents / 100), backgroundColor: '#10b981' }] },
+    options: { plugins: { legend: { labels: { color: '#94a3b8' } } }, scales: { x: { ticks: { color: '#64748b' } }, y: { ticks: { color: '#64748b' } } } }
+  });
+}
+
+async function loadAnalytics() {
+  const r = await api('/api/admin/metrics/by-provider');
+  document.getElementById('provs-tbl').innerHTML = `<table><thead><tr><th>Provedor</th><th>Pedidos</th><th>Receita</th><th>Lucro</th><th>Falhas</th></tr></thead><tbody>${(r.by_provider||[]).map(p=>`<tr><td>${escapeHtml(p.name)}</td><td>${p.orders}</td><td>R$ ${((p.revenue_cents||0)/100).toFixed(2)}</td><td class="text-emerald-400">R$ ${((p.profit_cents||0)/100).toFixed(2)}</td><td class="${p.failed_count>0?'text-red-400':''}">${p.failed_count||0}</td></tr>`).join('')}</tbody></table>`;
+}
+
+async function loadOrders() {
+  const s = document.getElementById('o-filter').value;
+  const r = await api('/api/admin/orders' + (s ? '?status=' + s : ''));
+  document.getElementById('o-tbl').innerHTML = `<table><thead><tr><th>#</th><th>User</th><th>Serviço</th><th>Qtd</th><th>R$</th><th>Status</th><th>Data</th><th></th></tr></thead><tbody>${r.orders.map(o=>`<tr><td>${o.id}</td><td>${escapeHtml(o.user_email)}</td><td>${escapeHtml(o.service_name)}</td><td>${o.quantity}</td><td>R$ ${(o.charge_cents/100).toFixed(2)}</td><td><span class="pill pill-${o.status==='completed'?'ok':o.status==='failed'?'bad':'warn'}">${escapeHtml(o.status)}</span></td><td>${o.created_at}</td><td><button class="btn btn-ghost text-xs" onclick="retry(${o.id})">Reenviar</button> <button class="btn btn-danger text-xs" onclick="refundOrder(${o.id})">Estornar</button></td></tr>`).join('')}</tbody></table>`;
+}
+async function retry(id) { await api('/api/admin/orders/' + id + '/retry', { method: 'POST' }); loadOrders(); }
+async function refundOrder(id) { if (confirm('Estornar ordem ' + id + '?')) { await api('/api/admin/orders/' + id + '/force-refund', { method: 'POST' }); loadOrders(); } }
+
+async function loadServices() {
+  const r = await api('/api/admin/services');
+  document.getElementById('s-tbl').innerHTML = `<table><thead><tr><th>#</th><th>Nome</th><th>Plataforma</th><th>Custo/K</th><th>Preço/K</th><th>Status</th></tr></thead><tbody>${r.services.map(s=>`<tr><td>${s.id}</td><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.platform)}</td><td>R$ ${(s.cost_per_k_cents/100).toFixed(2)}</td><td>R$ ${(s.price_per_k_cents/100).toFixed(2)}</td><td>${escapeHtml(s.status)}</td></tr>`).join('')}</tbody></table>`;
+}
+
+async function loadProviders() {
+  const r = await api('/api/admin/providers');
+  document.getElementById('p-tbl').innerHTML = `<table><thead><tr><th>#</th><th>Nome</th><th>Saldo</th><th>Mock?</th><th>Status</th><th></th></tr></thead><tbody>${r.providers.map(p=>`<tr><td>${p.id}</td><td>${escapeHtml(p.name)}</td><td>${escapeHtml(p.currency)} ${(p.balance_upstream||0).toFixed(2)}</td><td>${p.is_mock?'✅':'❌'}</td><td>${escapeHtml(p.status)}</td><td><button class="btn btn-ghost text-xs" onclick="testProv(${p.id})">Testar</button></td></tr>`).join('')}</tbody></table>`;
+}
+async function addProvider() {
+  const r = await api('/api/admin/providers', { method: 'POST', body: JSON.stringify({ name: document.getElementById('p-name').value, api_url: document.getElementById('p-url').value, api_key: document.getElementById('p-key').value, is_mock: 0 }) });
+  if (r.message) { alert(r.message); loadProviders(); }
+}
+async function testProv(id) { const r = await api(`/api/admin/providers/${id}/test-balance`, { method: 'POST' }); alert(JSON.stringify(r)); }
+
+async function loadAnomalies() {
+  const r = await api('/api/intelligence/anomalies');
+  document.getElementById('an-tbl').innerHTML = r.anomalies.length ? `<table><thead><tr><th>Serviço</th><th>Plataforma</th><th>Total 24h</th><th>Falhas</th></tr></thead><tbody>${r.anomalies.map(a=>`<tr><td>${escapeHtml(a.name)}</td><td>${escapeHtml(a.platform)}</td><td>${a.total}</td><td class="text-red-400">${a.failed}</td></tr>`).join('')}</tbody></table>` : '<p class="ink-dim">Nenhuma anomalia nas últimas 24h ✅</p>';
+}
+
+async function loadUsers() {
+  const s = document.getElementById('u-search').value;
+  const r = await api('/api/admin/users' + (s ? '?search=' + encodeURIComponent(s) : ''));
+  document.getElementById('u-tbl').innerHTML = `<table><thead><tr><th>#</th><th>Nome</th><th>E-mail</th><th>Saldo</th><th>Tier</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>${r.users.map(u=>`<tr><td>${u.id}</td><td>${escapeHtml(u.name)}</td><td>${escapeHtml(u.email)}</td><td>R$ ${(u.balance_cents/100).toFixed(2)}</td><td>${escapeHtml(u.tier)}</td><td>${escapeHtml(u.role)}</td><td><span class="pill pill-${u.status==='active'?'ok':'bad'}">${escapeHtml(u.status)}</span></td><td><button class="btn btn-ghost text-xs" onclick="impersonate(${u.id})">Entrar como</button></td></tr>`).join('')}</tbody></table>`;
+}
+async function impersonate(id) {
+  const password=await new Promise(resolve=>{const dialog=document.createElement('dialog');const form=document.createElement('form');form.method='dialog';const label=document.createElement('label');label.textContent='Confirme sua senha para uma sessão de consulta de 15 minutos';const input=document.createElement('input');input.type='password';input.autocomplete='current-password';input.required=true;label.append(input);const button=document.createElement('button');button.textContent='Abrir consulta';form.append(label,button);dialog.append(form);document.body.append(dialog);dialog.onclose=()=>{resolve(input.value);dialog.remove();};dialog.showModal();});
+  if(!password)return;
+  const r = await api(`/api/admin/users/${id}/impersonate`, { method: 'POST',body:JSON.stringify({password}) });
+  if (r.token) { localStorage.setItem('smm_token', r.token); location.href = '/'; }
+}
+
+async function loadTickets() { const r = await api('/api/admin/tickets'); document.getElementById('t-tbl').innerHTML = `<table><thead><tr><th>#</th><th>Assunto</th><th>Cliente</th><th>Status</th><th>Msgs</th></tr></thead><tbody>${r.tickets.map(t=>`<tr><td>${t.id}</td><td>${escapeHtml(t.subject)}</td><td>${escapeHtml(t.user_email)}</td><td><span class="pill pill-${t.status==='open'?'warn':'ok'}">${escapeHtml(t.status)}</span></td><td>${t.msg_count}</td></tr>`).join('')}</tbody></table>`; }
+async function loadAffiliates() { const r = await api('/api/admin/affiliates'); document.getElementById('af-tbl').innerHTML = `<table><thead><tr><th>#</th><th>Nível</th><th>Afiliado</th><th>Indicado</th><th>Comissão</th></tr></thead><tbody>${r.affiliates.map(a=>`<tr><td>${a.id}</td><td>L${a.level}</td><td>${a.referrer_email}</td><td>${a.buyer_email}</td><td>R$ ${(a.commission_cents/100).toFixed(2)}</td></tr>`).join('')}</tbody></table>`; }
+async function loadLGPD() { const r = await api('/api/admin/lgpd/requests'); document.getElementById('lg-tbl').innerHTML = r.requests.length ? `<table><thead><tr><th>#</th><th>User</th><th>Tipo</th><th>Status</th></tr></thead><tbody>${r.requests.map(l=>`<tr><td>${l.id}</td><td>${escapeHtml(l.email)}</td><td>${l.type}</td><td>${escapeHtml(l.status)}</td></tr>`).join('')}</tbody></table>` : '<p class="ink-dim">Sem pedidos LGPD.</p>'; }
+
+async function loadCoupons() { const r = await api('/api/admin/coupons'); document.getElementById('cp-tbl').innerHTML = `<table><thead><tr><th>Código</th><th>%</th><th>Fixo</th><th>Mín</th><th>Usos</th><th>Status</th><th></th></tr></thead><tbody>${r.coupons.map(c=>`<tr><td class="font-mono">${escapeHtml(c.code)}</td><td>${c.discount_pct}%</td><td>R$ ${(c.fixed_cents/100).toFixed(2)}</td><td>R$ ${(c.min_order_cents/100).toFixed(2)}</td><td>${c.uses_count}/${c.max_uses}</td><td>${escapeHtml(c.status)}</td><td><button class="btn btn-danger text-xs" onclick="delCoupon(${c.id})">×</button></td></tr>`).join('')}</tbody></table>`; }
+async function addCoupon() { await api('/api/admin/coupons', { method: 'POST', body: JSON.stringify({ code: cpCode.value, discount_pct: cpPct.value, fixed_cents: cpFix.value, min_order_cents: cpMin.value, max_uses: cpMax.value }) }); loadCoupons(); }
+async function delCoupon(id) { if (confirm('Remover?')) { await api('/api/admin/coupons/' + id, { method: 'DELETE' }); loadCoupons(); } }
+
+async function loadAnnouncements() { const r = await api('/api/admin/announcements'); document.getElementById('an-list').innerHTML = `<table><thead><tr><th>#</th><th>Título</th><th>Ativo</th><th></th></tr></thead><tbody>${r.announcements.map(a=>`<tr><td>${a.id}</td><td>${escapeHtml(a.title)}</td><td>${a.is_active?'✅':'❌'}</td><td><button class="btn btn-danger text-xs" onclick="delAnn(${a.id})">×</button></td></tr>`).join('')}</tbody></table>`; }
+async function addAnnouncement() { await api('/api/admin/announcements', { method: 'POST', body: JSON.stringify({ title: anTitle.value, message: anMsg.value, badge: anBadge.value, is_active: 1 }) }); loadAnnouncements(); }
+async function delAnn(id) { await api('/api/admin/announcements/' + id, { method: 'DELETE' }); loadAnnouncements(); }
+
+async function addGiveaway() { await api('/api/engagement/giveaways', { method: 'POST', body: JSON.stringify({ title: gvTitle.value, prize_cents: parseInt(gvPrize.value), min_deposit_cents: parseInt(gvMin.value||0), starts_at: new Date(gvStart.value).toISOString(), ends_at: new Date(gvEnd.value).toISOString() }) }); alert('Sorteio criado!'); }
+
+async function loadContent() {
+  const r = await api('/api/site/content');
+  document.getElementById('ct-form').innerHTML = Object.entries(r.content).map(([k, v]) => `<div><label class="label">${escapeHtml(k)}</label><input id="ct-${k}" class="input" value="${v.replace(/"/g, '&quot;')}"></div>`).join('');
+}
+async function saveContent() {
+  const payload = {};
+  document.querySelectorAll('[id^="ct-"]').forEach(i => { if (i.id.startsWith('ct-') && i.id !== 'ct-form') payload[i.id.replace('ct-', '')] = i.value; });
+  await api('/api/site/content', { method: 'PUT', body: JSON.stringify(payload) });
+  alert('Conteúdo salvo.');
+}
+
+async function loadPlatforms() {
+  const r = await api('/api/site/admin/platforms');
+  document.getElementById('pf-list').innerHTML = `<table><thead><tr><th>Slug</th><th>Nome</th><th>Cor</th><th>Ordem</th><th>Visível</th></tr></thead><tbody>${r.platforms.map(p=>`<tr><td class="font-mono">${escapeHtml(p.slug)}</td><td>${escapeHtml(p.name)}</td><td style="color:${p.color}">${p.color}</td><td>${p.display_order}</td><td>${p.is_visible?'✅':'❌'}</td></tr>`).join('')}</tbody></table>`;
+}
+async function loadPayments() {
+  const r = await api('/api/site/admin/payment-methods');
+  document.getElementById('pm-list').innerHTML = `<table><thead><tr><th>Método</th><th>Label</th><th>Mín</th><th>Máx</th><th>Habilitado</th></tr></thead><tbody>${r.methods.map(m=>`<tr><td class="font-mono">${m.method}</td><td>${m.label}</td><td>R$ ${(m.min_amount_cents/100).toFixed(2)}</td><td>R$ ${(m.max_amount_cents/100).toFixed(2)}</td><td>${m.is_enabled?'✅':'❌'}</td></tr>`).join('')}</tbody></table>`;
+}
+
+async function loadBlog() { const r = await fetch('/api/blog').then(r=>r.json()); document.getElementById('bl-list').innerHTML = `<table><thead><tr><th>Slug</th><th>Título</th><th>Categoria</th></tr></thead><tbody>${r.posts.map(p=>`<tr><td class="font-mono">${escapeHtml(p.slug)}</td><td>${escapeHtml(p.title)}</td><td>${escapeHtml(p.category)}</td></tr>`).join('')}</tbody></table>`; }
+
+async function loadPricing() { const r = await api('/api/intelligence/pricing/rules'); document.getElementById('dp-tbl').innerHTML = `<table><thead><tr><th>#</th><th>Platform</th><th>Dia</th><th>Hora</th><th>Mult</th><th></th></tr></thead><tbody>${r.rules.map(x=>`<tr><td>${x.id}</td><td>${x.platform||'*'}</td><td>${x.day_of_week??'*'}</td><td>${x.hour_from??0}-${x.hour_to??24}</td><td>${x.multiplier}x</td><td><button class="btn btn-danger text-xs" onclick="delPricing(${x.id})">×</button></td></tr>`).join('')}</tbody></table>`; }
+async function addPricing() { await api('/api/intelligence/pricing/rules', { method: 'POST', body: JSON.stringify({ platform: dpPlat.value, day_of_week: dpDow.value||null, hour_from: dpHf.value||null, hour_to: dpHt.value||null, multiplier: dpMult.value }) }); loadPricing(); }
+async function delPricing(id) { await api('/api/intelligence/pricing/rules/' + id, { method: 'DELETE' }); loadPricing(); }
+
+async function loadSnapshots() { const r = await api('/api/admin/snapshots?days=30'); document.getElementById('sn-tbl').innerHTML = `<table><thead><tr><th>Data</th><th>Pedidos</th><th>Receita</th><th>Lucro</th></tr></thead><tbody>${(r.snapshots||[]).map(s=>`<tr><td>${s.snapshot_date}</td><td>${s.orders_count}</td><td>R$ ${(s.revenue_cents/100).toFixed(2)}</td><td class="text-emerald-400">R$ ${(s.profit_cents/100).toFixed(2)}</td></tr>`).join('')}</tbody></table>`; }
+
+async function loadBlocked() { const r = await api('/api/admin/blocked-links'); document.getElementById('bl-tbl').innerHTML = `<table><thead><tr><th>#</th><th>Padrão</th><th>Motivo</th><th></th></tr></thead><tbody>${r.blocked.map(b=>`<tr><td>${b.id}</td><td class="font-mono">${b.pattern}</td><td>${b.reason||'-'}</td><td><button class="btn btn-danger text-xs" onclick="delBlocked(${b.id})">×</button></td></tr>`).join('')}</tbody></table>`; }
+async function addBlocked() { await api('/api/admin/blocked-links', { method: 'POST', body: JSON.stringify({ pattern: blPat.value, reason: blReas.value }) }); loadBlocked(); }
+async function delBlocked(id) { await api('/api/admin/blocked-links/' + id, { method: 'DELETE' }); loadBlocked(); }
+
+async function loadAudit() { const r = await api('/api/admin/audit-logs'); document.getElementById('au-tbl').innerHTML = `<table><thead><tr><th>Data</th><th>Admin</th><th>Ação</th><th>Alvo</th><th>Detalhes</th></tr></thead><tbody>${r.logs.map(l=>`<tr><td>${l.created_at}</td><td>${l.admin_name||l.admin_id}</td><td>${escapeHtml(l.action)}</td><td>${l.target||''}</td><td>${l.details||''}</td></tr>`).join('')}</tbody></table>`; }
+
+async function loadSettings() {
+  const r = await api('/api/admin/settings');
+  document.getElementById('st-form').innerHTML = Object.entries(r.settings).map(([k, v]) => `<div class="mb-3"><label class="label">${k}</label><input id="st-${k}" class="input" value="${escapeHtml(v)}"></div>`).join('');
+}
+async function saveSettings() {
+  const payload = {};
+  document.querySelectorAll('[id^="st-"]').forEach(i => { if (i.id !== 'st-form') payload[i.id.replace('st-', '')] = i.value; });
+  await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify(payload) });
+  alert('Settings salvas.');
+}
+
+if (token) loadDash();
+</script>
+<script src="/integrations-admin.js" defer></script>
+<script src="/admin-operations.js" defer></script>
+<script src="/combos-admin.js" defer></script>
+<script src="/admin-desk.js" defer></script>
+<script src="/accessibility.js" defer></script>
+</body>
+</html>
