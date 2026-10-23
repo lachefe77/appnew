@@ -81,7 +81,9 @@ router.get('/', (req, res) => {
   const subscriptions = db
     .prepare(
       `
-    SELECT sub.*, s.name as service_name, s.platform
+    SELECT sub.*, s.name as service_name, s.platform,
+      (SELECT message FROM subscription_run_log WHERE subscription_id=sub.id ORDER BY id DESC LIMIT 1) AS last_message,
+      (SELECT created_at FROM subscription_run_log WHERE subscription_id=sub.id ORDER BY id DESC LIMIT 1) AS last_run_at
     FROM subscriptions sub
     JOIN services s ON sub.service_id = s.id
     WHERE sub.user_id = ?

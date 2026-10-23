@@ -20,6 +20,77 @@
     if (!r.ok) throw new Error(data.error || 'Falha no atendimento.');
     return data;
   }
+  const desk = document.createElement('section');
+  desk.id = 'support-order';
+  desk.style.margin = '16px 0';
+  document.querySelector('main').append(desk);
+  const lookup = document.createElement('form');
+  const query = document.createElement('input');
+  query.placeholder = 'ID ou link do pedido';
+  query.setAttribute('aria-label', 'ID ou link do pedido');
+  query.className = 'brand-input';
+  const search = document.createElement('button');
+  search.type = 'submit';
+  search.className = 'brand-btn';
+  search.textContent = 'Abrir pedido';
+  lookup.append(query, search);
+  const orderHost = document.createElement('div');
+  desk.append(lookup, orderHost);
+  function text(tag, value) {
+    const node = document.createElement(tag);
+    node.textContent = value;
+    return node;
+  }
+  async function showOrder(id) {
+    const data = await api('/orders/' + id);
+    const order = data.order;
+    orderHost.replaceChildren(
+      text('h2', 'Pedido #' + order.id + ' · ' + order.status),
+      text('p', order.service_name + ' · ' + order.provider_name),
+      text('p', order.link),
+      text(
+        'p',
+        'Quantidade ' +
+          order.quantity +
+          ' · falta ' +
+          order.remains +
+          (order.remote_order_id ? ' · fornecedor ' + order.remote_order_id : '')
+      )
+    );
+    for (const note of order.notes || [])
+      orderHost.append(text('p', (note.author || 'Equipe') + ': ' + note.note));
+    const noteForm = document.createElement('form');
+    const note = document.createElement('textarea');
+    note.required = true;
+    note.maxLength = 2000;
+    note.placeholder = 'Nota interna';
+    note.className = 'brand-input';
+    const save = document.createElement('button');
+    save.type = 'submit';
+    save.className = 'brand-btn';
+    save.textContent = 'Guardar nota';
+    noteForm.append(note, save);
+    noteForm.onsubmit = async (event) => {
+      event.preventDefault();
+      await api('/orders/' + order.id + '/notes', { note: note.value });
+      await showOrder(order.id);
+    };
+    orderHost.append(noteForm);
+  }
+  lookup.onsubmit = async (event) => {
+    event.preventDefault();
+    try {
+      const found = await api('/orders/lookup?q=' + encodeURIComponent(query.value.trim()));
+      if (!found.orders.length) {
+        status.textContent = 'Nenhum pedido encontrado.';
+        return;
+      }
+      await showOrder(found.orders[0].id);
+    } catch (error) {
+      status.textContent = error.message;
+    }
+  };
+
   async function load() {
     try {
       const r = await api('/tickets');
@@ -46,6 +117,9 @@
       const title = document.createElement('h2');
       title.textContent = r.ticket.subject;
       conversation.append(title);
+      if (r.ticket.order_id) showOrder(r.ticket.order_id).catch((error) => {
+        status.textContent = error.message;
+      });
       for (const m of r.messages) {
         const card = document.createElement('article'),
           text = document.createElement('p');
@@ -94,7 +168,19 @@
       attachmentsInput.accept =
         'image/png,image/jpeg,image/gif,image/webp,application/pdf';
       attachmentsInput.setAttribute('aria-label', 'Até três anexos de 2 MB');
-      form.append(input, attachmentsInput, label, send);
+      const canned = document.createElement('select');
+      canned.className = 'brand-input';
+      canned.append(new Option('Resposta pronta', ''));
+      api('/canned-replies')
+        .then((data) => {
+          for (const reply of data.replies || [])
+            canned.append(new Option(reply.title, reply.body));
+        })
+        .catch(() => {});
+      canned.onchange = () => {
+        if (canned.value) input.value = canned.value;
+      };
+      form.append(canned, input, attachmentsInput, label, send);
       form.onsubmit = async (e) => {
         e.preventDefault();
         send.disabled = true;

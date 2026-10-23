@@ -39,6 +39,12 @@ const TEMPLATES = {
       <p><a href="${esc(baseUrl)}/reset.html?token=${encodeURIComponent(token)}" style="${btn}">Redefinir senha</a></p>
       <p style="color:#64748b;font-size:12px">Se você não solicitou, ignore este e-mail.</p>`),
   }),
+  order_failed: ({ name, orderId, serviceName }) => ({
+    subject: `Pedido #${orderId} não foi concluído`,
+    html: wrap(`<h1>Pedido não concluído</h1>
+      <p>Olá ${esc(name)}, o pedido <strong>#${orderId}</strong> (${esc(serviceName)}) falhou. O valor volta para o saldo.</p>
+      <p>A ficha do pedido no painel mostra o que aconteceu.</p>`),
+  }),
   order_completed: ({ name, orderId, serviceName, quantity, link }) => ({
     subject: `✅ Pedido #${orderId} concluído!`,
     html: wrap(`<h1>Entrega finalizada!</h1>

@@ -78,6 +78,7 @@ async function bootstrap() {
   applyExtendedSchema();
   applyV3Schema();
   require('./ops-desk').applySchema();
+  require('./order-notices').applySchema();
   require('./mail').registerMailWorker();
   require('./job-queue').registerHandler('dispatch', ({ orderId }) =>
     require('./smm-engine').dispatchOrder(orderId)

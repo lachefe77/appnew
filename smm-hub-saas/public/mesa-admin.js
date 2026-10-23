@@ -110,6 +110,7 @@
     const tools = document.createElement('div');
 
     const groups = [
+      ['Caixa da manhã', () => api('/api/admin/ops/inbox')],
       ['Status das integrações', () => api('/api/admin/ops/readiness')],
       ['Fila de webhooks', async () => show((await api('/api/admin/ops/webhooks')).webhooks)],
       ['Pix registrados', async () => show((await api('/api/admin/ops/pix')).invoices)],

@@ -1,4 +1,10 @@
-const { placeOrder, placeBatch, quoteOrder } = require('../order-domain');
+const {
+  placeOrder,
+  placeBatch,
+  placeEach,
+  previewMass,
+  quoteOrder,
+} = require('../order-domain');
 const { escapeHtml } = require('../html');
 const express = require('express');
 const { db } = require('../db');
@@ -19,7 +25,11 @@ router.post('/quote', (req, res) => {
 // 1. SINGLE ORDER
 router.post('/', async (req, res) => {
   try {
-    const result = placeOrder(req.user.id, req.body);
+    const result = placeOrder(
+      req.user.id,
+      req.body,
+      require('../order-notices').metaFrom(req)
+    );
     dispatchOrder(result.id).catch(() => {});
     res.status(201).json({
       message: 'Ordem criada com sucesso!',
@@ -60,7 +70,11 @@ router.post('/mass', async (req, res) => {
           .map((x) => x.trim());
         return { service_id, quantity, link };
       });
-    const results = placeBatch(req.user.id, inputs);
+    const results = placeBatch(
+      req.user.id,
+      inputs,
+      require('../order-notices').metaFrom(req)
+    );
     for (const r of results) dispatchOrder(r.id).catch(() => {});
     const total = results.reduce((n, r) => n + r.charge_cents, 0);
     res.status(201).json({
@@ -75,6 +89,64 @@ router.post('/mass', async (req, res) => {
     try {
       require('../ops-desk').logMassError(req.user.id, err.message, req.body.raw_text);
     } catch {}
+    res
+      .status(err.status || 500)
+      .json({ error: err.status ? err.message : 'Erro ao criar lote.' });
+  }
+});
+
+router.get('/notices', (req, res) => {
+  require('../order-notices').applySchema();
+  res.json({
+    notices: db
+      .prepare(
+        `SELECT id, order_id, status, message, read_at, created_at
+         FROM order_notices WHERE user_id=? ORDER BY id DESC LIMIT 20`
+      )
+      .all(req.user.id),
+  });
+});
+
+router.post('/notices/read', (req, res) => {
+  require('../order-notices').applySchema();
+  db.prepare(
+    'UPDATE order_notices SET read_at=CURRENT_TIMESTAMP WHERE user_id=? AND read_at IS NULL'
+  ).run(req.user.id);
+  res.json({ ok: true });
+});
+
+router.post('/mass/preview', (req, res) => {
+  try {
+    res.json({ lines: previewMass(req.user.id, req.body.raw_text) });
+  } catch (err) {
+    res
+      .status(err.status || 500)
+      .json({ error: err.status ? err.message : 'Não foi possível conferir o lote.' });
+  }
+});
+
+router.post('/mass/lines', (req, res) => {
+  try {
+    if (!Array.isArray(req.body.lines) || req.body.lines.length > 100)
+      return res.status(400).json({ error: 'Lote inválido.' });
+    const result = placeEach(
+      req.user.id,
+      req.body.lines.map((line) => ({
+        service_id: line && line.service_id,
+        quantity: line && line.quantity,
+        link: line && line.link,
+      })),
+      require('../order-notices').metaFrom(req)
+    );
+    for (const row of result.created) dispatchOrder(row.id).catch(() => {});
+    res.status(result.created.length ? 201 : 422).json({
+      created: result.created,
+      errors: result.errors,
+      created_count: result.created.length,
+      total_charged_cents: result.created.reduce((sum, row) => sum + row.charge_cents, 0),
+      new_balance_cents: result.created.at(-1)?.new_balance_cents,
+    });
+  } catch (err) {
     res
       .status(err.status || 500)
       .json({ error: err.status ? err.message : 'Erro ao criar lote.' });
@@ -127,6 +199,11 @@ router.get('/:id', (req, res) => {
     )
     .all(order.id);
   if(order.is_dripfeed)order.batches=db.prepare('SELECT run,quantity,remains,status,due_at,completed_at FROM drip_batches WHERE order_id=? ORDER BY run').all(order.id);
+  order.notices = db
+    .prepare(
+      'SELECT status, message, created_at FROM order_notices WHERE order_id=? AND user_id=? ORDER BY id'
+    )
+    .all(order.id, req.user.id);
 
   const { delivered, percent, remains } =
     require('../order-progress').progress(order);
@@ -136,6 +213,27 @@ router.get('/:id', (req, res) => {
   delete order.provider_id;
   delete order.remote_order_id;
   res.json({ order: { ...order, delivered, percent } });
+});
+
+router.post('/:id/cancel', (req, res) => {
+  try {
+    const result = require('../order-notices').cancelOrder(
+      req.user.id,
+      Number(req.params.id)
+    );
+    const balance = db
+      .prepare('SELECT balance_cents FROM users WHERE id=?')
+      .get(req.user.id).balance_cents;
+    res.json({
+      message: 'Pedido cancelado e valor estornado.',
+      ...result,
+      new_balance_cents: balance,
+    });
+  } catch (err) {
+    res
+      .status(err.status || 500)
+      .json({ error: err.status ? err.message : 'Não foi possível cancelar.' });
+  }
 });
 
 // 5. REFILL

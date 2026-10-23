@@ -177,7 +177,17 @@ router.get('/', (req, res) => {
     params.push(`%${search}%`);
   }
   q += ' ORDER BY c.sort_order ASC, s.id ASC';
-  res.json({ services: db.prepare(q).all(...params) });
+  const { unstable } = require('../order-notices');
+  const services = db.prepare(q.replace(
+    's.refill_available, s.cancel_available, s.dripfeed_available, s.avg_time, s.description,',
+    `s.refill_available, s.cancel_available, s.dripfeed_available, s.avg_time, s.description,
+           (SELECT COUNT(*) FROM orders o WHERE o.service_id=s.id AND datetime(o.created_at)>=datetime('now','-7 days')) AS recent_orders,
+           (SELECT COUNT(*) FROM orders o WHERE o.service_id=s.id AND o.status='failed' AND datetime(o.created_at)>=datetime('now','-7 days')) AS failed_recent,`
+  )).all(...params).map((row) => ({
+    ...row,
+    unstable: unstable(row.recent_orders, row.failed_recent) ? 1 : 0,
+  }));
+  res.json({ services });
 });
 
 router.get('/favorites', requireAuth, (req, res) => {

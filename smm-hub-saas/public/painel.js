@@ -39,6 +39,25 @@
       minute: '2-digit',
     });
   }
+  function attention(container, rows) {
+    const block = document.getElementById('order-attention-block');
+    if (!container || !block) return;
+    if (!rows.length) {
+      block.hidden = true;
+      container.replaceChildren();
+      return;
+    }
+    block.hidden = false;
+    container.replaceChildren();
+    for (const item of rows) {
+      const button = element('button', item.title, 'text-action');
+      button.type = 'button';
+      button.style.display = 'block';
+      button.style.margin = '6px 0';
+      button.onclick = () => navigateTo(item.view || 'orders');
+      container.append(button);
+    }
+  }
   function orders(container, rows) {
     if (!rows.length) {
       empty(
@@ -250,6 +269,7 @@
       document.getElementById('metric-today').textContent =
         number(data.global.orders_today) + ' registrados hoje';
       orders(document.getElementById('dashboard-orders'), data.recent_orders);
+      attention(document.getElementById('order-attention'), data.attention || []);
       activity(document.getElementById('dashboard-activity'), data.activity);
     } catch (error) {
       feedback.textContent =

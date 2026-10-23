@@ -49,9 +49,10 @@ router.post('/sub-login', (req, res) => {
 router.use(requireAuth);
 
 router.get('/sub-accounts', (req, res) => {
+  require('../order-notices').applySchema();
   const subs = db
     .prepare(
-      `SELECT id, name, email, can_order, can_view_balance, can_view_history, status, created_at
+      `SELECT id, name, email, can_order, can_view_balance, can_view_history, status, created_at, spend_cap_cents
     FROM sub_accounts WHERE parent_user_id = ? ORDER BY id DESC`
     )
     .all(req.user.id);
@@ -59,6 +60,7 @@ router.get('/sub-accounts', (req, res) => {
 });
 
 router.post('/sub-accounts', (req, res) => {
+  require('../order-notices').applySchema();
   try {
     const {
       name,
@@ -98,6 +100,12 @@ router.post('/sub-accounts', (req, res) => {
         can_order !== false ? 1 : 0,
         can_view_balance ? 1 : 0,
         can_view_history !== false ? 1 : 0
+      );
+    const cap = Number(req.body.spend_cap_cents);
+    if (Number.isSafeInteger(cap) && cap >= 0)
+      db.prepare('UPDATE sub_accounts SET spend_cap_cents=? WHERE id=?').run(
+        cap,
+        r.lastInsertRowid
       );
     res.status(201).json({
       message: 'Membro adicionado!',
@@ -155,6 +163,40 @@ router.get('/white-label-report/:order_id', (req, res) => {
     </div>
     <button onclick="window.print()" style="padding:10px 20px;background:#0284c7;color:#fff;border:none;border-radius:6px">Salvar PDF</button>
     </body></html>`);
+});
+
+router.get('/clients', (req, res) => {
+  require('../order-notices').applySchema();
+  res.json({
+    clients: db
+      .prepare(
+        `SELECT c.id, c.name, c.spend_cap_cents, c.created_at,
+                COALESCE(SUM(CASE WHEN o.status!='canceled' AND datetime(o.created_at)>=datetime('now','start of month') THEN o.charge_cents ELSE 0 END),0) AS spent_cents
+         FROM agency_clients c
+         LEFT JOIN agency_order_clients a ON a.client_id=c.id
+         LEFT JOIN orders o ON o.id=a.order_id
+         WHERE c.user_id=?
+         GROUP BY c.id
+         ORDER BY c.id DESC`
+      )
+      .all(req.user.id),
+  });
+});
+
+router.post('/clients', (req, res) => {
+  require('../order-notices').applySchema();
+  const name = req.body && req.body.name;
+  const cap = Number(req.body && req.body.spend_cap_cents);
+  if (typeof name !== 'string' || !name.trim() || name.trim().length > 80)
+    return res.status(400).json({ error: 'Nome do cliente inválido.' });
+  if (!Number.isSafeInteger(cap) || cap < 0 || cap > 100000000)
+    return res.status(400).json({ error: 'Teto mensal inválido.' });
+  const inserted = db
+    .prepare(
+      'INSERT INTO agency_clients(user_id, name, spend_cap_cents) VALUES(?,?,?)'
+    )
+    .run(req.user.id, name.trim(), cap);
+  res.status(201).json({ id: Number(inserted.lastInsertRowid) });
 });
 
 module.exports = router;

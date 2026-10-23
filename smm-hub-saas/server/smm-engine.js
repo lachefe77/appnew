@@ -29,9 +29,22 @@ async function fetchCurrentUSDBRL() {
   return setting ? parseFloat(setting.value) : 5.6;
 }
 
+function noteOrder(orderId, detail) {
+  try {
+    require('./order-notices').touch(orderId, detail);
+  } catch (err) {
+    logger.warn({ err: err.message, orderId }, 'aviso de status');
+  }
+}
+
 async function handleOrderCompleted(orderId) {
   try {
-    return tx(() => {
+    const already = db
+      .prepare(
+        "SELECT 1 AS ok FROM order_effects WHERE order_id=? AND effect='completed'"
+      )
+      .get(orderId);
+    const result = tx(() => {
       const order = db
         .prepare(
           `
@@ -150,7 +163,17 @@ async function handleOrderCompleted(orderId) {
           order.quantity
         );
       }
+      return true;
     });
+    if (!already && result) {
+      const row = db
+        .prepare(
+          "SELECT user_id, id FROM orders WHERE id=? AND status='completed'"
+        )
+        .get(orderId);
+      if (row) require('./order-notices').record(row.user_id, row.id, 'completed');
+    }
+    return result;
   } catch (err) {
     logger.error(
       { err: err.message, orderId },
@@ -227,6 +250,7 @@ async function dispatchOrder(orderId) {
     `
     ).run(mockRemoteId, startCount, order.is_dripfeed ? order.remains : batchQty, order.id);
     require('./drip-domain').accepted(order.id,mockRemoteId,order.prov_id);
+    noteOrder(order.id);
     return {
       success: true,
       remote_order_id: mockRemoteId,
@@ -281,11 +305,15 @@ async function dispatchOrder(orderId) {
           order.backup_service_id
         );
       }
-      if(require('./drip-domain').reject(order.id)) return {success:false,error:data.error};
+      if(require('./drip-domain').reject(order.id)) {
+        noteOrder(order.id, data.error);
+        return {success:false,error:data.error};
+      }
       db.prepare(
         `UPDATE orders SET status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`
       ).run(order.id);
       refundOrder(order.id);
+      noteOrder(order.id, data.error);
       return { success: false, error: data.error };
     }
 
@@ -296,6 +324,7 @@ async function dispatchOrder(orderId) {
       `
       ).run(String(data.order), order.is_dripfeed ? order.remains : batchQty, order.id);
       require('./drip-domain').accepted(order.id,String(data.order),order.prov_id);
+      noteOrder(order.id);
       return {
         success: true,
         remote_order_id: String(data.order),
@@ -314,6 +343,7 @@ async function dispatchOrder(orderId) {
     db.prepare(
       `UPDATE orders SET status = 'awaiting_confirmation', updated_at = CURRENT_TIMESTAMP WHERE id = ?`
     ).run(order.id);
+    noteOrder(order.id);
     return { success: false, error: err.message };
   }
 }
@@ -327,6 +357,7 @@ async function failoverToBackup(orderId, backupProvId, backupServiceId) {
       db.prepare("UPDATE orders SET status='failed',updated_at=CURRENT_TIMESTAMP WHERE id=?").run(orderId);
       refundOrder(orderId);
     }
+    noteOrder(orderId, 'Provedor ou serviço de backup indisponível.');
     return { success: false, error: 'Provedor ou serviço de backup indisponível.' };
   }
 
@@ -567,6 +598,7 @@ function startOrderProgressWorker() {
 
               const result=require('./order-reconciliation').applyProviderStatus(ord.id,ord.remote_order_id,{status:newRemains===0?'completed':'in progress',remains:newRemains});
               if(result.status==='completed')await handleOrderCompleted(ord.id);
+              else if(result.applied) noteOrder(ord.id);
             }
             continue;
           }
@@ -601,6 +633,7 @@ function startOrderProgressWorker() {
                 );
               if (applied.applied && applied.status === 'completed')
                 await handleOrderCompleted(ord.id);
+              else if (applied.applied) noteOrder(ord.id);
             }
           } catch (err) {
             logger.warn(

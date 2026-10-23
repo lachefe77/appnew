@@ -149,7 +149,10 @@ async function tick() {
         return { oId: order.id };
       });
 
-      if (result.oId) dispatchOrder(result.oId).catch(() => {});
+      if (result.oId) {
+        require('../order-notices').touch(result.oId);
+        dispatchOrder(result.oId).catch(() => {});
+      }
     } catch (err) {
       try {
         require('../ops-desk').logSubscription(sub.id, err.message);

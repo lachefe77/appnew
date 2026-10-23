@@ -692,6 +692,7 @@ async function handleCreateOrder(e) {
     '<i class="fa-solid fa-spinner fa-spin"></i><span>Despachando...</span>';
 
   try {
+    const clientField = document.getElementById('agency-client-select');
     const data = await apiCall('/api/orders', 'POST', {
       service_id: serviceId,
       link,
@@ -701,6 +702,7 @@ async function handleCreateOrder(e) {
       is_dripfeed: isDripfeed ? 1 : 0,
       dripfeed_runs: dripRuns,
       dripfeed_interval: dripInterval,
+      client_id: clientField && clientField.value ? Number(clientField.value) : undefined,
     });
 
     showToast(`Ordem #${data.order.id} despachada com sucesso!`, 'success');
@@ -828,7 +830,7 @@ async function loadSubscriptions() {
       <tr class="hover:bg-gray-800/30">
         <td class="p-4 font-mono text-gray-400">#${s.id}</td>
         <td class="p-4 font-bold text-cyan-400 font-mono">@${escapeText(s.username)}</td>
-        <td class="p-4 font-semibold text-gray-200">${escapeText(s.service_name)}</td>
+        <td class="p-4 font-semibold text-gray-200">${escapeText(s.service_name)}${s.last_message ? `<div class="text-[10px] text-amber-300">Última tentativa: ${escapeText(s.last_message)}</div>` : ''}</td>
         <td class="p-4 font-mono">${s.posts_delivered} / ${s.posts_limit}</td>
         <td class="p-4 font-mono text-gray-400">${s.min_quantity} - ${s.max_quantity}</td>
         <td class="p-4">
@@ -1040,10 +1042,14 @@ function renderOrdersTable() {
       const statusBadges = {
         pending:
           '<span class="px-2 py-0.5 rounded text-[10px] font-bold badge-pending">Pendente</span>',
+        dispatching:
+          '<span class="px-2 py-0.5 rounded text-[10px] font-bold badge-processing">Enviando</span>',
         processing:
           '<span class="px-2 py-0.5 rounded text-[10px] font-bold badge-processing">Processando</span>',
         in_progress:
           '<span class="px-2 py-0.5 rounded text-[10px] font-bold badge-in_progress">Em Andamento</span>',
+        awaiting_confirmation:
+          '<span class="px-2 py-0.5 rounded text-[10px] font-bold badge-processing">Em confirmação</span>',
         completed:
           '<span class="px-2 py-0.5 rounded text-[10px] font-bold badge-completed">Concluído</span>',
         partial:
@@ -1072,6 +1078,13 @@ function renderOrdersTable() {
         o.status === 'completed'
           ? `<button data-action="promptReviewOrder" data-event="click" data-args="${escapeText(JSON.stringify([o.id]))}" class="px-2 py-1 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold inline-block ml-1"><i class="fa-solid fa-star"></i></button>`
           : '';
+      const delivered = Math.max(0, o.quantity - (o.remains || 0));
+      const followBtn = `<button type="button" data-follow="ficha" data-id="${o.id}" class="px-2 py-1 rounded bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold">Ficha</button>`;
+      const againBtn = `<button type="button" data-follow="reorder" data-id="${o.id}" class="px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-[10px] font-bold">De novo</button>`;
+      const cancelBtn =
+        o.status === 'pending' && o.cancel_available
+          ? `<button type="button" data-follow="cancel" data-id="${o.id}" class="px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 text-[10px] font-bold">Cancelar</button>`
+          : '';
 
       return `
       <tr class="hover:bg-gray-800/30 transition">
@@ -1088,8 +1101,11 @@ function renderOrdersTable() {
         </td>
         <td class="p-4 font-mono font-bold">${o.quantity.toLocaleString()}</td>
         <td class="p-4 font-mono font-bold text-emerald-400">${formatPrice(o.charge_cents)}</td>
-        <td class="p-4">${statusBadge}</td>
+        <td class="p-4">${statusBadge}<span class="block text-[10px] text-gray-500">${delivered.toLocaleString()}/${o.quantity.toLocaleString()}</span></td>
         <td class="p-4 text-right space-x-1">
+          ${followBtn}
+          ${againBtn}
+          ${cancelBtn}
           ${receiptBtn}
           ${refillBtn}
           ${reviewBtn}
@@ -1172,7 +1188,7 @@ function renderCatalogTable() {
       <tr class="hover:bg-gray-800/30 transition">
         <td class="p-4 font-mono text-gray-400">#${s.id}</td>
         <td class="p-4 uppercase font-bold text-gray-300 text-[10px] tracking-wider">${escapeText(s.platform)}</td>
-        <td class="p-4 font-semibold text-gray-200">${escapeText(s.name)}</td>
+        <td class="p-4 font-semibold text-gray-200">${escapeText(s.name)}${s.unstable ? ' <span class="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 text-[10px]">Instável</span>' : ''}</td>
         <td class="p-4 font-mono font-bold text-emerald-400">${formatPrice(s.price_per_k_cents)}</td>
         <td class="p-4">${starsRating}</td>
         <td class="p-4 font-mono text-gray-400">${s.min_quantity} / ${s.max_quantity.toLocaleString()}</td>

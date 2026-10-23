@@ -6,6 +6,9 @@ router.get('/', (req, res) => res.json({ combos: domain.list() }));
 router.post('/:id/purchase', (req, res) => {
   try {
     const result = domain.purchase(req.user.id, req.params.id, req.body);
+    if (!result.repeated)
+      for (const orderId of result.order_ids)
+        require('../order-notices').touch(orderId);
     for (const orderId of result.order_ids)
       require('../job-queue').enqueue(
         'dispatch',

@@ -435,6 +435,49 @@ router.post('/orders/:id/partial-refund', requireCEO, (req, res) => {
   }
 });
 
+router.get('/ops/inbox', (req, res) => {
+  ops.applySchema();
+  const floor = Number(ops.ops('provider_balance_floor'));
+  res.json({
+    failed_orders: db
+      .prepare(
+        `SELECT id, user_id, status, link, created_at FROM orders
+         WHERE status IN ('failed','partial') ORDER BY id DESC LIMIT 30`
+      )
+      .all(),
+    refills: db
+      .prepare(
+        `SELECT id, order_id, status, created_at FROM order_refills
+         WHERE status IN ('requested','processing','awaiting_confirmation')
+         ORDER BY id DESC LIMIT 30`
+      )
+      .all(),
+    unassigned_tickets: db
+      .prepare(
+        `SELECT id, subject, status, priority, updated_at FROM tickets
+         WHERE assignee_id IS NULL AND status!='closed'
+         ORDER BY updated_at DESC LIMIT 30`
+      )
+      .all(),
+    below_cost: db
+      .prepare(
+        `SELECT COUNT(*) AS n FROM services
+         WHERE status='active' AND price_per_k_cents < cost_per_k_cents`
+      )
+      .get().n,
+    provider_balance_floor: floor,
+    providers_under_floor:
+      floor > 0
+        ? db
+            .prepare(
+              `SELECT id, name, balance_upstream FROM providers
+               WHERE status='active' AND balance_upstream < ?`
+            )
+            .all(floor)
+        : [],
+  });
+});
+
 router.get('/refills', (req, res) => {
   res.json({
     refills: db

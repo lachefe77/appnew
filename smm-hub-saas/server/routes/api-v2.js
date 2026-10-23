@@ -1,4 +1,4 @@
-const { placeOrder } = require('../order-domain');
+const { placeOrder, placeEach, parseMass } = require('../order-domain');
 const express = require('express');
 const crypto = require('node:crypto');
 const { db, debitBalanceAtomic, tx } = require('../db');
@@ -169,10 +169,78 @@ router.post('/', async (req, res, next) => {
           .get(order, user.id);
         if (!row)
           return res.status(400).json({ error: 'Ordem não encontrada.' });
-        await requestRefill(row.id,params.run);
-        return res.json({ refill: '1' });
+        const refill = await requestRefill(row.id, params.run);
+        return res.json({ refill: String(refill.refill_id) });
       } catch (e) {
         return res.status(400).json({ error: e.message });
+      }
+    }
+
+    if (action === 'cancel') {
+      const notices = require('../order-notices');
+      const ids = params.orders
+        ? String(params.orders)
+            .split(',')
+            .map((item) => Number(item.trim()))
+        : [Number(params.order)];
+      if (
+        !ids.length ||
+        ids.length > 100 ||
+        ids.some((id) => !Number.isSafeInteger(id) || id <= 0)
+      )
+        return res.status(400).json({ error: 'Pedido inválido.' });
+      if (!params.orders) {
+        try {
+          const canceled = notices.cancelOrder(user.id, ids[0]);
+          return res.json({ cancel: canceled.id });
+        } catch (err) {
+          return res.status(err.status || 400).json({ error: err.message });
+        }
+      }
+      const results = {};
+      for (const id of ids) {
+        try {
+          results[id] = { cancel: notices.cancelOrder(user.id, id).id };
+        } catch (err) {
+          results[id] = { error: err.status ? err.message : 'Não foi possível cancelar.' };
+        }
+      }
+      return res.json(results);
+    }
+
+    if (action === 'refill_status') {
+      const refillId = Number(params.refill);
+      if (!Number.isSafeInteger(refillId) || refillId <= 0)
+        return res.status(400).json({ error: 'Reposição inválida.' });
+      const refill = db
+        .prepare(
+          `SELECT r.id, r.status
+           FROM order_refills r JOIN orders o ON o.id=r.order_id
+           WHERE r.id=? AND o.user_id=?`
+        )
+        .get(refillId, user.id);
+      if (!refill) return res.status(400).json({ error: 'Reposição não encontrada.' });
+      const names = {
+        requested: 'Pending',
+        processing: 'In progress',
+        awaiting_confirmation: 'Pending',
+        completed: 'Completed',
+        failed: 'Rejected',
+      };
+      return res.json({
+        status: names[refill.status] || refill.status,
+        refill: refill.id,
+      });
+    }
+
+    if (action === 'mass') {
+      try {
+        const result = placeEach(user.id, parseMass(params.orders));
+        for (const row of result.created) dispatchOrder(row.id).catch(() => {});
+        return res.json(result);
+      } catch (err) {
+        if (err.status) return res.status(err.status).json({ error: err.message });
+        throw err;
       }
     }
 

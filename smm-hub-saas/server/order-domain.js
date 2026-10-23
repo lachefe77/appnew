@@ -213,12 +213,103 @@ function insertOrder(userId, input,pricing) {
   require('./metrics').inc('orders_created_total');
   return { ...q, id, uuid, new_balance_cents: balance };
 }
-function placeOrder(userId, input) {
-  return tx(() => insertOrder(userId, input));
+function remember(userId, results, meta) {
+  const notices = require('./order-notices');
+  for (const result of results) {
+    notices.attach(result.id, meta);
+    notices.record(userId, result.id, 'pending');
+  }
 }
-function placeBatch(userId, inputs) {
+function guardMeta(userId, chargeCents, meta) {
+  if (meta && (meta.placed_by_sub || meta.client_id))
+    require('./order-notices').assertCharge(userId, chargeCents, meta);
+}
+function placeOrder(userId, input, meta) {
+  if (meta && (meta.placed_by_sub || meta.client_id))
+    guardMeta(userId, quoteOrder(userId, input).charge_cents, meta);
+  const result = tx(() => insertOrder(userId, input));
+  remember(userId, [result], meta);
+  return result;
+}
+function placeBatch(userId, inputs, meta) {
   if (!Array.isArray(inputs) || !inputs.length || inputs.length > 100)
     throw error('Lote inválido.');
-  return tx(() => inputs.map((input) => insertOrder(userId, input)));
+  if (meta && (meta.placed_by_sub || meta.client_id)) {
+    const total = inputs.reduce(
+      (sum, input) => sum + quoteOrder(userId, input).charge_cents,
+      0
+    );
+    guardMeta(userId, total, meta);
+  }
+  const results = tx(() => inputs.map((input) => insertOrder(userId, input)));
+  remember(userId, results, meta);
+  return results;
 }
-module.exports = { quoteOrder, placeOrder, placeBatch, insertOrder };
+function placeEach(userId, inputs, meta) {
+  if (!Array.isArray(inputs) || !inputs.length || inputs.length > 100)
+    throw error('Lote inválido.');
+  const created = [];
+  const errors = [];
+  inputs.forEach((input, index) => {
+    try {
+      const result = placeOrder(userId, input, meta);
+      created.push({
+        line: index + 1,
+        id: result.id,
+        charge_cents: result.charge_cents,
+        new_balance_cents: result.new_balance_cents,
+      });
+    } catch (err) {
+      errors.push({
+        line: index + 1,
+        error: err.status ? err.message : 'Linha recusada.',
+      });
+    }
+  });
+  return { created, errors };
+}
+function parseMass(raw) {
+  if (typeof raw !== 'string' || !raw.trim() || raw.length > 20000)
+    throw error('Texto de pedidos obrigatório.');
+  const inputs = raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [service_id, quantity, link] = line.split('|').map((part) => part.trim());
+      return { service_id, quantity, link };
+    });
+  if (!inputs.length || inputs.length > 100) throw error('Lote inválido.');
+  return inputs;
+}
+function previewMass(userId, raw) {
+  return parseMass(raw).map((input, index) => {
+    try {
+      const quote = quoteOrder(userId, input);
+      return {
+        line: index + 1,
+        ok: true,
+        service_name: quote.service.name,
+        quantity: quote.quantity,
+        charge_cents: quote.charge_cents,
+        service_id: quote.service.id,
+        link: quote.link,
+      };
+    } catch (err) {
+      return {
+        line: index + 1,
+        ok: false,
+        error: err.status ? err.message : 'Linha inválida.',
+      };
+    }
+  });
+}
+module.exports = {
+  quoteOrder,
+  placeOrder,
+  placeBatch,
+  placeEach,
+  parseMass,
+  previewMass,
+  insertOrder,
+};
