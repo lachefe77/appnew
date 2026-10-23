@@ -72,6 +72,9 @@ router.post('/mass', async (req, res) => {
       new_balance_cents: results.at(-1).new_balance_cents,
     });
   } catch (err) {
+    try {
+      require('../ops-desk').logMassError(req.user.id, err.message, req.body.raw_text);
+    } catch {}
     res
       .status(err.status || 500)
       .json({ error: err.status ? err.message : 'Erro ao criar lote.' });

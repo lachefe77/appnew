@@ -82,6 +82,14 @@ router.post(
 
       if (provider === 'mercadopago') {
         const ok = verifyMercadoPagoSignature(req.headers, body);
+        try {
+          require('../ops-desk').logWebhook(
+            'pix',
+            body?.data?.id,
+            ok ? 'received' : 'rejected',
+            rawBody
+          );
+        } catch {}
         if (!ok) {
           logger.warn('Webhook MP com assinatura inválida');
           return res.status(401).json({ error: 'Assinatura inválida.' });

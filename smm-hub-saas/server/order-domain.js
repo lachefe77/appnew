@@ -123,6 +123,12 @@ function quoteOrder(userId, input) {
     charge
   )
     throw error('Serviço temporariamente sem preço comercial válido.', 409);
+  require('./ops-desk').assertCommerceGuards(
+    user,
+    service,
+    { ...input, link: url.href },
+    charge
+  );
   return {
     user,
     service,

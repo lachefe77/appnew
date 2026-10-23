@@ -1,7 +1,29 @@
 const config = require('../config');
 
+function opsMaintenance() {
+  try {
+    return require('../ops-desk').maintenanceEnabled();
+  } catch {
+    return false;
+  }
+}
+
+function staffBypass(req) {
+  if (
+    req.path.startsWith('/api/admin') ||
+    req.path.startsWith('/api/auth') ||
+    req.path.startsWith('/health')
+  )
+    return true;
+  if (['/admin.html', '/login.html', '/profile.html'].includes(req.path))
+    return true;
+  return /\.(js|css|svg|png|ico|woff2)$/.test(req.path);
+}
+
 module.exports = function maintenance(req, res, next) {
-  if (!config.maintenance.enabled) return next();
+  const fromDesk = !config.maintenance.enabled && opsMaintenance();
+  if (!config.maintenance.enabled && !fromDesk) return next();
+  if (fromDesk && staffBypass(req)) return next();
   const ip = req.ip.replace('::ffff:', '');
   if (
     config.maintenance.whitelist.includes(ip) ||

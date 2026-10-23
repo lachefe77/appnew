@@ -476,12 +476,20 @@ router.post('/providers/:id/test-balance', async (req, res) => {
       .get(req.params.id);
     if (!prov)
       return res.status(404).json({ error: 'Provedor não encontrado.' });
-    if (prov.is_mock)
+    if (prov.is_mock) {
+      require('../ops-desk').logProviderBalance(
+        prov.id,
+        prov.balance_upstream,
+        prov.currency,
+        1,
+        'mock'
+      );
       return res.json({
         message: 'Modo mock. Conexão OK.',
         balance: prov.balance_upstream,
         currency: prov.currency,
       });
+    }
 
     const params = new URLSearchParams();
     params.append('key', prov.api_key);
@@ -503,6 +511,7 @@ router.post('/providers/:id/test-balance', async (req, res) => {
     db.prepare(
       'UPDATE providers SET balance_upstream=?, currency=?, last_ping_ms=?, last_checked_at=CURRENT_TIMESTAMP WHERE id=?'
     ).run(balance, currency, latency, prov.id);
+    require('../ops-desk').logProviderBalance(prov.id, balance, currency, 1, null);
     res.json({
       message: 'Conexão OK.',
       balance,
@@ -655,6 +664,9 @@ router.post('/services/bulk-markup', (req, res) => {
   const pct = parseFloat(markup_pct);
   if (!Number.isFinite(pct) || pct <= 0 || pct>10000)
     return res.status(400).json({ error: 'Margem inválida.' });
+  try {
+    require('../ops-desk').snapshotMarkup(provider_id, platform);
+  } catch {}
 
   let q = `UPDATE services SET price_per_k_cents = CAST(cost_per_k_cents * (1.0 + (? / 100.0)) AS INTEGER) WHERE status='active'`;
   const params = [pct];
@@ -724,8 +736,12 @@ router.post('/orders/:id/retry', async (req, res) => {
       `UPDATE orders SET status = 'pending', updated_at = CURRENT_TIMESTAMP WHERE id = ?`
     ).run(order.id);
     const result = await dispatchOrder(order.id);
+    require('../ops-desk').logRetry(order.id, req.user.id, 'redispatched', '');
     res.json({ message: 'Ordem redespachada.', result });
   } catch (err) {
+    try {
+      require('../ops-desk').logRetry(req.params.id, req.user.id, 'failed', err.message);
+    } catch {}
     res.status(400).json({ error: err.message });
   }
 });

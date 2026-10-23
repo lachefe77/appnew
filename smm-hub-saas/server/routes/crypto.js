@@ -47,6 +47,14 @@ router.post(
       if (!ok)
         return res.status(401).json({ error: 'Assinatura IPN inválida.' });
       const body = JSON.parse(rawBody);
+      try {
+        require('../ops-desk').logWebhook(
+          'crypto',
+          body.payment_id,
+          'received',
+          rawBody
+        );
+      } catch {}
       if (body.payment_status === 'finished') {
         const txid = `NOW${body.payment_id}`;
         const invoice = db

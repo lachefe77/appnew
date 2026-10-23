@@ -75,6 +75,7 @@
 
     <div class="side-group">Operação</div>
     <div class="side-item" data-pane="orders"><i class="fa-solid fa-cart-shopping w-4"></i>Pedidos</div>
+    <div class="side-item" data-pane="mesa"><i class="fa-solid fa-screwdriver-wrench w-4"></i>Mesa de operação</div>
     <div class="side-item" data-pane="services"><i class="fa-solid fa-list w-4"></i>Serviços</div>
     <div class="side-item" data-pane="providers"><i class="fa-solid fa-server w-4"></i>Provedores</div>
     <div class="side-item" data-pane="anomalies"><i class="fa-solid fa-triangle-exclamation w-4"></i>Anomalias</div>
@@ -163,6 +164,7 @@
     <div id="pane-press" class="pane"><div class="card"><h3 class="font-bold ink-strong mb-4">Press kit — números públicos</h3><pre id="press-json" class="text-xs text-slate-400 overflow-auto"></pre></div></div>
 
     <!-- ORDERS -->
+    <div id="pane-mesa" class="pane"><div class="card"><div id="mesa-root"></div></div></div>
     <div id="pane-orders" class="pane">
       <div class="flex gap-2 mb-4">
         <select id="o-filter" class="select max-w-xs">
@@ -170,6 +172,7 @@
           <option value="processing">Processando</option><option value="completed">Concluídos</option>
           <option value="failed">Falhados</option><option value="canceled">Cancelados</option>
         </select>
+        <input id="o-search" class="input" placeholder="Link, e-mail ou id upstream">
         <button class="btn btn-primary" onclick="loadOrders()">Filtrar</button>
       </div>
       <div class="card"><div id="o-tbl"></div></div>
@@ -338,6 +341,7 @@ const titles = {
   analytics: ['Analytics avançado', 'Performance por provedor e plataforma'],
   press: ['Press kit', 'Números para imprensa e parceiros'],
   orders: ['Pedidos', 'Todas as ordens do sistema'],
+  mesa: ['Mesa de operação', 'Pedido, admin, cobrança e VPS prontos para configurar'],
   services: ['Serviços', 'Catálogo completo editável'],
   providers: ['Provedores', 'APIs upstream SMM v2'],
   anomalies: ['Anomalias', 'Serviços com alta taxa de falha nas últimas 24h'],
@@ -566,6 +570,7 @@ async function saveSettings() {
 <script src="/admin-operations.js" defer></script>
 <script src="/combos-admin.js" defer></script>
 <script src="/admin-desk.js" defer></script>
+<script src="/mesa-admin.js" defer></script>
 <script src="/accessibility.js" defer></script>
 </body>
 </html>

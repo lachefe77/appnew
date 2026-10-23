@@ -77,6 +77,7 @@ async function bootstrap() {
   initDB();
   applyExtendedSchema();
   applyV3Schema();
+  require('./ops-desk').applySchema();
   require('./mail').registerMailWorker();
   require('./job-queue').registerHandler('dispatch', ({ orderId }) =>
     require('./smm-engine').dispatchOrder(orderId)
@@ -251,6 +252,7 @@ async function bootstrap() {
   app.use('/api/tickets', ticketsRoutes);
   app.use('/api/support', require('./routes/support'));
   app.use('/api/admin', adminRoutes);
+  app.use('/api/admin', require('./routes/admin-next'));
   app.use('/api/admin', require('./routes/admin-catalog'));
   app.use('/api/admin', adminExtrasRoutes);
   app.use('/api/admin/integrations', require('./routes/integrations'));

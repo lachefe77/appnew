@@ -151,6 +151,9 @@ async function tick() {
 
       if (result.oId) dispatchOrder(result.oId).catch(() => {});
     } catch (err) {
+      try {
+        require('../ops-desk').logSubscription(sub.id, err.message);
+      } catch {}
       logger.error(
         { subId: sub.id, err: err.message },
         'Subscription tick falhou'

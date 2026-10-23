@@ -32,9 +32,14 @@ router.post('/', async (req, res, next) => {
         .json({ error: 'Chave de API não informada (key is missing)' });
     }
 
-    const user = db
-      .prepare('SELECT id, balance_cents, status FROM users WHERE api_key = ?')
-      .get(key);
+    let user;
+    try {
+      user = require('../ops-desk').userByApiKey(key);
+    } catch {
+      user = db
+        .prepare('SELECT id, balance_cents, status FROM users WHERE api_key = ?')
+        .get(key);
+    }
     if (!user || user.status !== 'active') {
       return res
         .status(401)
