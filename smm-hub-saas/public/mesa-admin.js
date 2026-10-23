@@ -89,6 +89,7 @@
   let output;
   function message(text) {
     output.textContent = text;
+    output.scrollIntoView({ block: 'start' });
   }
   function show(data) {
     output.textContent = '';
@@ -98,6 +99,7 @@
       pre.textContent = JSON.stringify(data, null, 2);
       output.append(pre);
     }
+    output.scrollIntoView({ block: 'start' });
   }
 
   loaders.mesa = async function () {
@@ -443,6 +445,6 @@
       button('Ver destinos de backup', async () => show(await api('/api/admin/backup-targets')))
     );
 
-    root.append(intro, tools, forms, output);
+    root.append(intro, output, tools, forms);
   };
 })();
