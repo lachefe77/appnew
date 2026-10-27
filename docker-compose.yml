@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nh
+      POSTGRES_PASSWORD: nh
+      POSTGRES_DB: novos_horizontes
+    ports:
+      - "5432:5432"
+    volumes:
+      - nh_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nh -d novos_horizontes"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Opcional. O app registra a mensagem mesmo sem este container.
+  # Confira as variáveis na documentação da Evolution API v2 antes de usar em produção.
+  evolution:
+    profiles: ["whatsapp"]
+    image: atendai/evolution-api:v2.2.3
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_URL: http://localhost:8080
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-change-me-evolution-key}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://nh:nh@postgres:5432/novos_horizontes?schema=evolution
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/1
+      LANGUAGE: pt
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  nh_pg:
