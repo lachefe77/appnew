@@ -104,7 +104,7 @@ export default async function AdminPage() {
           </ul>
         </Card>
         <Card>
-          <h2 className="text-xl font-semibold">Leituras da conta mestre</h2>
+          <h2 className="text-xl font-semibold">Leituras do saldo do galpão</h2>
           <ul className="mt-3 space-y-2 text-sm">
             {snapshots.map((row) => (
               <li key={row.id} className="flex justify-between gap-3">

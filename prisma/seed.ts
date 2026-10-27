@@ -37,7 +37,7 @@ async function main() {
 
   const admin = await upsertUser({
     email: "admin@novoshorizontes.test",
-    name: "Mestre do Atacadão",
+    name: "Master",
     password: "Admin#Horizonte",
     role: "MASTER",
     planStatus: "ACTIVE",

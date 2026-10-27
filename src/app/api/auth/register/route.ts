@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { SESSION_COOKIE, signSession } from "@/lib/session";
+import { recordAccess } from "@/server/access";
 import { registerAccount } from "@/server/accounts";
 import { jsonError } from "@/server/api";
 import { registerSchema } from "@/server/validators";
@@ -10,6 +11,7 @@ export async function POST(request: Request) {
     const cookie = request.headers.get("cookie") ?? "";
     const affiliate = cookie.match(/(?:^|; )ma_ref=([^;]+)/)?.[1];
     const user = await registerAccount(input, affiliate ? decodeURIComponent(affiliate) : null);
+    await recordAccess(user.id, request, "register");
     const token = await signSession({ id: user.id, role: user.role, email: user.email });
     const next = user.role === "RESELLER" ? "/painel" : "/";
     const response = NextResponse.json({ ok: true, next });

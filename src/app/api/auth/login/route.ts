@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { SESSION_COOKIE, safeNext, signSession } from "@/lib/session";
+import { recordAccess } from "@/server/access";
 import { loginAccount } from "@/server/accounts";
 import { jsonError } from "@/server/api";
 import { homePath } from "@/server/roles";
@@ -9,6 +10,7 @@ export async function POST(request: Request) {
   try {
     const input = loginSchema.parse(await request.json());
     const user = await loginAccount(input.email, input.password);
+    await recordAccess(user.id, request, "login");
     const token = await signSession({ id: user.id, role: user.role, email: user.email });
     const next =
       safeNext(input.next) ?? homePath(user.role);

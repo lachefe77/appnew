@@ -13,6 +13,13 @@ const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("role"), userId: z.string().min(1), role: roleSchema }),
   z.object({ action: z.literal("note"), userId: z.string().min(1), note: z.string().trim().max(500) }),
   z.object({
+    action: z.literal("profile"),
+    userId: z.string().min(1),
+    name: z.string().trim().min(3).max(120),
+    email: z.string().trim().email(),
+    phone: z.string().trim().max(20).optional().default(""),
+  }),
+  z.object({
     action: z.literal("create"),
     name: z.string().trim().min(3),
     email: z.string().trim().email(),
@@ -26,7 +33,7 @@ export async function POST(request: Request) {
     const actor = await requireApiUser(["MASTER", "ADMIN"]);
     const input = schema.parse(await readJson(request));
     if (input.action === "create") {
-      if (input.role === "ADMIN" && actor.role !== "MASTER") throw new AppError("Só o mestre cria administrador", "FORBIDDEN", 403);
+      if (input.role === "ADMIN" && actor.role !== "MASTER") throw new AppError("Só o Master cria administrador", "FORBIDDEN", 403);
       const user = await prisma.user.create({
         data: {
           name: input.name,
@@ -41,18 +48,25 @@ export async function POST(request: Request) {
     }
     const target = await prisma.user.findUnique({ where: { id: input.userId } });
     if (!target) throw new AppError("Usuário não encontrado", "NOT_FOUND", 404);
-    if (target.role === "MASTER" && actor.role !== "MASTER") throw new AppError("O administrador não altera o mestre", "FORBIDDEN", 403);
+    if (target.role === "MASTER" && actor.role !== "MASTER") throw new AppError("O administrador não altera o Master", "FORBIDDEN", 403);
     if (target.id === actor.id && (input.action === "suspend" || input.action === "role")) {
       throw new AppError("Você não altera o próprio cargo nem se suspende", "FORBIDDEN", 403);
     }
     if (input.action === "role") {
-      if (input.role === "MASTER" && actor.role !== "MASTER") throw new AppError("Só o mestre entrega o cargo de mestre", "FORBIDDEN", 403);
-      if (input.role === "ADMIN" && actor.role !== "MASTER") throw new AppError("Só o mestre cria administrador", "FORBIDDEN", 403);
+      if (input.role === "MASTER" && actor.role !== "MASTER") throw new AppError("Só o Master entrega o cargo de Master", "FORBIDDEN", 403);
+      if (input.role === "ADMIN" && actor.role !== "MASTER") throw new AppError("Só o Master cria administrador", "FORBIDDEN", 403);
       if (target.role === "MASTER" && input.role !== "MASTER") {
         const masters = await prisma.user.count({ where: { role: "MASTER" } });
-        if (masters <= 1) throw new AppError("A casa precisa de um mestre", "LAST_MASTER", 409);
+        if (masters <= 1) throw new AppError("A casa precisa de um Master", "LAST_MASTER", 409);
       }
       await prisma.user.update({ where: { id: target.id }, data: { role: input.role } });
+      return NextResponse.json({ ok: true });
+    }
+    if (input.action === "profile") {
+      await prisma.user.update({
+        where: { id: target.id },
+        data: { name: input.name, email: input.email.toLowerCase(), phone: input.phone || null },
+      });
       return NextResponse.json({ ok: true });
     }
     if (input.action === "note") {

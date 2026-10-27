@@ -9,7 +9,7 @@ export function isStaff(role: string) {
 }
 
 export function roleLabel(role: string) {
-  if (role === "MASTER") return "Mestre";
+  if (role === "MASTER") return "Master";
   if (role === "ADMIN") return "Administrador";
   if (role === "SUPPORT" || role === "OPERATOR") return "Suporte";
   if (role === "RESELLER") return "Revendedor";

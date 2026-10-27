@@ -136,6 +136,34 @@ export function TxHashForm({ publicCode }: { publicCode: string }) {
   );
 }
 
+export function ProfileForm({ userId, name, email, phone }: { userId: string; name: string; email: string; phone: string }) {
+  const router = useRouter();
+  const [form, setForm] = useState({ name, email, phone });
+  const [message, setMessage] = useState("");
+  return (
+    <form
+      className="grid gap-2 sm:grid-cols-3"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        const response = await fetch("/api/admin/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "profile", userId, ...form }),
+        });
+        const body = (await response.json()) as { error?: string };
+        setMessage(response.ok ? "Dados salvos" : body.error ?? "Não salvou");
+        if (response.ok) router.refresh();
+      }}
+    >
+      <input className="field" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
+      <input className="field" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
+      <input className="field" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} placeholder="WhatsApp" />
+      <button className="w-fit rounded-full bg-ink px-4 py-2 text-sm text-white">Salvar cadastro</button>
+      {message ? <p className="text-sm text-muted sm:col-span-3">{message}</p> : null}
+    </form>
+  );
+}
+
 export function UserControl({ userId, role, note }: { userId: string; role: string; note: string }) {
   const router = useRouter();
   const [nextRole, setNextRole] = useState(role === "OPERATOR" ? "SUPPORT" : role);
@@ -157,7 +185,7 @@ export function UserControl({ userId, role, note }: { userId: string; role: stri
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         <select className="field w-auto" value={nextRole} onChange={(event) => setNextRole(event.target.value)}>
-          <option value="MASTER">Mestre</option>
+          <option value="MASTER">Master</option>
           <option value="ADMIN">Administrador</option>
           <option value="SUPPORT">Suporte</option>
           <option value="RESELLER">Revendedor</option>

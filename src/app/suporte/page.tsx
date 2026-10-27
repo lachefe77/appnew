@@ -12,7 +12,7 @@ export default async function SupportPage() {
     <div className="grid gap-8 lg:grid-cols-2">
       <div className="space-y-4">
         <h1 className="text-4xl font-semibold">Suporte</h1>
-        <p className="text-sm text-muted">Escreva para {brand.supportEmail} por aqui. Mestre, administrador e suporte respondem no admin.</p>
+        <p className="text-sm text-muted">Escreva para {brand.supportEmail} por aqui. Master, administrador e suporte respondem no admin.</p>
         <SupportForm name={user?.name} email={user?.email} />
       </div>
       <div className="space-y-3">
