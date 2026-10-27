@@ -9,6 +9,7 @@ datasource db {
 
 enum Role {
   ADMIN
+  OPERATOR
   RESELLER
   CUSTOMER
 }
@@ -73,11 +74,13 @@ model User {
   phone        String?
   role         Role            @default(CUSTOMER)
   planStatus   PlanStatus      @default(INACTIVE)
+  storeSlug    String?         @unique
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   wallet       Wallet?
   orders       Order[]         @relation("TenantOrders")
   imports      CatalogImport[]
+  customers    ResellerCustomer[]
 }
 
 model Wallet {
@@ -123,6 +126,10 @@ model Product {
   suggestedRetailCents   Int
   stockQuantity          Int
   isActive               Boolean         @default(true)
+  curated                Boolean         @default(false)
+  shipDays               Int             @default(2)
+  bundleQty              Int?
+  bundlePriceCents       Int?
   weightGrams            Int             @default(500)
   createdAt              DateTime        @default(now())
   updatedAt              DateTime        @updatedAt
@@ -236,6 +243,32 @@ model OutboxJob {
   updatedAt   DateTime     @updatedAt
 
   @@index([status, runAt])
+}
+
+model ResellerCustomer {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  name        String
+  cpf         String
+  phone       String
+  email       String?
+  addressJson Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, cpf])
+  @@index([userId, name])
+}
+
+model BalanceSnapshot {
+  id           String   @id @default(cuid())
+  source       String
+  balanceCents Int
+  currency     String
+  createdAt    DateTime @default(now())
+
+  @@index([source, createdAt])
 }
 
 model AdminAlert {

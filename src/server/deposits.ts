@@ -1,4 +1,4 @@
-import { config } from "./config";
+import { getCommerce } from "./commerce";
 import { newId } from "./crypto";
 import { prisma } from "./db";
 import { AppError } from "./errors";
@@ -7,8 +7,9 @@ import { issuePix } from "./payments";
 import { wake } from "./queue";
 
 export async function generatePixDeposit(userId: string, amountCents: number) {
-  if (!Number.isInteger(amountCents) || amountCents < config.minDepositCents) {
-    throw new AppError(`A recarga mínima é ${formatBRL(config.minDepositCents)}`, "MIN_DEPOSIT");
+  const commerce = await getCommerce();
+  if (!Number.isInteger(amountCents) || amountCents < commerce.minDepositCents) {
+    throw new AppError(`A recarga mínima é ${formatBRL(commerce.minDepositCents)}`, "MIN_DEPOSIT");
   }
   const user = await prisma.user.findUnique({ where: { id: userId }, include: { wallet: true } });
   if (!user?.wallet) throw new AppError("Carteira não encontrada", "NO_WALLET", 404);
@@ -42,10 +43,10 @@ export async function generatePixDeposit(userId: string, amountCents: number) {
       queue: "abandoned-pix-queue",
       jobKey: `recover:${charge.id}`,
       payloadJson: { chargeId: charge.id },
-      runAt: new Date(Date.now() + config.abandonedPixDelayMs),
+      runAt: new Date(Date.now() + commerce.abandonedPixDelayMs),
     },
   });
-  await wake("abandoned-pix-queue", outbox.id, config.abandonedPixDelayMs);
+  await wake("abandoned-pix-queue", outbox.id, commerce.abandonedPixDelayMs);
   return {
     externalId: charge.externalId,
     amountCents,

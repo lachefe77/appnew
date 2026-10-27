@@ -3,7 +3,12 @@ import Link from "next/link";
 const links = [
   ["/admin", "Operação"],
   ["/admin/pedidos", "Pedidos"],
+  ["/admin/revendedores", "Revendedores"],
+  ["/admin/catalogo", "Catálogo"],
   ["/admin/mensagens", "Mensagens"],
+  ["/admin/webhooks", "Webhooks"],
+  ["/admin/configuracoes", "Ajustes"],
+  ["/admin/equipe", "Equipe"],
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

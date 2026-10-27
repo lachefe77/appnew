@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient, type Prisma } from "@prisma/client";
-import { ensureFixtures, pricesFromCost } from "../src/server/catalog";
+import { ensureFixtures } from "../src/server/catalog";
 import { config } from "../src/server/config";
 import { sha256 } from "../src/server/crypto";
 
@@ -21,6 +21,19 @@ async function main() {
   await prisma.$executeRawUnsafe(`ALTER TABLE "Wallet" ADD CONSTRAINT wallet_balance_nonnegative CHECK ("balanceCents" >= 0)`);
 
   await ensureFixtures();
+  const catalog = await prisma.product.findMany();
+  for (const product of catalog) {
+    if (product.images.length === 0) {
+      await prisma.product.update({
+        where: { id: product.id },
+        data: { images: [`/catalog/${product.slug}.jpg`] },
+      });
+    }
+  }
+  await prisma.product.updateMany({
+    where: { slug: "parafusadeira-21v", bundleQty: null },
+    data: { bundleQty: 2, bundlePriceCents: 59600 },
+  });
 
   const admin = await upsertUser({
     email: "admin@novoshorizontes.test",
@@ -31,6 +44,15 @@ async function main() {
     cpfCnpj: "52998224725",
     phone: "11900000001",
   });
+  await upsertUser({
+    email: "operador@novoshorizontes.test",
+    name: "Operador do Galpão",
+    password: "Operador#Horizonte",
+    role: "OPERATOR",
+    planStatus: "ACTIVE",
+    cpfCnpj: "15350946056",
+    phone: "11900000002",
+  });
   const reseller = await upsertUser({
     email: "revenda@novoshorizontes.test",
     name: "Marina Alves",
@@ -40,6 +62,10 @@ async function main() {
     cpfCnpj: "39053344705",
     phone: "11988887777",
   });
+  if (!reseller.storeSlug) {
+    await prisma.user.update({ where: { id: reseller.id }, data: { storeSlug: "marina" } });
+    reseller.storeSlug = "marina";
+  }
 
   await prisma.setting.upsert({
     where: { key: "cj_master_balance_cents" },
@@ -104,7 +130,7 @@ async function main() {
     resellerWalletId: null,
   });
 
-  const wholesale = pricesFromCost(gun.supplierCostCents).platformWholesaleCents;
+  const wholesale = Math.round(gun.supplierCostCents * config.spread);
   await ensureDemoOrder({
     publicCode: "NH-DEMO002",
     clientRequestId: "seed-demo-b2b",
@@ -130,7 +156,7 @@ async function upsertUser(input: {
   email: string;
   name: string;
   password: string;
-  role: "ADMIN" | "RESELLER" | "CUSTOMER";
+  role: "ADMIN" | "OPERATOR" | "RESELLER" | "CUSTOMER";
   planStatus: "ACTIVE" | "INACTIVE";
   cpfCnpj: string;
   phone: string;

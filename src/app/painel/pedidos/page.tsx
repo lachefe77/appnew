@@ -7,7 +7,7 @@ import { prisma } from "@/server/db";
 
 export default async function ResellerOrdersPage() {
   const user = await requireUser(["RESELLER", "ADMIN"]);
-  const [imports, orders] = await Promise.all([
+  const [imports, orders, customers] = await Promise.all([
     prisma.catalogImport.findMany({
       where: { userId: user.id, product: { isActive: true } },
       include: { product: true },
@@ -18,6 +18,7 @@ export default async function ResellerOrdersPage() {
       orderBy: { createdAt: "desc" },
       take: 30,
     }),
+    prisma.resellerCustomer.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
   ]);
   const rows: OrderRow[] = orders.map((order) => ({
     publicCode: order.publicCode,
@@ -42,8 +43,10 @@ export default async function ResellerOrdersPage() {
             id: item.product.id,
             title: item.product.title,
             wholesaleCents: item.product.platformWholesaleCents,
+            retailCents: item.retailPriceCents,
             stockQuantity: item.product.stockQuantity,
           }))}
+          customers={customers}
         />
       </Card>
       <Card>

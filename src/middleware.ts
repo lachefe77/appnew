@@ -10,7 +10,7 @@ export async function middleware(request: NextRequest) {
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
-  if (pathname.startsWith("/admin") && session.role !== "ADMIN") {
+  if (pathname.startsWith("/admin") && session.role !== "ADMIN" && session.role !== "OPERATOR") {
     return NextResponse.redirect(new URL("/painel", request.url));
   }
   if (pathname.startsWith("/painel") && session.role === "CUSTOMER") {

@@ -1,83 +1,170 @@
-import { Prisma } from "@prisma/client";
-import { config } from "./config";
+import { Prisma, type SupplierSource } from "@prisma/client";
+import { getCommerce } from "./commerce";
 import { prisma } from "./db";
 import { AppError } from "./errors";
 import { sha256, publicCode } from "./crypto";
 import { issuePix } from "./payments";
+import { quoteLine } from "./pricing";
 import { wake } from "./queue";
 import { applyWalletEntry } from "./wallet";
-import type { B2COrderInput } from "./validators";
+import type { AddressInput, CustomerInput } from "./validators";
 import { notifyAdmin } from "./notifications";
 
 const orderInclude = { items: true, charge: true } satisfies Prisma.OrderInclude;
 
-export async function createStoreOrder(input: B2COrderInput) {
-  if (input.clientRequestId) {
-    const existing = await prisma.order.findUnique({ where: { clientRequestId: input.clientRequestId } });
-    if (existing) return existing;
-  }
-  const product = await prisma.product.findUnique({ where: { id: input.productId } });
-  if (!product || !product.isActive) throw new AppError("Produto indisponível", "PRODUCT_UNAVAILABLE", 404);
+type LineRequest = { productId: string; quantity: number };
 
-  const totalSale = product.suggestedRetailCents * input.quantity;
-  const pix = await issuePix({
-    amountCents: totalSale,
-    description: `Pedido ${product.title}`,
-    externalReference: input.clientRequestId ?? publicCode(),
-    customer: {
-      name: input.customer.name,
-      cpfCnpj: input.customer.cpf,
-      email: input.customer.email,
-      phone: input.customer.phone,
-    },
+type CheckoutInput = {
+  clientRequestId?: string;
+  customer: CustomerInput;
+  address: AddressInput;
+  items?: LineRequest[];
+  productId?: string;
+  quantity?: number;
+};
+
+export async function createStoreOrder(input: CheckoutInput) {
+  return createCheckout(null, input);
+}
+
+export async function createResellerOrder(userId: string, input: CheckoutInput) {
+  return createCheckout(userId, input);
+}
+
+async function createCheckout(userId: string | null, input: CheckoutInput) {
+  const existing = await findExisting(input.clientRequestId);
+  if (existing.length > 0) return existing;
+
+  const requests = normalizeLines(input);
+  const products = await prisma.product.findMany({ where: { id: { in: requests.map((line) => line.productId) } } });
+  const byId = new Map(products.map((product) => [product.id, product]));
+  const imports = userId
+    ? await prisma.catalogImport.findMany({
+        where: { userId, productId: { in: requests.map((line) => line.productId) } },
+      })
+    : [];
+  const importByProduct = new Map(imports.map((row) => [row.productId, row]));
+
+  const prepared = requests.map((line) => {
+    const product = byId.get(line.productId);
+    if (!product || !product.isActive) throw new AppError("Produto indisponível", "PRODUCT_UNAVAILABLE", 404);
+    if (userId && !importByProduct.has(product.id)) {
+      throw new AppError("Importe o produto para a sua vitrine antes de vender", "NOT_IMPORTED", 409);
+    }
+    const saleUnit = userId ? importByProduct.get(product.id)?.retailPriceCents : undefined;
+    return { product, quantity: line.quantity, quote: quoteLine(product, line.quantity, saleUnit) };
   });
 
-  try {
+  const groups = new Map<SupplierSource, typeof prepared>();
+  for (const line of prepared) {
+    const bucket = groups.get(line.product.supplierSource) ?? [];
+    bucket.push(line);
+    groups.set(line.product.supplierSource, bucket);
+  }
+
+  const commerce = await getCommerce();
+  const orders = [];
+  for (const [source, lines] of groups) {
+    const totalSale = lines.reduce((sum, line) => sum + line.quote.sale, 0);
+    const requestId = groups.size === 1 ? input.clientRequestId : input.clientRequestId ? `${input.clientRequestId}:${source}` : undefined;
+    const pix = userId
+      ? null
+      : await issuePix({
+          amountCents: totalSale,
+          description: `Pedido ${lines.map((line) => line.product.title).join(", ")}`.slice(0, 140),
+          externalReference: requestId ?? publicCode(),
+          customer: {
+            name: input.customer.name,
+            cpfCnpj: input.customer.cpf,
+            email: input.customer.email,
+            phone: input.customer.phone,
+          },
+        });
+
     const created = await prisma.$transaction(async (tx) => {
-      const reserved = await tx.product.updateMany({
-        where: { id: product.id, isActive: true, stockQuantity: { gte: input.quantity } },
-        data: { stockQuantity: { decrement: input.quantity } },
-      });
-      if (reserved.count !== 1) throw new AppError("Sem estoque suficiente", "OUT_OF_STOCK", 409);
+      for (const line of lines) {
+        const reserved = await tx.product.updateMany({
+          where: { id: line.product.id, isActive: true, stockQuantity: { gte: line.quantity } },
+          data: { stockQuantity: { decrement: line.quantity } },
+        });
+        if (reserved.count !== 1) throw new AppError("Sem estoque suficiente", "OUT_OF_STOCK", 409);
+      }
       const order = await tx.order.create({
         data: {
           publicCode: publicCode(),
-          clientRequestId: input.clientRequestId,
-          channel: "B2C",
+          clientRequestId: requestId,
+          tenantId: userId,
+          channel: userId ? "B2B" : "B2C",
           customerName: input.customer.name,
           customerCpf: input.customer.cpf,
           customerPhone: input.customer.phone,
           customerEmail: emptyToNull(input.customer.email),
           shippingAddressJson: input.address,
-          totalCostCents: product.supplierCostCents * input.quantity,
-          totalWholesaleCents: product.platformWholesaleCents * input.quantity,
+          totalCostCents: lines.reduce((sum, line) => sum + line.quote.cost, 0),
+          totalWholesaleCents: lines.reduce((sum, line) => sum + line.quote.wholesale, 0),
           totalSaleCents: totalSale,
-          paymentStatus: "PENDING",
-          fulfillmentStatus: "WAITING_PAYMENT",
-          supplierSource: product.supplierSource,
-          pixCopyPaste: pix.pixCopyPaste,
-          pixQrCodeBase64: pix.qrCodeBase64,
+          paymentStatus: userId ? "PAID" : "PENDING",
+          fulfillmentStatus: userId ? "QUEUED" : "WAITING_PAYMENT",
+          supplierSource: source,
+          pixCopyPaste: pix?.pixCopyPaste,
+          pixQrCodeBase64: pix?.qrCodeBase64,
           items: {
-            create: {
-              productId: product.id,
-              title: product.title,
-              quantity: input.quantity,
-              unitCostCents: product.supplierCostCents,
-              unitWholesaleCents: product.platformWholesaleCents,
-              unitSaleCents: product.suggestedRetailCents,
-            },
+            create: lines.map((line) => ({
+              productId: line.product.id,
+              title: line.product.title,
+              quantity: line.quantity,
+              unitCostCents: line.product.supplierCostCents,
+              unitWholesaleCents: line.product.platformWholesaleCents,
+              unitSaleCents: line.quote.unitSale,
+            })),
           },
         },
       });
+      if (userId) {
+        await applyWalletEntry(tx, {
+          userId,
+          orderId: order.id,
+          amountCents: BigInt(-order.totalWholesaleCents),
+          type: "ORDER_DEBIT",
+          idempotencyKey: sha256(`${userId}:${order.id}:ORDER_DEBIT`),
+          description: `Atacado do pedido ${order.publicCode}`,
+        });
+        await tx.resellerCustomer.upsert({
+          where: { userId_cpf: { userId, cpf: input.customer.cpf } },
+          create: {
+            userId,
+            name: input.customer.name,
+            cpf: input.customer.cpf,
+            phone: input.customer.phone,
+            email: emptyToNull(input.customer.email),
+            addressJson: input.address,
+          },
+          update: {
+            name: input.customer.name,
+            phone: input.customer.phone,
+            email: emptyToNull(input.customer.email),
+            addressJson: input.address,
+          },
+        });
+        const outbox = await tx.outboxJob.create({
+          data: {
+            queue: "fulfillment-queue",
+            jobKey: `fulfill:${order.id}`,
+            payloadJson: { orderId: order.id },
+            runAt: new Date(),
+          },
+        });
+        return { order, outboxId: outbox.id, delay: 0, queue: "fulfillment-queue" as const };
+      }
       const charge = await tx.pixCharge.create({
         data: {
           purpose: "ORDER_PAYMENT",
           orderId: order.id,
-          provider: pix.provider,
-          externalId: pix.externalId,
+          provider: pix!.provider,
+          externalId: pix!.externalId,
           amountCents: BigInt(totalSale),
-          pixCopyPaste: pix.pixCopyPaste,
-          expiresAt: pix.expiresAt,
+          pixCopyPaste: pix!.pixCopyPaste,
+          expiresAt: pix!.expiresAt,
         },
       });
       const outbox = await tx.outboxJob.create({
@@ -85,99 +172,35 @@ export async function createStoreOrder(input: B2COrderInput) {
           queue: "abandoned-pix-queue",
           jobKey: `recover:${charge.id}`,
           payloadJson: { chargeId: charge.id },
-          runAt: new Date(Date.now() + config.abandonedPixDelayMs),
+          runAt: new Date(Date.now() + commerce.abandonedPixDelayMs),
         },
       });
-      return { order, outboxId: outbox.id };
+      return { order, outboxId: outbox.id, delay: commerce.abandonedPixDelayMs, queue: "abandoned-pix-queue" as const };
     });
-    await wake("abandoned-pix-queue", created.outboxId, config.abandonedPixDelayMs);
-    return created.order;
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002" && input.clientRequestId) {
-      const existing = await prisma.order.findUnique({ where: { clientRequestId: input.clientRequestId } });
-      if (existing) return existing;
-    }
-    throw error;
+    await wake(created.queue, created.outboxId, created.delay);
+    orders.push(created.order);
   }
+  return orders;
 }
 
-export async function createResellerOrder(userId: string, input: B2COrderInput) {
-  if (input.clientRequestId) {
-    const existing = await prisma.order.findUnique({ where: { clientRequestId: input.clientRequestId } });
-    if (existing) return existing;
-  }
-  const product = await prisma.product.findUnique({ where: { id: input.productId } });
-  if (!product || !product.isActive) throw new AppError("Produto indisponível", "PRODUCT_UNAVAILABLE", 404);
-  const imported = await prisma.catalogImport.findUnique({
-    where: { userId_productId: { userId, productId: product.id } },
+async function findExisting(clientRequestId?: string) {
+  if (!clientRequestId) return [];
+  return prisma.order.findMany({
+    where: {
+      OR: [{ clientRequestId }, { clientRequestId: { startsWith: `${clientRequestId}:` } }],
+    },
+    orderBy: { createdAt: "asc" },
   });
-  if (!imported) throw new AppError("Importe o produto para a sua vitrine antes de vender", "NOT_IMPORTED", 409);
+}
 
-  const quantity = input.quantity;
-  const wholesale = product.platformWholesaleCents * quantity;
-  try {
-    const created = await prisma.$transaction(async (tx) => {
-      const reserved = await tx.product.updateMany({
-        where: { id: product.id, isActive: true, stockQuantity: { gte: quantity } },
-        data: { stockQuantity: { decrement: quantity } },
-      });
-      if (reserved.count !== 1) throw new AppError("Sem estoque suficiente", "OUT_OF_STOCK", 409);
-      const order = await tx.order.create({
-        data: {
-          publicCode: publicCode(),
-          clientRequestId: input.clientRequestId,
-          tenantId: userId,
-          channel: "B2B",
-          customerName: input.customer.name,
-          customerCpf: input.customer.cpf,
-          customerPhone: input.customer.phone,
-          customerEmail: emptyToNull(input.customer.email),
-          shippingAddressJson: input.address,
-          totalCostCents: product.supplierCostCents * quantity,
-          totalWholesaleCents: wholesale,
-          totalSaleCents: imported.retailPriceCents * quantity,
-          paymentStatus: "PAID",
-          fulfillmentStatus: "QUEUED",
-          supplierSource: product.supplierSource,
-          items: {
-            create: {
-              productId: product.id,
-              title: product.title,
-              quantity,
-              unitCostCents: product.supplierCostCents,
-              unitWholesaleCents: product.platformWholesaleCents,
-              unitSaleCents: imported.retailPriceCents,
-            },
-          },
-        },
-      });
-      await applyWalletEntry(tx, {
-        userId,
-        orderId: order.id,
-        amountCents: BigInt(-wholesale),
-        type: "ORDER_DEBIT",
-        idempotencyKey: sha256(`${userId}:${order.id}:ORDER_DEBIT`),
-        description: `Atacado do pedido ${order.publicCode}`,
-      });
-      const outbox = await tx.outboxJob.create({
-        data: {
-          queue: "fulfillment-queue",
-          jobKey: `fulfill:${order.id}`,
-          payloadJson: { orderId: order.id },
-          runAt: new Date(),
-        },
-      });
-      return { order, outboxId: outbox.id };
-    });
-    await wake("fulfillment-queue", created.outboxId, 0);
-    return created.order;
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002" && input.clientRequestId) {
-      const existing = await prisma.order.findUnique({ where: { clientRequestId: input.clientRequestId } });
-      if (existing) return existing;
-    }
-    throw error;
+function normalizeLines(input: CheckoutInput): LineRequest[] {
+  const source = input.items && input.items.length > 0 ? input.items : input.productId ? [{ productId: input.productId, quantity: input.quantity ?? 1 }] : [];
+  if (source.length === 0) throw new AppError("Escolha ao menos um produto", "EMPTY_CART", 400);
+  const merged = new Map<string, number>();
+  for (const line of source) {
+    merged.set(line.productId, (merged.get(line.productId) ?? 0) + line.quantity);
   }
+  return [...merged.entries()].map(([productId, quantity]) => ({ productId, quantity }));
 }
 
 export async function refundOrder(orderId: string) {
@@ -217,7 +240,7 @@ export async function refundOrder(orderId: string) {
   if (order.channel === "B2C") {
     await notifyAdmin(
       "Estorno de pedido B2C",
-      `O pedido ${order.publicCode} foi marcado como estornado. Devolva o PIX no gateway — o sandbox não movimenta banco.`,
+      `O pedido ${order.publicCode} foi marcado como estornado. Devolva o PIX no gateway. O sandbox não movimenta banco.`,
       "info",
     );
   }

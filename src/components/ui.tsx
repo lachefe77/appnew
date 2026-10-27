@@ -28,7 +28,7 @@ export function Button({
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-3xl border border-line bg-card p-5 shadow-card ${className}`}>{children}</section>;
+  return <section className={`rounded-2xl border border-line bg-card p-5 ${className}`}>{children}</section>;
 }
 
 export function Badge({ children, tone = "paper" }: { children: ReactNode; tone?: "paper" | "pine" | "gold" | "alert" }) {
