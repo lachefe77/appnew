@@ -7,7 +7,9 @@ import { registerSchema } from "@/server/validators";
 export async function POST(request: Request) {
   try {
     const input = registerSchema.parse(await request.json());
-    const user = await registerAccount(input);
+    const cookie = request.headers.get("cookie") ?? "";
+    const affiliate = cookie.match(/(?:^|; )ma_ref=([^;]+)/)?.[1];
+    const user = await registerAccount(input, affiliate ? decodeURIComponent(affiliate) : null);
     const token = await signSession({ id: user.id, role: user.role, email: user.email });
     const next = user.role === "RESELLER" ? "/painel" : "/";
     const response = NextResponse.json({ ok: true, next });

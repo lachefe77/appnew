@@ -129,7 +129,7 @@ class CjAdapter implements SupplierAdapter {
         houseNumber: input.address.number,
         taxId: input.customerCpf,
         email: input.customerEmail ?? "",
-        remark: `Novos Horizontes ${input.publicCode}`,
+        remark: `Mestre do Atacadão ${input.publicCode}`,
         payType: 3,
         logisticName: config.cjLogisticName,
         fromCountryCode: config.cjFromCountry,
@@ -262,7 +262,7 @@ class BlingAdapter implements SupplierAdapter {
         data: today,
         dataSaida: today,
         contato: { id: contactId },
-        observacoes: `Novos Horizontes ${input.publicCode}. Expedir para o cliente final.`,
+        observacoes: `Mestre do Atacadão ${input.publicCode}. Expedir para o cliente final.`,
         observacoesInternas: "Pago com saldo da operação. Não gerar cobrança para o cliente.",
         itens: input.items.map((item) => ({
           codigo: item.sku,

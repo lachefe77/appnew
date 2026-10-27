@@ -11,9 +11,9 @@ function dayKey(date: Date) {
 }
 
 export default async function AdminPage() {
-  await requireUser(["ADMIN", "OPERATOR"]);
+  await requireUser(["MASTER", "ADMIN", "SUPPORT", "OPERATOR"]);
   const start = new Date(`${dayKey(new Date())}T00:00:00-03:00`);
-  const weekStart = new Date(start.getTime() - 6 * 24 * 60 * 60 * 1000);
+  const weekStart = new Date(start.getTime() - 13 * 24 * 60 * 60 * 1000);
   const [cj, bling, pause, lastRun, commerce, today, week, failed, alerts, snapshots, supplied] = await Promise.all([
     getMasterBalance("CJ_BRAZIL"),
     getMasterBalance("BLING_HUB"),
@@ -40,12 +40,13 @@ export default async function AdminPage() {
   const wholesale = b2b.reduce((sum, order) => sum + order.totalWholesaleCents, 0);
   const margin = b2c.reduce((sum, order) => sum + order.totalSaleCents - order.totalCostCents, 0) + b2b.reduce((sum, order) => sum + order.totalWholesaleCents - order.totalCostCents, 0);
   const ticket = b2c.length ? Math.round(pix / b2c.length) : 0;
-  const days = Array.from({ length: 7 }, (_, index) => dayKey(new Date(weekStart.getTime() + index * 24 * 60 * 60 * 1000)));
-  const byDay = days.map((key) => ({
-    key,
-    count: week.filter((order) => dayKey(order.createdAt) === key).length,
-  }));
-  const max = Math.max(1, ...byDay.map((day) => day.count));
+  const days = Array.from({ length: 14 }, (_, index) => dayKey(new Date(weekStart.getTime() + index * 24 * 60 * 60 * 1000)));
+  const byDay = days.map((key) => {
+    const rows = week.filter((order) => dayKey(order.createdAt) === key);
+    const cents = rows.reduce((sum, order) => sum + (order.channel === "B2B" ? order.totalWholesaleCents : order.totalSaleCents), 0);
+    return { key, count: rows.length, cents };
+  });
+  const max = Math.max(1, ...byDay.map((day) => day.cents));
 
   return (
     <div className="space-y-6">
@@ -66,19 +67,20 @@ export default async function AdminPage() {
         <Stat label="Ticket médio B2C" value={formatMoney(ticket, "BRL")} />
       </div>
       <Card>
-        <h2 className="text-xl font-semibold">Pedidos pagos nos últimos 7 dias</h2>
-        <ul className="mt-4 space-y-2">
+        <h2 className="text-xl font-semibold">Vendas pagas nos últimos 14 dias</h2>
+        <p className="mt-1 text-xs text-muted">Eixo horizontal: dia em São Paulo. Eixo vertical: reais pagos. Vitrine entra pelo preço de venda. Revenda entra pelo atacado.</p>
+        <div className="mt-4 flex h-40 items-end gap-1">
           {byDay.map((day) => (
-            <li key={day.key} className="grid grid-cols-[88px_1fr_24px] items-center gap-3 text-sm">
-              <span className="text-muted">{day.key.slice(5)}</span>
-              <span className="h-2 rounded-full bg-pineSoft">
-                <span className="block h-2 rounded-full bg-pine" style={{ width: `${(day.count / max) * 100}%` }} />
-              </span>
-              <span>{day.count}</span>
-            </li>
+            <div key={day.key} className="flex h-full flex-1 flex-col justify-end" title={`${day.key}: ${formatMoney(day.cents, "BRL")} · ${day.count} pedidos`}>
+              <span className="block rounded-t bg-pine" style={{ height: `${Math.max(4, (day.cents / max) * 100)}%` }} />
+            </div>
           ))}
-        </ul>
-        <p className="mt-3 text-xs text-muted">Horário de São Paulo. Cada barra é a quantidade de pedidos pagos criados no dia.</p>
+        </div>
+        <div className="mt-2 flex justify-between text-xs text-muted">
+          <span>{byDay[0]?.key.slice(5)}</span>
+          <span>{formatMoney(byDay.reduce((sum, day) => sum + day.cents, 0), "BRL")} no período</span>
+          <span>{byDay.at(-1)?.key.slice(5)}</span>
+        </div>
       </Card>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Stat label="Saldo CJ" value={formatMoney(cj.cents, cj.currency)} hint={`Alerta abaixo de ${formatMoney(cj.currency === "USD" ? commerce.cjLowBalanceCents : commerce.lowBalanceCents, cj.currency)}`} />

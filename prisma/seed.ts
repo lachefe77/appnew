@@ -37,21 +37,30 @@ async function main() {
 
   const admin = await upsertUser({
     email: "admin@novoshorizontes.test",
-    name: "Admin do Galpão",
+    name: "Mestre do Atacadão",
     password: "Admin#Horizonte",
-    role: "ADMIN",
+    role: "MASTER",
     planStatus: "ACTIVE",
     cpfCnpj: "52998224725",
     phone: "11900000001",
   });
   await upsertUser({
     email: "operador@novoshorizontes.test",
-    name: "Operador do Galpão",
+    name: "Suporte da Casa",
     password: "Operador#Horizonte",
-    role: "OPERATOR",
+    role: "SUPPORT",
     planStatus: "ACTIVE",
     cpfCnpj: "15350946056",
     phone: "11900000002",
+  });
+  await upsertUser({
+    email: "administrador@novoshorizontes.test",
+    name: "Administrador da Casa",
+    password: "Admin#Horizonte",
+    role: "ADMIN",
+    planStatus: "ACTIVE",
+    cpfCnpj: "11144477735",
+    phone: "11900000003",
   });
   const reseller = await upsertUser({
     email: "revenda@novoshorizontes.test",
@@ -62,9 +71,14 @@ async function main() {
     cpfCnpj: "39053344705",
     phone: "11988887777",
   });
-  if (!reseller.storeSlug) {
-    await prisma.user.update({ where: { id: reseller.id }, data: { storeSlug: "marina" } });
-    reseller.storeSlug = "marina";
+  if (!reseller.storeSlug || !reseller.affiliateCode) {
+    await prisma.user.update({
+      where: { id: reseller.id },
+      data: {
+        storeSlug: reseller.storeSlug ?? "marina",
+        affiliateCode: reseller.affiliateCode ?? "MARINA",
+      },
+    });
   }
 
   await prisma.setting.upsert({
@@ -156,7 +170,7 @@ async function upsertUser(input: {
   email: string;
   name: string;
   password: string;
-  role: "ADMIN" | "OPERATOR" | "RESELLER" | "CUSTOMER";
+  role: "MASTER" | "ADMIN" | "SUPPORT" | "OPERATOR" | "RESELLER" | "CUSTOMER";
   planStatus: "ACTIVE" | "INACTIVE";
   cpfCnpj: string;
   phone: string;

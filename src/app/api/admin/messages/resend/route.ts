@@ -10,7 +10,7 @@ const schema = z.object({ id: z.string().min(1) });
 
 export async function POST(request: Request) {
   try {
-    await requireApiUser(["ADMIN", "OPERATOR"]);
+    await requireApiUser(["MASTER", "ADMIN", "SUPPORT", "OPERATOR"]);
     const input = schema.parse(await readJson(request));
     const message = await prisma.notificationLog.findUnique({ where: { id: input.id } });
     if (!message) throw new AppError("Mensagem não encontrada", "NOT_FOUND", 404);

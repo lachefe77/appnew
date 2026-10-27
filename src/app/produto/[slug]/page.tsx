@@ -22,7 +22,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       orderBy: { title: "asc" },
     }),
   ]);
-  const reseller = user && user.role !== "CUSTOMER" && user.role !== "OPERATOR";
+  const reseller = user && (user.role === "RESELLER" || user.role === "ADMIN" || user.role === "MASTER");
   const bundle = bundleLabel(product);
   const badge = lowStockLabel(product.stockQuantity, commerce.lowStockBadge);
 

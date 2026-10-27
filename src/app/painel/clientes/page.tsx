@@ -3,7 +3,7 @@ import { requireUser } from "@/server/auth";
 import { prisma } from "@/server/db";
 
 export default async function CustomersPage() {
-  const user = await requireUser(["RESELLER", "ADMIN"]);
+  const user = await requireUser(["RESELLER", "ADMIN", "MASTER"]);
   const customers = await prisma.resellerCustomer.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } });
   const lastOrders = await prisma.order.findMany({
     where: { tenantId: user.id, customerCpf: { in: customers.map((customer) => customer.cpf) } },

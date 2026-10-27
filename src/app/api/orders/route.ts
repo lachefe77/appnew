@@ -11,7 +11,7 @@ export async function GET() {
   try {
     const user = await requireApiUser();
     const orders = await prisma.order.findMany({
-      where: user.role === "ADMIN" || user.role === "OPERATOR" ? {} : { tenantId: user.id },
+      where: user.role === "RESELLER" ? { tenantId: user.id } : {},
       include: { items: true },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   try {
     const body = (await readJson(request)) as { channel?: string };
     if (body.channel === "B2B") {
-      const user = await requireApiUser(["RESELLER", "ADMIN"]);
+      const user = await requireApiUser(["RESELLER", "ADMIN", "MASTER"]);
       const input = b2bOrderSchema.parse(body);
       const orders = await createResellerOrder(user.id, input);
       return NextResponse.json({ publicCode: orders[0]?.publicCode, publicCodes: orders.map((order) => order.publicCode) });

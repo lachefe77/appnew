@@ -6,7 +6,7 @@ import { AppError } from "@/server/errors";
 
 export async function GET(request: Request) {
   try {
-    const user = await requireApiUser(["RESELLER", "ADMIN"]);
+    const user = await requireApiUser(["RESELLER", "ADMIN", "MASTER"]);
     if (!user.wallet) throw new AppError("Carteira não encontrada", "NO_WALLET", 404);
     const type = new URL(request.url).searchParams.get("type");
     const entries = await prisma.walletLedger.findMany({

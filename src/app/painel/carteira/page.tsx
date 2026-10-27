@@ -7,9 +7,9 @@ import { isSandboxPayment } from "@/server/config";
 import { prisma } from "@/server/db";
 
 export default async function WalletPage({ searchParams }: { searchParams: Promise<{ tipo?: string }> }) {
-  const user = await requireUser(["RESELLER", "ADMIN"]);
+  const user = await requireUser(["RESELLER", "ADMIN", "MASTER"]);
   const { tipo } = await searchParams;
-  const types = ["PIX_DEPOSIT", "ORDER_DEBIT", "REFUND", "ADMIN_ADJUSTMENT"] as const;
+  const types = ["PIX_DEPOSIT", "ORDER_DEBIT", "REFUND", "ADMIN_ADJUSTMENT", "AFFILIATE_COMMISSION"] as const;
   const type = types.find((item) => item === tipo);
   const entries = user.wallet
     ? await prisma.walletLedger.findMany({

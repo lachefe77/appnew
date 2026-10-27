@@ -5,7 +5,7 @@ import { syncCatalogs } from "@/server/catalog";
 
 export async function POST() {
   try {
-    await requireApiUser(["ADMIN"]);
+    await requireApiUser(["MASTER", "ADMIN"]);
     const result = await syncCatalogs();
     return NextResponse.json(result);
   } catch (error) {

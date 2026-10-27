@@ -24,11 +24,89 @@ export type PixIssued = {
   expiresAt: Date;
 };
 
+export type IssuedPayment = PixIssued & {
+  method: "PIX" | "BOLETO" | "USDT";
+  boletoLine: string | null;
+};
+
 export async function issuePix(input: PixRequest): Promise<PixIssued> {
+  const issued = await issueCollection({ ...input, method: "PIX", usdtAddress: "" });
+  return issued;
+}
+
+export async function issueCollection(input: PixRequest & { method: "PIX" | "BOLETO" | "USDT"; usdtAddress: string }): Promise<IssuedPayment> {
   if (input.amountCents <= 0) throw new AppError("Valor inválido", "BAD_AMOUNT");
-  if (config.paymentProvider === "asaas") return issueAsaas(input);
-  if (config.paymentProvider === "openpix") return issueOpenPix(input);
-  return issueSandbox(input);
+  if (input.method === "USDT") return issueUsdt(input);
+  if (input.method === "BOLETO") return issueBoleto(input);
+  if (config.paymentProvider === "asaas") return { ...(await issueAsaas(input)), method: "PIX", boletoLine: null };
+  if (config.paymentProvider === "openpix") return { ...(await issueOpenPix(input)), method: "PIX", boletoLine: null };
+  return { ...(await issueSandbox(input)), method: "PIX", boletoLine: null };
+}
+
+async function issueBoleto(input: PixRequest): Promise<IssuedPayment> {
+  if (config.paymentProvider === "asaas") return issueAsaasBoleto(input);
+  if (config.paymentProvider !== "sandbox") {
+    throw new AppError("Boleto neste gateway ainda não está ligado. Use PIX ou USDT.", "BOLETO_UNAVAILABLE", 422);
+  }
+  const externalId = newId("boleto");
+  const line = sandboxBoletoLine(externalId, input.amountCents);
+  return {
+    provider: "sandbox",
+    externalId,
+    method: "BOLETO",
+    pixCopyPaste: line,
+    boletoLine: line,
+    qrCodeBase64: await toQr(line),
+    expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+  };
+}
+
+async function issueUsdt(input: PixRequest & { usdtAddress: string }): Promise<IssuedPayment> {
+  const address = input.usdtAddress.trim();
+  if (address.length < 8) throw new AppError("Cadastre o endereço USDT nos ajustes antes de receber cripto", "USDT_NOT_CONFIGURED", 422);
+  const externalId = newId("usdt");
+  return {
+    provider: "usdt",
+    externalId,
+    method: "USDT",
+    pixCopyPaste: address,
+    boletoLine: null,
+    qrCodeBase64: await toQr(address),
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  };
+}
+
+function sandboxBoletoLine(externalId: string, amountCents: number) {
+  const digits = `${amountCents}`.padStart(10, "0") + externalId.replace(/\D/g, "").padEnd(25, "8").slice(0, 25);
+  const raw = digits.padEnd(47, "0").slice(0, 47);
+  return `${raw.slice(0, 5)}.${raw.slice(5, 10)} ${raw.slice(10, 15)}.${raw.slice(15, 21)} ${raw.slice(21, 26)}.${raw.slice(26, 32)} ${raw.slice(32, 33)} ${raw.slice(33)}`;
+}
+
+async function issueAsaasBoleto(input: PixRequest): Promise<IssuedPayment> {
+  if (!config.asaasApiKey) throw new AppError("ASAAS_API_KEY ausente", "PAYMENT_NOT_CONFIGURED", 503);
+  const customerId = await asaasCustomer(input.customer);
+  const due = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const payment = await asaas<AsaasBoleto>("/payments", {
+    method: "POST",
+    body: JSON.stringify({
+      customer: customerId,
+      billingType: "BOLETO",
+      value: reais(input.amountCents),
+      dueDate: due,
+      description: input.description.slice(0, 500),
+      externalReference: input.externalReference,
+    }),
+  });
+  const line = payment.identificationField || payment.barCode || payment.id;
+  return {
+    provider: "asaas",
+    externalId: payment.id,
+    method: "BOLETO",
+    pixCopyPaste: line,
+    boletoLine: line,
+    qrCodeBase64: await toQr(line),
+    expiresAt: new Date(due + "T23:59:59-03:00"),
+  };
 }
 
 async function toQr(payload: string) {
@@ -42,7 +120,7 @@ async function toQr(payload: string) {
 
 async function issueSandbox(input: PixRequest): Promise<PixIssued> {
   const externalId = newId("sandbox");
-  const pixCopyPaste = `SANDBOX-PIX|NOVOS-HORIZONTES|${externalId}|${input.amountCents}`;
+  const pixCopyPaste = `SANDBOX-PIX|MESTRE-DO-ATACADAO|${externalId}|${input.amountCents}`;
   return {
     provider: "sandbox",
     externalId,
@@ -84,6 +162,7 @@ async function issueAsaas(input: PixRequest): Promise<PixIssued> {
 }
 
 type AsaasPayment = { id: string };
+type AsaasBoleto = { id: string; identificationField?: string; barCode?: string };
 type AsaasQr = { encodedImage: string; payload: string; expirationDate?: string };
 type AsaasCustomer = { id: string };
 type AsaasList<T> = { data?: T[] };

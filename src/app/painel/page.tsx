@@ -12,7 +12,7 @@ function startOfSaoPauloDay() {
 }
 
 export default async function PanelHome() {
-  const user = await requireUser(["RESELLER", "ADMIN"]);
+  const user = await requireUser(["RESELLER", "ADMIN", "MASTER"]);
   const start = startOfSaoPauloDay();
   const [orders, imports, pending] = await Promise.all([
     prisma.order.findMany({ where: { tenantId: user.id, paymentStatus: "PAID", createdAt: { gte: start } }, include: { items: true } }),

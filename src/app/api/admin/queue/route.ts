@@ -9,7 +9,7 @@ const schema = z.object({ action: z.enum(["pause", "resume", "sweep"]) });
 
 export async function POST(request: Request) {
   try {
-    await requireApiUser(["ADMIN"]);
+    await requireApiUser(["MASTER", "ADMIN"]);
     const input = schema.parse(await request.json());
     if (input.action === "pause") await pauseFulfillment("Pausa manual do administrador");
     if (input.action === "resume") await resumeFulfillment();

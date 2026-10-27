@@ -6,7 +6,7 @@ import { productEditSchema } from "@/server/validators";
 
 export async function POST(request: Request) {
   try {
-    await requireApiUser(["ADMIN", "OPERATOR"]);
+    await requireApiUser(["MASTER", "ADMIN"]);
     const input = productEditSchema.parse(await readJson(request));
     const product = await prisma.product.update({
       where: { id: input.id },
