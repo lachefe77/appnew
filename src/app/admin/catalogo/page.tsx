@@ -1,3 +1,4 @@
+import { ProductCreate } from "@/components/product-create";
 import { ProductEditor } from "@/components/product-editor";
 import { ProductPhoto } from "@/components/product-photo";
 import { formatBRL } from "@/lib/format";
@@ -12,8 +13,9 @@ export default async function AdminCatalogPage() {
     <div className="space-y-5">
       <div>
         <h1 className="text-3xl font-semibold">Catálogo</h1>
-        <p className="max-w-2xl text-sm text-muted">Salvar aqui marca o produto como curado. O sync seguinte atualiza custo e estoque e preserva título, preço e foto.</p>
+        <p className="max-w-2xl text-sm text-muted">Cadastre aqui o que ainda não veio da API. Salvar marca o produto como curado: o sync seguinte atualiza custo e estoque e preserva título, preço e foto.</p>
       </div>
+      <ProductCreate />
       {products.map((product) => (
         <div key={product.id} className="grid gap-4 lg:grid-cols-[180px_1fr]">
           <div>

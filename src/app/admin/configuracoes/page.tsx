@@ -15,7 +15,7 @@ export default async function SettingsPage() {
         <p className="max-w-2xl text-sm text-muted">
           O texto da vitrine, o endereço USDT e a comissão mudam aqui. Asaas, OpenPix, CJ, Bling, Evolution e Telegram continuam nas variáveis de ambiente.
         </p>
-        {desk ? <BrandForm initial={brand} /> : <p className="text-sm text-muted">O suporte consulta. Mestre e administrador gravam.</p>}
+        {desk ? <BrandForm initial={brand} /> : <p className="text-sm text-muted">O suporte consulta. Master e administrador gravam.</p>}
       </div>
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Preço e alertas</h2>

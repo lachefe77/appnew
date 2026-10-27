@@ -13,7 +13,7 @@ export default async function TeamPage() {
     <div className="space-y-4">
       <h1 className="text-3xl font-semibold">Equipe</h1>
       <p className="max-w-2xl text-sm text-muted">
-        Mestre é o dono. Administrador opera a casa e não muda o mestre. Suporte responde chamado, contato e currículo, e não mexe em saldo, preço nem ajuste.
+        Master é o CEO. Administrador opera a casa e não muda o Master. Suporte responde chamado, contato e currículo, e não mexe em saldo, preço nem ajuste.
       </p>
       <ul className="text-sm">
         {people.map((person) => (

@@ -94,14 +94,26 @@ model User {
   referredById  String?
   referredBy    User?              @relation("Referrals", fields: [referredById], references: [id])
   referrals     User[]             @relation("Referrals")
-  note          String?
-  createdAt     DateTime           @default(now())
+  note            String?
+  registeredIp    String?
+  registeredCity  String?
+  registeredRegion String?
+  registeredLat   Float?
+  registeredLng   Float?
+  lastLoginAt     DateTime?
+  lastLoginIp     String?
+  lastCity        String?
+  lastRegion      String?
+  lastLat         Float?
+  lastLng         Float?
+  createdAt       DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
   wallet        Wallet?
   orders        Order[]            @relation("TenantOrders")
   imports       CatalogImport[]
   customers     ResellerCustomer[]
   tickets       SupportTicket[]
+  logins        LoginEvent[]
 }
 
 model Wallet {
@@ -320,6 +332,22 @@ model NotificationLog {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+model LoginEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  ip        String
+  kind      String
+  city      String?
+  region    String?
+  lat       Float?
+  lng       Float?
+  createdAt DateTime @default(now())
+
+  @@index([ip])
+  @@index([userId, createdAt])
 }
 
 model Setting {

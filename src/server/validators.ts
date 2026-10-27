@@ -91,6 +91,20 @@ export const commerceSchema = z.object({
   shipDays: z.number().int().min(1).max(30),
 });
 
+export const productCreateSchema = z.object({
+  action: z.literal("create"),
+  title: z.string().trim().min(3).max(140),
+  description: z.string().trim().min(10).max(2000),
+  category: z.enum(["ferramentas", "bem-estar", "pet"]),
+  supplierSource: z.enum(["CJ_BRAZIL", "BLING_HUB"]),
+  supplierSku: z.string().trim().min(2).max(60),
+  supplierCostCents: z.number().int().positive(),
+  platformWholesaleCents: z.number().int().positive(),
+  suggestedRetailCents: z.number().int().positive(),
+  stockQuantity: z.number().int().min(0).max(100000),
+  shipDays: z.number().int().min(1).max(30),
+});
+
 export const productEditSchema = z.object({
   id: z.string().min(1),
   title: z.string().trim().min(3).max(140),
