@@ -1,9 +1,10 @@
+import { PostButton } from "@/components/post-button";
 import { Card } from "@/components/ui";
 import { requireUser } from "@/server/auth";
 import { prisma } from "@/server/db";
 
 export default async function MessagesPage() {
-  await requireUser(["ADMIN"]);
+  await requireUser(["ADMIN", "OPERATOR"]);
   const messages = await prisma.notificationLog.findMany({ orderBy: { createdAt: "desc" }, take: 40 });
   return (
     <div className="space-y-4">
@@ -20,6 +21,11 @@ export default async function MessagesPage() {
             </div>
             <p className="mt-2 whitespace-pre-wrap text-sm">{message.body}</p>
             {message.error ? <p className="mt-2 text-xs text-muted">{message.error}</p> : null}
+            {message.channel.startsWith("whatsapp") ? (
+              <div className="mt-3">
+                <PostButton url="/api/admin/messages/resend" body={{ id: message.id }} label="Reenviar" />
+              </div>
+            ) : null}
           </Card>
         ))}
         {messages.length === 0 ? <p className="text-sm text-muted">Nenhuma mensagem ainda. Dispare os lembretes na operação.</p> : null}

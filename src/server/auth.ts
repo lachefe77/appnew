@@ -48,7 +48,9 @@ export async function currentUser() {
 export async function requireUser(roles?: Role[]) {
   const user = await currentUser();
   if (!user) redirect("/entrar");
-  if (roles && !roles.includes(user.role)) redirect(user.role === "ADMIN" ? "/admin" : "/");
+  if (roles && !roles.includes(user.role)) {
+    redirect(user.role === "ADMIN" || user.role === "OPERATOR" ? "/admin" : user.role === "RESELLER" ? "/painel" : "/");
+  }
   if (user.planStatus === "SUSPENDED") {
     throw new AppError("Conta suspensa", "SUSPENDED", 403);
   }

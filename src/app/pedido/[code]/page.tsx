@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { LiveRefresh } from "@/components/live-refresh";
 import { PixPanel } from "@/components/pix-panel";
 import { Card, StatusBadge } from "@/components/ui";
-import { formatBRL } from "@/lib/format";
+import { CopyBox } from "@/components/copy-box";
+import { formatBRL, trackingMessage } from "@/lib/format";
 import { isSandboxPayment } from "@/server/config";
 import { prisma } from "@/server/db";
 
@@ -62,7 +63,7 @@ export default async function OrderPage({ params }: { params: Promise<{ code: st
           <p className="mt-4 text-sm text-muted">
             {order.customerName} · {address.street}, {address.number} · {address.city}/{address.state}
           </p>
-          {order.trackingCode ? <p className="mt-3 text-sm">Rastreio: <strong>{order.trackingCode}</strong></p> : null}
+          {order.trackingCode ? <div className="mt-3"><CopyBox text={trackingMessage(order)} /></div> : null}
           {order.failureReason ? <p className="mt-3 text-sm text-red-700">{order.failureReason}</p> : null}
           {order.supplierOrderId ? <p className="mt-2 text-xs text-muted">Fornecedor: {order.supplierOrderId}</p> : null}
         </Card>

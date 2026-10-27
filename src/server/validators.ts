@@ -33,13 +33,23 @@ export const customerSchema = z.object({
   email: z.string().trim().email("E-mail inválido").optional().or(z.literal("")),
 });
 
-export const b2cOrderSchema = z.object({
+const lineSchema = z.object({
   productId: z.string().min(1),
   quantity: z.number().int().min(1).max(5),
-  clientRequestId: z.string().min(8).max(80).optional(),
-  customer: customerSchema,
-  address: addressSchema,
 });
+
+export const b2cOrderSchema = z
+  .object({
+    productId: z.string().min(1).optional(),
+    quantity: z.number().int().min(1).max(5).optional(),
+    items: z.array(lineSchema).min(1).max(12).optional(),
+    clientRequestId: z.string().min(8).max(80).optional(),
+    customer: customerSchema,
+    address: addressSchema,
+  })
+  .refine((value) => (value.items && value.items.length > 0) || Boolean(value.productId), {
+    message: "Escolha ao menos um produto",
+  });
 
 export const b2bOrderSchema = b2cOrderSchema;
 
@@ -68,5 +78,52 @@ export const depositSchema = z.object({
   amountCents: z.number().int().positive(),
 });
 
+export const commerceSchema = z.object({
+  spread: z.number().gt(1).lt(5),
+  retailMultiplier: z.number().gt(1).lt(8),
+  minDepositCents: z.number().int().min(1000).max(100_000_00),
+  abandonedPixDelayMs: z.number().int().min(60_000).max(86_400_000),
+  lowBalanceCents: z.number().int().min(0),
+  cjLowBalanceCents: z.number().int().min(0),
+  lowStockThreshold: z.number().int().min(1).max(100),
+  lowStockBadge: z.number().int().min(1).max(100),
+  shipDays: z.number().int().min(1).max(30),
+});
+
+export const productEditSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().min(3).max(140),
+  description: z.string().trim().min(10).max(2000),
+  platformWholesaleCents: z.number().int().positive(),
+  suggestedRetailCents: z.number().int().positive(),
+  isActive: z.boolean(),
+  shipDays: z.number().int().min(1).max(30),
+  bundleQty: z.number().int().min(2).max(10).nullable(),
+  bundlePriceCents: z.number().int().positive().nullable(),
+});
+
+export const customerSaveSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(3).max(120),
+  cpf: z.string().transform(digits).refine(isValidCpf, { message: "CPF inválido" }),
+  phone: z
+    .string()
+    .transform(digits)
+    .refine((value) => value.length >= 10 && value.length <= 13, { message: "Telefone inválido" }),
+  email: z.string().trim().email().optional().or(z.literal("")),
+});
+
+export const lookupSchema = z.object({
+  email: z.string().trim().email().transform((value) => value.toLowerCase()),
+  cpf: z.string().transform(digits).refine(isValidCpf, { message: "CPF inválido" }),
+});
+
+export const adjustSchema = z.object({
+  userId: z.string().min(1),
+  amountCents: z.number().int().refine((value) => value !== 0, { message: "Informe um valor" }),
+  reason: z.string().trim().min(3).max(180),
+});
+
 export type AddressInput = z.infer<typeof addressSchema>;
+export type CustomerInput = z.infer<typeof customerSchema>;
 export type B2COrderInput = z.infer<typeof b2cOrderSchema>;

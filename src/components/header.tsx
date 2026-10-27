@@ -17,8 +17,9 @@ export async function Header() {
         <nav className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 text-sm">
           <Link href="/" className="hover:text-copper">Vitrine</Link>
           <Link href="/revenda" className="hover:text-copper">Revenda</Link>
-          {user?.role === "ADMIN" ? <Link href="/admin" className="hover:text-copper">Operação</Link> : null}
-          {user && user.role !== "CUSTOMER" ? <Link href="/painel" className="hover:text-copper">Painel</Link> : null}
+          <Link href="/carrinho" className="hover:text-copper">Carrinho</Link>
+          {user?.role === "ADMIN" || user?.role === "OPERATOR" ? <Link href="/admin" className="hover:text-copper">Operação</Link> : null}
+          {user && user.role !== "CUSTOMER" && user.role !== "OPERATOR" ? <Link href="/painel" className="hover:text-copper">Painel</Link> : null}
           {user ? (
             <>
               <span className="hidden text-muted sm:inline">{user.name.split(" ")[0]}</span>

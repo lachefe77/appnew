@@ -8,15 +8,12 @@
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(900px 420px at 0% -10%, rgba(194, 77, 44, 0.14), transparent 55%),
-    radial-gradient(800px 380px at 100% 0%, rgba(30, 74, 56, 0.12), transparent 50%),
-    #f4f0e7;
+  background: #f3f4f6;
 }
 
 ::selection {
-  background: #f0d7a2;
-  color: #1a1714;
+  background: #d7eee4;
+  color: #14181c;
 }
 
 input,

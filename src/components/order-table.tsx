@@ -34,7 +34,7 @@ export function OrderTable({ orders, admin = false }: { orders: OrderRow[]; admi
           {orders.map((order) => (
             <tr key={order.publicCode} className="border-t border-line align-top">
               <td className="py-3 pr-3">
-                <Link href={`/pedido/${order.publicCode}`} className="font-medium hover:text-copper">{order.publicCode}</Link>
+                <Link href={admin ? `/admin/pedidos/${order.publicCode}` : `/pedido/${order.publicCode}`} className="font-medium hover:text-copper">{order.publicCode}</Link>
                 <p className="text-xs text-muted">{order.channel} · {order.title}</p>
               </td>
               <td className="py-3 pr-3">{order.customerName}</td>

@@ -56,6 +56,14 @@ export function ledgerLabel(type: string) {
   return labels[type] ?? type;
 }
 
+export function trackingMessage(order: { customerName: string; publicCode: string; trackingCode: string | null }) {
+  return [
+    `Olá, ${order.customerName}. Aqui é a Novos Horizontes.`,
+    `O pedido ${order.publicCode} foi enviado.`,
+    `Código de rastreio: ${order.trackingCode ?? "ainda sem código"}.`,
+  ].join("\n");
+}
+
 export function whatsAppNumber(phone: string) {
   const digits = phone.replace(/\D/g, "");
   if (digits.startsWith("55") && digits.length >= 12) return digits;

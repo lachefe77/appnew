@@ -5,18 +5,19 @@ import { useRouter } from "next/navigation";
 import { Field } from "@/components/ui";
 import { formatBRL } from "@/lib/format";
 
-type ProductOption = { id: string; title: string; wholesaleCents: number; stockQuantity: number };
+type ProductOption = { id: string; title: string; wholesaleCents: number; stockQuantity: number; retailCents: number };
+type SavedCustomer = { name: string; cpf: string; phone: string; email?: string | null };
 
-export function ResellerOrderForm({ products }: { products: ProductOption[] }) {
+export function ResellerOrderForm({ products, customers = [] }: { products: ProductOption[]; customers?: SavedCustomer[] }) {
   const router = useRouter();
   const requestId = useRef(crypto.randomUUID());
-  const [productId, setProductId] = useState(products[0]?.id ?? "");
-  const [quantity, setQuantity] = useState(1);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [customer, setCustomer] = useState({ name: "", cpf: "", phone: "", email: "" });
   const [address, setAddress] = useState({ cep: "", street: "", number: "", complement: "", district: "", city: "", state: "SP" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const selected = products.find((product) => product.id === productId);
+  const chosen = products.filter((product) => (quantities[product.id] ?? 0) > 0);
+  const debit = chosen.reduce((sum, product) => sum + product.wholesaleCents * (quantities[product.id] ?? 0), 0);
 
   if (products.length === 0) {
     return <p className="text-sm text-muted">Importe um produto no catálogo para vender.</p>;
@@ -29,35 +30,66 @@ export function ResellerOrderForm({ products }: { products: ProductOption[] }) {
         event.preventDefault();
         setLoading(true);
         setError("");
+        if (chosen.length === 0) {
+          setLoading(false);
+          setError("Informe a quantidade de ao menos um produto");
+          return;
+        }
         const response = await fetch("/api/orders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ channel: "B2B", productId, quantity, clientRequestId: requestId.current, customer, address }),
+          body: JSON.stringify({
+            channel: "B2B",
+            items: chosen.map((product) => ({ productId: product.id, quantity: quantities[product.id] })),
+            clientRequestId: requestId.current,
+            customer,
+            address,
+          }),
         });
-        const body = (await response.json()) as { publicCode?: string; error?: string };
+        const body = (await response.json()) as { publicCode?: string; publicCodes?: string[]; error?: string };
         setLoading(false);
         if (!response.ok || !body.publicCode) {
           setError(body.error ?? "Não criou o pedido");
           requestId.current = crypto.randomUUID();
           return;
         }
-        router.push(`/pedido/${body.publicCode}`);
+        const codes = body.publicCodes ?? [body.publicCode];
+        router.push(codes.length > 1 ? `/painel/pedidos` : `/pedido/${codes[0]}`);
         router.refresh();
       }}
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Produto importado">
-          <select className="field" value={productId} onChange={(event) => setProductId(event.target.value)}>
-            {products.map((product) => (
-              <option key={product.id} value={product.id}>
-                {product.title} · atacado {formatBRL(product.wholesaleCents)} · estoque {product.stockQuantity}
-              </option>
+        <Field label="Cliente salvo">
+          <select
+            className="field"
+            defaultValue=""
+            onChange={(event) => {
+              const saved = customers.find((item) => item.cpf === event.target.value);
+              if (!saved) return;
+              setCustomer({ name: saved.name, cpf: saved.cpf, phone: saved.phone, email: saved.email ?? "" });
+            }}
+          >
+            <option value="">Digitar agora</option>
+            {customers.map((item) => (
+              <option key={item.cpf} value={item.cpf}>{item.name}</option>
             ))}
           </select>
         </Field>
-        <Field label="Quantidade">
-          <input className="field" type="number" min={1} max={5} value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} />
-        </Field>
+        <div className="sm:col-span-2 space-y-2">
+          {products.map((product) => (
+            <label key={product.id} className="flex items-center justify-between gap-3 text-sm">
+              <span>{product.title} · atacado {formatBRL(product.wholesaleCents)} · seu preço {formatBRL(product.retailCents)} · estoque {product.stockQuantity}</span>
+              <input
+                className="field w-20"
+                type="number"
+                min={0}
+                max={5}
+                value={quantities[product.id] ?? 0}
+                onChange={(event) => setQuantities({ ...quantities, [product.id]: Number(event.target.value) })}
+              />
+            </label>
+          ))}
+        </div>
         <Field label="Cliente final"><input className="field" value={customer.name} onChange={(event) => setCustomer({ ...customer, name: event.target.value })} required /></Field>
         <Field label="CPF do cliente"><input className="field" value={customer.cpf} onChange={(event) => setCustomer({ ...customer, cpf: event.target.value })} required /></Field>
         <Field label="WhatsApp"><input className="field" value={customer.phone} onChange={(event) => setCustomer({ ...customer, phone: event.target.value })} required /></Field>
@@ -69,9 +101,9 @@ export function ResellerOrderForm({ products }: { products: ProductOption[] }) {
         <Field label="Cidade"><input className="field" value={address.city} onChange={(event) => setAddress({ ...address, city: event.target.value })} required /></Field>
         <Field label="UF"><input className="field" maxLength={2} value={address.state} onChange={(event) => setAddress({ ...address, state: event.target.value })} required /></Field>
       </div>
-      {selected ? (
+      {chosen.length > 0 ? (
         <p className="text-sm text-muted">
-          A carteira será debitada em {formatBRL(selected.wholesaleCents * quantity)}. O cliente final não paga a plataforma neste fluxo.
+          A carteira será debitada em {formatBRL(debit)}. O cliente final não paga a plataforma neste fluxo. Itens de galpões diferentes viram pedidos separados.
         </p>
       ) : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
