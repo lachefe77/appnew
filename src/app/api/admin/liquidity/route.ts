@@ -12,7 +12,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
-    await requireApiUser(["ADMIN"]);
+    await requireApiUser(["MASTER", "ADMIN"]);
     const input = schema.parse(await request.json());
     const currency = input.source === "CJ_BRAZIL" && process.env.SUPPLIER_MODE === "live" ? "USD" : "BRL";
     await setMasterBalance(input.source as SupplierSource, { cents: input.balanceCents, currency });

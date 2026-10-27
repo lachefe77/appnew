@@ -5,6 +5,7 @@ import type { Role } from "@prisma/client";
 import { prisma } from "./db";
 import { AppError } from "./errors";
 import { readSession, SESSION_COOKIE, signSession, type SessionRole } from "@/lib/session";
+import { homePath } from "./roles";
 
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
@@ -49,7 +50,7 @@ export async function requireUser(roles?: Role[]) {
   const user = await currentUser();
   if (!user) redirect("/entrar");
   if (roles && !roles.includes(user.role)) {
-    redirect(user.role === "ADMIN" || user.role === "OPERATOR" ? "/admin" : user.role === "RESELLER" ? "/painel" : "/");
+    redirect(homePath(user.role));
   }
   if (user.planStatus === "SUSPENDED") {
     throw new AppError("Conta suspensa", "SUSPENDED", 403);

@@ -6,7 +6,7 @@ import { requireUser } from "@/server/auth";
 import { prisma } from "@/server/db";
 
 export default async function ResellerStorePage() {
-  const user = await requireUser(["RESELLER", "ADMIN"]);
+  const user = await requireUser(["RESELLER", "ADMIN", "MASTER"]);
   const imports = await prisma.catalogImport.findMany({
     where: { userId: user.id },
     include: { product: true },

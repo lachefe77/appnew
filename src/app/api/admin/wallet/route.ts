@@ -9,7 +9,7 @@ import { applyWalletEntry } from "@/server/wallet";
 
 export async function POST(request: Request) {
   try {
-    const admin = await requireApiUser(["ADMIN"]);
+    const admin = await requireApiUser(["MASTER", "ADMIN"]);
     const input = adjustSchema.parse(await readJson(request));
     const user = await prisma.user.findUnique({ where: { id: input.userId }, include: { wallet: true } });
     if (!user?.wallet) throw new AppError("Revendedor sem carteira", "NO_WALLET", 404);

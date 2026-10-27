@@ -2,7 +2,7 @@ import { requireUser } from "@/server/auth";
 import { prisma } from "@/server/db";
 
 export default async function WebhooksPage() {
-  await requireUser(["ADMIN", "OPERATOR"]);
+  await requireUser(["MASTER", "ADMIN", "SUPPORT", "OPERATOR"]);
   const events = await prisma.webhookEvent.findMany({ orderBy: { createdAt: "desc" }, take: 40 });
   return (
     <div className="space-y-4">

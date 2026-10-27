@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ProductPhoto } from "@/components/product-photo";
+import { TrustBar } from "@/components/trust-bar";
 import { categoryLabel, formatBRL, sourceLabel } from "@/lib/format";
+import { getBrand } from "@/server/brand";
 import { getCommerce } from "@/server/commerce";
 import { bundleLabel } from "@/server/pricing";
 import { listStoreProducts, lowStockLabel } from "@/server/storefront";
@@ -11,18 +13,23 @@ export default async function HomePage({
   searchParams: Promise<{ categoria?: string; q?: string; ordem?: string }>;
 }) {
   const { categoria, q, ordem } = await searchParams;
-  const [products, commerce] = await Promise.all([
+  const [products, commerce, brand] = await Promise.all([
     listStoreProducts({ category: categoria, q, sort: ordem }),
     getCommerce(),
+    getBrand(),
   ]);
 
   return (
     <div className="space-y-8">
       <section className="grid items-end gap-6 lg:grid-cols-[1.4fr_0.6fr]">
         <div className="space-y-4">
-          <p className="text-sm font-medium text-pine">Estoque no Brasil · envio depois do PIX</p>
-          <h1 className="max-w-xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">Atacado de uma unidade, com foto e preço na frente.</h1>
-          <p className="max-w-xl text-lg text-ink/80">Ferramentas, bem-estar e pet. O pagamento é PIX. O despacho começa quando o pagamento confirma.</p>
+          <p className="text-sm font-medium text-pine">{brand.name}</p>
+          <h1 className="max-w-xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">{brand.heroTitle}</h1>
+          <p className="max-w-xl text-lg text-ink/80">{brand.heroBody}</p>
+          <TrustBar
+            payments={["PIX", "Boleto", "USDT"]}
+            promises={[brand.dispatchLabel, brand.warehouseLabel, brand.supplierLabel, brand.shippingLabel]}
+          />
           <div className="flex flex-wrap gap-3">
             <Link href="#catalogo" className="rounded-full bg-ink px-5 py-3 text-sm text-white">Ver catálogo</Link>
             <Link href="/revenda" className="rounded-full border border-line bg-card px-5 py-3 text-sm">Quero revender</Link>
@@ -31,7 +38,7 @@ export default async function HomePage({
         <aside className="rounded-2xl border border-line bg-card p-5 text-sm">
           <p className="font-medium">Como comprar</p>
           <ol className="mt-3 space-y-2 text-muted">
-            <li>1. Escolha o produto e gere o PIX.</li>
+            <li>1. Escolha o produto e pague com PIX, boleto ou USDT.</li>
             <li>2. O estoque fica reservado até o pagamento ou o vencimento.</li>
             <li>3. O rastreio volta nesta página do pedido.</li>
           </ol>

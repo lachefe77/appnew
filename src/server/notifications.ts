@@ -47,7 +47,7 @@ export function recoveryText(input: { name: string; code: string; amountCents: n
       .replaceAll("{pix}", input.pix);
   }
   return [
-    `Olá, ${input.name}. Aqui é a Novos Horizontes.`,
+    `Olá, ${input.name}. Aqui é o Mestre do Atacadão.`,
     "",
     `O pedido ${input.code} (${formatBRL(input.amountCents)}) ainda está com o PIX em aberto. Se quiser seguir com a compra, use o copia-e-cola abaixo. Se já pagou ou desistiu, pode ignorar esta mensagem.`,
     "",

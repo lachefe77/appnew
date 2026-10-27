@@ -7,7 +7,7 @@ import { requireUser } from "@/server/auth";
 import { prisma } from "@/server/db";
 
 export default async function ResellerDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const actor = await requireUser(["ADMIN", "OPERATOR"]);
+  const actor = await requireUser(["MASTER", "ADMIN", "SUPPORT", "OPERATOR"]);
   const { id } = await params;
   const user = await prisma.user.findUnique({
     where: { id },
@@ -24,13 +24,13 @@ export default async function ResellerDetailPage({ params }: { params: Promise<{
         <h1 className="text-3xl font-semibold">{user.name}</h1>
         <p className="text-sm text-muted">{user.email} · {user.planStatus} · saldo {formatBRL(Number(user.wallet?.balanceCents ?? 0))}</p>
       </div>
-      {actor.role === "ADMIN" ? (
+      {actor.role === "MASTER" || actor.role === "ADMIN" ? (
         <div className="flex flex-wrap gap-2">
           <PostButton url="/api/admin/users" body={{ action: "suspend", userId: user.id }} label="Bloquear" confirm="Bloquear este revendedor?" />
           <PostButton url="/api/admin/users" body={{ action: "activate", userId: user.id }} label="Reativar" />
         </div>
       ) : null}
-      {actor.role === "ADMIN" ? <AdjustForm userId={user.id} /> : null}
+      {actor.role === "MASTER" || actor.role === "ADMIN" ? <AdjustForm userId={user.id} /> : null}
       <Card>
         <h2 className="text-xl font-semibold">Extrato</h2>
         <ul className="mt-3 divide-y divide-line text-sm">

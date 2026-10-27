@@ -8,10 +8,12 @@ datasource db {
 }
 
 enum Role {
+  MASTER
   ADMIN
-  OPERATOR
+  SUPPORT
   RESELLER
   CUSTOMER
+  OPERATOR
 }
 
 enum PlanStatus {
@@ -25,6 +27,19 @@ enum LedgerType {
   ORDER_DEBIT
   REFUND
   ADMIN_ADJUSTMENT
+  AFFILIATE_COMMISSION
+}
+
+enum PayMethod {
+  PIX
+  BOLETO
+  USDT
+}
+
+enum TicketStatus {
+  OPEN
+  ANSWERED
+  CLOSED
 }
 
 enum SupplierSource {
@@ -74,13 +89,19 @@ model User {
   phone        String?
   role         Role            @default(CUSTOMER)
   planStatus   PlanStatus      @default(INACTIVE)
-  storeSlug    String?         @unique
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  wallet       Wallet?
-  orders       Order[]         @relation("TenantOrders")
-  imports      CatalogImport[]
-  customers    ResellerCustomer[]
+  storeSlug     String?            @unique
+  affiliateCode String?            @unique
+  referredById  String?
+  referredBy    User?              @relation("Referrals", fields: [referredById], references: [id])
+  referrals     User[]             @relation("Referrals")
+  note          String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  wallet        Wallet?
+  orders        Order[]            @relation("TenantOrders")
+  imports       CatalogImport[]
+  customers     ResellerCustomer[]
+  tickets       SupportTicket[]
 }
 
 model Wallet {
@@ -173,8 +194,11 @@ model Order {
   supplierOrderId     String?
   trackingCode        String?
   failureReason       String?
+  payMethod           PayMethod         @default(PIX)
   pixCopyPaste        String?
   pixQrCodeBase64     String?
+  boletoLine          String?
+  cryptoTxHash        String?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
   items               OrderItem[]
@@ -210,7 +234,9 @@ model PixCharge {
   externalId   String        @unique
   amountCents  BigInt
   status       PaymentStatus @default(PENDING)
+  payMethod    PayMethod     @default(PIX)
   pixCopyPaste String
+  boletoLine   String?
   expiresAt    DateTime
   paidAt       DateTime?
   createdAt    DateTime      @default(now())
@@ -254,6 +280,7 @@ model ResellerCustomer {
   phone       String
   email       String?
   addressJson Json?
+  note        String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -299,4 +326,57 @@ model Setting {
   key       String   @id
   valueJson Json
   updatedAt DateTime @updatedAt
+}
+
+model SupportTicket {
+  id        String          @id @default(cuid())
+  userId    String?
+  user      User?           @relation(fields: [userId], references: [id])
+  name      String
+  email     String
+  subject   String
+  status    TicketStatus    @default(OPEN)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  messages  SupportMessage[]
+
+  @@index([status, updatedAt])
+}
+
+model SupportMessage {
+  id        String        @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id])
+  authorId  String?
+  body      String
+  staff     Boolean       @default(false)
+  createdAt DateTime      @default(now())
+}
+
+model ContactMessage {
+  id        String    @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  body      String
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([createdAt])
+}
+
+model JobApplication {
+  id         String   @id @default(cuid())
+  name       String
+  email      String
+  phone      String
+  city       String
+  roleWanted String
+  message    String
+  resumePath String?
+  status     String   @default("NEW")
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
 }

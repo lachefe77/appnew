@@ -5,7 +5,7 @@ import { runWatchdog } from "@/server/watchdog";
 
 export async function POST() {
   try {
-    await requireApiUser(["ADMIN"]);
+    await requireApiUser(["MASTER", "ADMIN"]);
     await runWatchdog();
     return NextResponse.json({ ok: true });
   } catch (error) {

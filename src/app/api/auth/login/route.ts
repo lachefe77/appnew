@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { SESSION_COOKIE, safeNext, signSession } from "@/lib/session";
 import { loginAccount } from "@/server/accounts";
 import { jsonError } from "@/server/api";
+import { homePath } from "@/server/roles";
 import { loginSchema } from "@/server/validators";
 
 export async function POST(request: Request) {
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
     const user = await loginAccount(input.email, input.password);
     const token = await signSession({ id: user.id, role: user.role, email: user.email });
     const next =
-      safeNext(input.next) ?? (user.role === "ADMIN" ? "/admin" : user.role === "RESELLER" ? "/painel" : "/");
+      safeNext(input.next) ?? homePath(user.role);
     const response = NextResponse.json({ ok: true, next, role: user.role });
     response.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true,

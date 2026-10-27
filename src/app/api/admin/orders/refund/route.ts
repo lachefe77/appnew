@@ -10,7 +10,7 @@ const schema = z.object({ publicCode: z.string().min(3) });
 
 export async function POST(request: Request) {
   try {
-    await requireApiUser(["ADMIN"]);
+    await requireApiUser(["MASTER", "ADMIN"]);
     const input = schema.parse(await request.json());
     const order = await prisma.order.findUnique({ where: { publicCode: input.publicCode } });
     if (!order) throw new AppError("Pedido não encontrado", "NOT_FOUND", 404);

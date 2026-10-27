@@ -4,7 +4,7 @@ import { formatBRL } from "@/lib/format";
 import { prisma } from "@/server/db";
 
 export default async function ResellersPage() {
-  await requireUser(["ADMIN", "OPERATOR"]);
+  await requireUser(["MASTER", "ADMIN", "SUPPORT", "OPERATOR"]);
   const users = await prisma.user.findMany({
     where: { role: "RESELLER" },
     include: { wallet: true, orders: { orderBy: { createdAt: "desc" }, take: 1 } },

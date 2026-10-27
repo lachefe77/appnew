@@ -8,7 +8,7 @@ const schema = z.object({ productId: z.string().min(1) });
 
 export async function POST(request: Request) {
   try {
-    const user = await requireApiUser(["RESELLER", "ADMIN"]);
+    const user = await requireApiUser(["RESELLER", "ADMIN", "MASTER"]);
     const input = schema.parse(await request.json());
     await importProduct(user.id, input.productId);
     return NextResponse.json({ ok: true });
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const user = await requireApiUser(["RESELLER", "ADMIN"]);
+    const user = await requireApiUser(["RESELLER", "ADMIN", "MASTER"]);
     const input = schema.parse(await request.json());
     await removeImport(user.id, input.productId);
     return NextResponse.json({ ok: true });

@@ -52,13 +52,14 @@ export function ledgerLabel(type: string) {
     ORDER_DEBIT: "Débito de pedido",
     REFUND: "Estorno",
     ADMIN_ADJUSTMENT: "Ajuste",
+    AFFILIATE_COMMISSION: "Comissão de afiliado",
   };
   return labels[type] ?? type;
 }
 
 export function trackingMessage(order: { customerName: string; publicCode: string; trackingCode: string | null }) {
   return [
-    `Olá, ${order.customerName}. Aqui é a Novos Horizontes.`,
+    `Olá, ${order.customerName}. Aqui é o Mestre do Atacadão.`,
     `O pedido ${order.publicCode} foi enviado.`,
     `Código de rastreio: ${order.trackingCode ?? "ainda sem código"}.`,
   ].join("\n");

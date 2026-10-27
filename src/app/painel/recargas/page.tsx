@@ -5,7 +5,7 @@ import { isSandboxPayment } from "@/server/config";
 import { prisma } from "@/server/db";
 
 export default async function DepositsPage() {
-  const user = await requireUser(["RESELLER", "ADMIN"]);
+  const user = await requireUser(["RESELLER", "ADMIN", "MASTER"]);
   const charges = user.wallet
     ? await prisma.pixCharge.findMany({
         where: { walletId: user.wallet.id, purpose: "WALLET_DEPOSIT" },

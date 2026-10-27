@@ -1,23 +1,26 @@
-import { OperatorForm } from "@/components/operator-form";
+import { StaffCreateForm } from "@/components/simple-forms";
 import { requireUser } from "@/server/auth";
 import { prisma } from "@/server/db";
+import { roleLabel } from "@/server/roles";
 
 export default async function TeamPage() {
-  const user = await requireUser(["ADMIN", "OPERATOR"]);
-  const operators = await prisma.user.findMany({ where: { role: "OPERATOR" }, orderBy: { createdAt: "desc" } });
+  const user = await requireUser(["MASTER", "ADMIN"]);
+  const people = await prisma.user.findMany({
+    where: { role: { in: ["MASTER", "ADMIN", "SUPPORT"] } },
+    orderBy: { createdAt: "asc" },
+  });
   return (
     <div className="space-y-4">
       <h1 className="text-3xl font-semibold">Equipe</h1>
       <p className="max-w-2xl text-sm text-muted">
-        O dono entra com o login admin. O operador vê pedidos, catálogo, mensagens e webhooks. Não pausa a fila, não estorna e não mexe no saldo.
+        Mestre é o dono. Administrador opera a casa e não muda o mestre. Suporte responde chamado, contato e currículo, e não mexe em saldo, preço nem ajuste.
       </p>
       <ul className="text-sm">
-        {operators.map((operator) => (
-          <li key={operator.id}>{operator.name} · {operator.email}</li>
+        {people.map((person) => (
+          <li key={person.id}>{roleLabel(person.role)} · {person.name} · {person.email}</li>
         ))}
-        {operators.length === 0 ? <li className="text-muted">Nenhum operador ainda.</li> : null}
       </ul>
-      {user.role === "ADMIN" ? <OperatorForm /> : null}
+      {user.role === "MASTER" || user.role === "ADMIN" ? <StaffCreateForm /> : null}
     </div>
   );
 }

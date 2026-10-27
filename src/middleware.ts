@@ -10,11 +10,12 @@ export async function middleware(request: NextRequest) {
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
-  if (pathname.startsWith("/admin") && session.role !== "ADMIN" && session.role !== "OPERATOR") {
-    return NextResponse.redirect(new URL("/painel", request.url));
+  const staff = session.role === "MASTER" || session.role === "ADMIN" || session.role === "SUPPORT" || session.role === "OPERATOR";
+  if (pathname.startsWith("/admin") && !staff) {
+    return NextResponse.redirect(new URL(session.role === "RESELLER" ? "/painel" : "/", request.url));
   }
-  if (pathname.startsWith("/painel") && session.role === "CUSTOMER") {
-    return NextResponse.redirect(new URL("/", request.url));
+  if (pathname.startsWith("/painel") && session.role !== "RESELLER" && session.role !== "ADMIN" && session.role !== "MASTER") {
+    return NextResponse.redirect(new URL(staff ? "/admin" : "/", request.url));
   }
   return NextResponse.next();
 }

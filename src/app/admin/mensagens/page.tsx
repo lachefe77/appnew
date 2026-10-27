@@ -4,7 +4,7 @@ import { requireUser } from "@/server/auth";
 import { prisma } from "@/server/db";
 
 export default async function MessagesPage() {
-  await requireUser(["ADMIN", "OPERATOR"]);
+  await requireUser(["MASTER", "ADMIN", "SUPPORT", "OPERATOR"]);
   const messages = await prisma.notificationLog.findMany({ orderBy: { createdAt: "desc" }, take: 40 });
   return (
     <div className="space-y-4">

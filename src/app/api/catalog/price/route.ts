@@ -12,7 +12,7 @@ const schema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const user = await requireApiUser(["RESELLER", "ADMIN"]);
+    const user = await requireApiUser(["RESELLER", "ADMIN", "MASTER"]);
     const input = schema.parse(await readJson(request));
     const imported = await prisma.catalogImport.findUnique({
       where: { userId_productId: { userId: user.id, productId: input.productId } },

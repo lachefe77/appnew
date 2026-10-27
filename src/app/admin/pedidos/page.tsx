@@ -12,7 +12,7 @@ export default async function AdminOrdersPage({
 }: {
   searchParams: Promise<{ q?: string; pagamento?: string; despacho?: string }>;
 }) {
-  await requireUser(["ADMIN", "OPERATOR"]);
+  await requireUser(["MASTER", "ADMIN", "SUPPORT", "OPERATOR"]);
   const { q, pagamento, despacho } = await searchParams;
   const digits = (q ?? "").replace(/\D/g, "");
   const orders = await prisma.order.findMany({

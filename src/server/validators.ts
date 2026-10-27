@@ -46,6 +46,7 @@ export const b2cOrderSchema = z
     clientRequestId: z.string().min(8).max(80).optional(),
     customer: customerSchema,
     address: addressSchema,
+    payMethod: z.enum(["PIX", "BOLETO", "USDT"]).optional(),
   })
   .refine((value) => (value.items && value.items.length > 0) || Boolean(value.productId), {
     message: "Escolha ao menos um produto",
@@ -111,6 +112,7 @@ export const customerSaveSchema = z.object({
     .transform(digits)
     .refine((value) => value.length >= 10 && value.length <= 13, { message: "Telefone inválido" }),
   email: z.string().trim().email().optional().or(z.literal("")),
+  note: z.string().trim().max(400).optional(),
 });
 
 export const lookupSchema = z.object({

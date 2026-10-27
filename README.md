@@ -27,8 +27,9 @@ A Evolution API fica fora do `docker compose up` padrão. Para tentar o containe
 | Papel | E-mail | Senha |
 | --- | --- | --- |
 | Revenda | revenda@novoshorizontes.test | Revenda#Horizonte |
-| Admin | admin@novoshorizontes.test | Admin#Horizonte |
-| Operador | operador@novoshorizontes.test | Operador#Horizonte |
+| Mestre | admin@novoshorizontes.test | Admin#Horizonte |
+| Administrador | administrador@novoshorizontes.test | Admin#Horizonte |
+| Suporte | operador@novoshorizontes.test | Operador#Horizonte |
 
 O seed cria o pedido `NH-DEMO001` com PIX pendente por 30 minutos. A vitrine só mostra o atalho enquanto ele ainda está `PENDING`. Depois disso o pedido expira e o link some.
 

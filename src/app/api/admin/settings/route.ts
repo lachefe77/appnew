@@ -6,7 +6,7 @@ import { commerceSchema } from "@/server/validators";
 
 export async function POST(request: Request) {
   try {
-    await requireApiUser(["ADMIN"]);
+    await requireApiUser(["MASTER", "ADMIN"]);
     const input = commerceSchema.parse(await readJson(request));
     const saved = await saveCommerce(input);
     return NextResponse.json({ ok: true, settings: saved });

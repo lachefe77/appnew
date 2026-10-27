@@ -7,12 +7,12 @@ import { requireUser } from "@/server/auth";
 import { prisma } from "@/server/db";
 
 export default async function AdminOrderPage({ params }: { params: Promise<{ code: string }> }) {
-  const user = await requireUser(["ADMIN", "OPERATOR"]);
+  const user = await requireUser(["MASTER", "ADMIN", "SUPPORT", "OPERATOR"]);
   const { code } = await params;
   const order = await prisma.order.findUnique({ where: { publicCode: code }, include: { items: true, charge: true, tenant: true } });
   if (!order) notFound();
   const address = order.shippingAddressJson as { street?: string; number?: string; city?: string; state?: string; cep?: string };
-  const owner = user.role === "ADMIN";
+  const owner = user.role === "MASTER" || user.role === "ADMIN";
 
   return (
     <div className="space-y-5">
@@ -31,6 +31,9 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ cod
           <p>Atacado {formatBRL(order.totalWholesaleCents)}</p>
           <p>Custo {formatBRL(order.totalCostCents)}</p>
           <p className="text-sm text-muted">Margem da casa {formatBRL((order.channel === "B2B" ? order.totalWholesaleCents : order.totalSaleCents) - order.totalCostCents)}</p>
+          <p className="mt-2 text-sm">Pagamento {order.payMethod}</p>
+          {order.cryptoTxHash ? <p className="break-all text-sm">Hash {order.cryptoTxHash}</p> : null}
+          {order.boletoLine ? <p className="break-all text-xs text-muted">{order.boletoLine}</p> : null}
         </Card>
         <Card>
           <p className="text-xs uppercase tracking-[0.14em] text-muted">Cliente</p>
@@ -65,6 +68,9 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ cod
       ) : null}
       {owner ? (
         <div className="flex flex-wrap gap-2">
+          {order.paymentStatus === "PENDING" && order.charge ? (
+            <PostButton url="/api/admin/payments/confirm" body={{ externalId: order.charge.externalId }} label={order.payMethod === "USDT" ? "Confirmar USDT" : "Confirmar pagamento"} confirm="Marcar esta cobrança como paga?" />
+          ) : null}
           <PostButton url="/api/admin/orders/requeue" body={{ publicCode: order.publicCode }} label="Reprocessar despacho" />
           <PostButton url="/api/admin/orders/refund" body={{ publicCode: order.publicCode }} label="Estornar" confirm="Estornar este pedido?" />
         </div>

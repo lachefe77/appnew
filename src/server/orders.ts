@@ -1,9 +1,10 @@
 import { Prisma, type SupplierSource } from "@prisma/client";
+import { getBrand } from "./brand";
 import { getCommerce } from "./commerce";
 import { prisma } from "./db";
 import { AppError } from "./errors";
 import { sha256, publicCode } from "./crypto";
-import { issuePix } from "./payments";
+import { issueCollection } from "./payments";
 import { quoteLine } from "./pricing";
 import { wake } from "./queue";
 import { applyWalletEntry } from "./wallet";
@@ -21,6 +22,7 @@ type CheckoutInput = {
   items?: LineRequest[];
   productId?: string;
   quantity?: number;
+  payMethod?: "PIX" | "BOLETO" | "USDT";
 };
 
 export async function createStoreOrder(input: CheckoutInput) {
@@ -63,13 +65,17 @@ async function createCheckout(userId: string | null, input: CheckoutInput) {
   }
 
   const commerce = await getCommerce();
+  const brand = await getBrand();
+  const payMethod = userId ? "PIX" : input.payMethod ?? "PIX";
   const orders = [];
   for (const [source, lines] of groups) {
     const totalSale = lines.reduce((sum, line) => sum + line.quote.sale, 0);
     const requestId = groups.size === 1 ? input.clientRequestId : input.clientRequestId ? `${input.clientRequestId}:${source}` : undefined;
     const pix = userId
       ? null
-      : await issuePix({
+      : await issueCollection({
+          method: payMethod,
+          usdtAddress: brand.usdtAddress,
           amountCents: totalSale,
           description: `Pedido ${lines.map((line) => line.product.title).join(", ")}`.slice(0, 140),
           externalReference: requestId ?? publicCode(),
@@ -106,8 +112,10 @@ async function createCheckout(userId: string | null, input: CheckoutInput) {
           paymentStatus: userId ? "PAID" : "PENDING",
           fulfillmentStatus: userId ? "QUEUED" : "WAITING_PAYMENT",
           supplierSource: source,
+          payMethod: pix?.method ?? "PIX",
           pixCopyPaste: pix?.pixCopyPaste,
           pixQrCodeBase64: pix?.qrCodeBase64,
+          boletoLine: pix?.boletoLine,
           items: {
             create: lines.map((line) => ({
               productId: line.product.id,
@@ -129,6 +137,7 @@ async function createCheckout(userId: string | null, input: CheckoutInput) {
           idempotencyKey: sha256(`${userId}:${order.id}:ORDER_DEBIT`),
           description: `Atacado do pedido ${order.publicCode}`,
         });
+        await creditAffiliate(tx, { buyerId: userId, orderId: order.id, wholesaleCents: order.totalWholesaleCents });
         await tx.resellerCustomer.upsert({
           where: { userId_cpf: { userId, cpf: input.customer.cpf } },
           create: {
@@ -163,7 +172,9 @@ async function createCheckout(userId: string | null, input: CheckoutInput) {
           provider: pix!.provider,
           externalId: pix!.externalId,
           amountCents: BigInt(totalSale),
+          payMethod: pix!.method,
           pixCopyPaste: pix!.pixCopyPaste,
+          boletoLine: pix!.boletoLine,
           expiresAt: pix!.expiresAt,
         },
       });
@@ -221,6 +232,7 @@ export async function refundOrder(orderId: string) {
         idempotencyKey: sha256(`${order.id}:REFUND`),
         description: `Estorno do pedido ${order.publicCode}`,
       });
+      await reverseAffiliate(tx, order.id, order.publicCode);
     }
     await tx.order.update({
       where: { id: order.id },
@@ -245,6 +257,40 @@ export async function refundOrder(orderId: string) {
     );
   }
   return prisma.order.findUnique({ where: { id: order.id }, include: orderInclude });
+}
+
+async function creditAffiliate(tx: Prisma.TransactionClient, input: { buyerId: string; orderId: string; wholesaleCents: number }) {
+  const buyer = await tx.user.findUnique({ where: { id: input.buyerId }, select: { referredById: true } });
+  if (!buyer?.referredById) return;
+  const referrer = await tx.user.findUnique({ where: { id: buyer.referredById }, include: { wallet: true } });
+  if (!referrer?.wallet || referrer.planStatus === "SUSPENDED") return;
+  const brand = await getBrand();
+  const cents = Math.floor((input.wholesaleCents * brand.affiliateBps) / 10000);
+  if (cents <= 0) return;
+  await applyWalletEntry(tx, {
+    userId: referrer.id,
+    orderId: input.orderId,
+    amountCents: BigInt(cents),
+    type: "AFFILIATE_COMMISSION",
+    idempotencyKey: sha256(`affiliate:${input.orderId}`),
+    description: "Comissão de afiliado",
+  });
+}
+
+async function reverseAffiliate(tx: Prisma.TransactionClient, orderId: string, publicCode: string) {
+  const commission = await tx.walletLedger.findUnique({
+    where: { idempotencyKey: sha256(`affiliate:${orderId}`) },
+    include: { wallet: true },
+  });
+  if (!commission || commission.amountCents <= 0n) return;
+  await applyWalletEntry(tx, {
+    userId: commission.wallet.userId,
+    orderId,
+    amountCents: -commission.amountCents,
+    type: "AFFILIATE_COMMISSION",
+    idempotencyKey: sha256(`affiliate-reversal:${orderId}`),
+    description: `Estorno da comissão do pedido ${publicCode}`,
+  });
 }
 
 function emptyToNull(value: string | undefined) {

@@ -26,6 +26,7 @@ export default function CheckoutPage() {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [form, setForm] = useState(empty);
+  const [payMethod, setPayMethod] = useState<"PIX" | "BOLETO" | "USDT">("PIX");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -49,6 +50,7 @@ export default function CheckoutPage() {
       body: JSON.stringify({
         items: lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
         clientRequestId: requestId.current,
+        payMethod,
         customer: { name: form.name, cpf: form.cpf, phone: form.phone, email: form.email },
         address: {
           cep: form.cep,
@@ -112,14 +114,21 @@ export default function CheckoutPage() {
           <div className="rounded-2xl border border-line bg-card p-4 text-sm">
             <p>{form.name} · {form.cpf}</p>
             <p className="text-muted">{form.street}, {form.number} · {form.city}/{form.state}</p>
-            <p className="mt-3">O PIX reserva o estoque. Itens de galpões diferentes viram pedidos separados, cada um com o próprio código.</p>
+            <p className="mt-3">Escolha como pagar. Cartão não entra. Itens de galpões diferentes viram pedidos separados.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {(["PIX", "BOLETO", "USDT"] as const).map((method) => (
+                <button key={method} type="button" className={`rounded-md border px-3 py-2 text-sm ${payMethod === method ? "border-ink bg-ink text-white" : "border-line"}`} onClick={() => setPayMethod(method)}>
+                  {method === "BOLETO" ? "Boleto" : method}
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
         <div className="flex gap-2">
           {step > 1 ? <button type="button" className="rounded-full border border-line px-4 py-2 text-sm" onClick={() => setStep((step - 1) as 1 | 2 | 3)}>Voltar</button> : null}
           {step < 3 ? <button type="button" className="rounded-full bg-ink px-4 py-2 text-sm text-white" onClick={() => setStep((step + 1) as 1 | 2 | 3)}>Continuar</button> : null}
-          {step === 3 ? <button type="button" disabled={loading} className="rounded-full bg-copper px-4 py-2 text-sm text-white disabled:opacity-60" onClick={pay}>{loading ? "Gerando PIX..." : "Gerar PIX"}</button> : null}
+          {step === 3 ? <button type="button" disabled={loading} className="rounded-full bg-copper px-4 py-2 text-sm text-white disabled:opacity-60" onClick={pay}>{loading ? "Gerando..." : payMethod === "PIX" ? "Gerar PIX" : payMethod === "BOLETO" ? "Gerar boleto" : "Pagar com USDT"}</button> : null}
         </div>
       </div>
       <aside className="h-fit rounded-2xl border border-line bg-card p-4">

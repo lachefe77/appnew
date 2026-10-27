@@ -3,7 +3,9 @@ import { LiveRefresh } from "@/components/live-refresh";
 import { PixPanel } from "@/components/pix-panel";
 import { Card, StatusBadge } from "@/components/ui";
 import { CopyBox } from "@/components/copy-box";
+import { TxHashForm } from "@/components/simple-forms";
 import { formatBRL, trackingMessage } from "@/lib/format";
+import { getBrand } from "@/server/brand";
 import { isSandboxPayment } from "@/server/config";
 import { prisma } from "@/server/db";
 
@@ -22,6 +24,8 @@ export default async function OrderPage({ params }: { params: Promise<{ code: st
     include: { items: true, charge: true },
   });
   if (!order) notFound();
+  const brand = await getBrand();
+  const usdt = brand.usdtBrlCents > 0 ? (order.totalSaleCents / brand.usdtBrlCents).toFixed(2) : null;
   const address = order.shippingAddressJson as { street?: string; number?: string; city?: string; state?: string };
 
   return (
@@ -68,7 +72,22 @@ export default async function OrderPage({ params }: { params: Promise<{ code: st
           {order.supplierOrderId ? <p className="mt-2 text-xs text-muted">Fornecedor: {order.supplierOrderId}</p> : null}
         </Card>
         <Card>
-          {order.paymentStatus === "PENDING" && order.pixCopyPaste && order.pixQrCodeBase64 && order.charge ? (
+          {order.paymentStatus === "PENDING" && order.payMethod === "USDT" ? (
+            <div className="space-y-3">
+              <h2 className="text-2xl font-semibold">Pagar em USDT</h2>
+              <p className="text-sm text-muted">Rede {brand.usdtNetwork}. Estimativa pela cotação do admin: {usdt} USDT para {formatBRL(order.totalSaleCents)}. A equipe confere o hash antes de despachar.</p>
+              <p className="break-all text-sm">{order.pixCopyPaste}</p>
+              {order.cryptoTxHash ? <p className="text-sm">Hash informado: {order.cryptoTxHash}</p> : <TxHashForm publicCode={order.publicCode} />}
+            </div>
+          ) : order.paymentStatus === "PENDING" && order.payMethod === "BOLETO" && order.boletoLine && order.charge ? (
+            <div className="space-y-3">
+              <h2 className="text-2xl font-semibold">Boleto</h2>
+              <CopyBox text={order.boletoLine} label="Copiar linha digitável" />
+              {isSandboxPayment() ? (
+                <PixPanel amountCents={order.totalSaleCents} copyPaste={order.boletoLine} qrCodeBase64={order.pixQrCodeBase64 ?? ""} externalId={order.charge.externalId} sandbox status={order.paymentStatus} />
+              ) : null}
+            </div>
+          ) : order.paymentStatus === "PENDING" && order.pixCopyPaste && order.pixQrCodeBase64 && order.charge ? (
             <PixPanel
               amountCents={order.totalSaleCents}
               copyPaste={order.pixCopyPaste}

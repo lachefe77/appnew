@@ -5,7 +5,7 @@ import { requireUser } from "@/server/auth";
 import { prisma } from "@/server/db";
 
 export default async function AdminCatalogPage() {
-  await requireUser(["ADMIN", "OPERATOR"]);
+  await requireUser(["MASTER", "ADMIN"]);
   const products = await prisma.product.findMany({ orderBy: { title: "asc" } });
 
   return (

@@ -5,7 +5,7 @@ import { requireUser } from "@/server/auth";
 import { prisma } from "@/server/db";
 
 export default async function CatalogPage() {
-  const user = await requireUser(["RESELLER", "ADMIN"]);
+  const user = await requireUser(["RESELLER", "ADMIN", "MASTER"]);
   const [products, imports] = await Promise.all([
     prisma.product.findMany({ orderBy: [{ isActive: "desc" }, { title: "asc" }] }),
     prisma.catalogImport.findMany({ where: { userId: user.id } }),

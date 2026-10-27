@@ -8,7 +8,7 @@ import { AppError } from "@/server/errors";
 
 export async function POST(request: Request) {
   try {
-    await requireApiUser(["ADMIN", "OPERATOR"]);
+    await requireApiUser(["MASTER", "ADMIN"]);
     const form = await request.formData();
     const id = String(form.get("id") ?? "");
     const file = form.get("file");

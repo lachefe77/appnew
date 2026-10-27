@@ -9,3 +9,4 @@ coverage
 src/generated
 *.tsbuildinfo
 public/uploads
+data
