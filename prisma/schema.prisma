@@ -1,0 +1,269 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  RESELLER
+  CUSTOMER
+}
+
+enum PlanStatus {
+  INACTIVE
+  ACTIVE
+  SUSPENDED
+}
+
+enum LedgerType {
+  PIX_DEPOSIT
+  ORDER_DEBIT
+  REFUND
+  ADMIN_ADJUSTMENT
+}
+
+enum SupplierSource {
+  CJ_BRAZIL
+  BLING_HUB
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  EXPIRED
+  REFUNDED
+}
+
+enum FulfillmentStatus {
+  WAITING_PAYMENT
+  QUEUED
+  DISPATCHED_TO_SUPPLIER
+  SHIPPED
+  DELIVERED
+  FAILED
+}
+
+enum OrderChannel {
+  B2C
+  B2B
+}
+
+enum ChargePurpose {
+  WALLET_DEPOSIT
+  ORDER_PAYMENT
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+model User {
+  id           String          @id @default(cuid())
+  name         String
+  email        String          @unique
+  passwordHash String
+  cpfCnpj      String?
+  phone        String?
+  role         Role            @default(CUSTOMER)
+  planStatus   PlanStatus      @default(INACTIVE)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  wallet       Wallet?
+  orders       Order[]         @relation("TenantOrders")
+  imports      CatalogImport[]
+}
+
+model Wallet {
+  id           String         @id @default(cuid())
+  userId       String         @unique
+  user         User           @relation(fields: [userId], references: [id])
+  balanceCents BigInt         @default(0)
+  version      Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  ledger       WalletLedger[]
+  charges      PixCharge[]
+}
+
+/// Lançamento imutável. amountCents > 0 credita, < 0 debita.
+model WalletLedger {
+  id             String     @id @default(cuid())
+  walletId       String
+  wallet         Wallet     @relation(fields: [walletId], references: [id])
+  orderId        String?
+  order          Order?     @relation(fields: [orderId], references: [id])
+  amountCents    BigInt
+  type           LedgerType
+  idempotencyKey String     @unique
+  description    String?
+  createdAt      DateTime   @default(now())
+
+  @@index([walletId, createdAt])
+  @@index([orderId])
+}
+
+model Product {
+  id                     String          @id @default(cuid())
+  supplierSource         SupplierSource
+  supplierSku            String
+  title                  String
+  slug                   String          @unique
+  description            String
+  images                 String[]
+  category               String
+  supplierCostCents      Int
+  platformWholesaleCents Int
+  suggestedRetailCents   Int
+  stockQuantity          Int
+  isActive               Boolean         @default(true)
+  weightGrams            Int             @default(500)
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  items                  OrderItem[]
+  imports                CatalogImport[]
+
+  @@unique([supplierSource, supplierSku])
+  @@index([isActive, category])
+}
+
+model CatalogImport {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  productId        String
+  product          Product  @relation(fields: [productId], references: [id])
+  retailPriceCents Int
+  createdAt        DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+model Order {
+  id                  String            @id @default(cuid())
+  publicCode          String            @unique
+  clientRequestId     String?           @unique
+  tenantId            String?
+  tenant              User?             @relation("TenantOrders", fields: [tenantId], references: [id])
+  channel             OrderChannel
+  customerName        String
+  customerCpf         String
+  customerPhone       String
+  customerEmail       String?
+  shippingAddressJson Json
+  totalCostCents      Int
+  totalWholesaleCents Int
+  totalSaleCents      Int
+  paymentStatus       PaymentStatus     @default(PENDING)
+  fulfillmentStatus   FulfillmentStatus @default(WAITING_PAYMENT)
+  supplierSource      SupplierSource
+  supplierOrderId     String?
+  trackingCode        String?
+  failureReason       String?
+  pixCopyPaste        String?
+  pixQrCodeBase64     String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  items               OrderItem[]
+  ledger              WalletLedger[]
+  charge              PixCharge?
+
+  @@index([tenantId, createdAt])
+  @@index([paymentStatus, fulfillmentStatus])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id                 String  @id @default(cuid())
+  orderId            String
+  order              Order   @relation(fields: [orderId], references: [id])
+  productId          String
+  product            Product @relation(fields: [productId], references: [id])
+  title              String
+  quantity           Int
+  unitCostCents      Int
+  unitWholesaleCents Int
+  unitSaleCents      Int
+}
+
+model PixCharge {
+  id           String        @id @default(cuid())
+  purpose      ChargePurpose
+  walletId     String?
+  wallet       Wallet?       @relation(fields: [walletId], references: [id])
+  orderId      String?       @unique
+  order        Order?        @relation(fields: [orderId], references: [id])
+  provider     String
+  externalId   String        @unique
+  amountCents  BigInt
+  status       PaymentStatus @default(PENDING)
+  pixCopyPaste String
+  expiresAt    DateTime
+  paidAt       DateTime?
+  createdAt    DateTime      @default(now())
+
+  @@index([status, expiresAt])
+}
+
+/// externalId aqui é o id do evento no gateway, não o id da cobrança.
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  provider    String
+  externalId  String
+  payloadJson Json
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([provider, externalId])
+}
+
+model OutboxJob {
+  id          String       @id @default(cuid())
+  queue       String
+  jobKey      String       @unique
+  payloadJson Json
+  runAt       DateTime
+  status      OutboxStatus @default(PENDING)
+  attempts    Int          @default(0)
+  lastError   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([status, runAt])
+}
+
+model AdminAlert {
+  id        String    @id @default(cuid())
+  level     String
+  title     String
+  body      String
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([createdAt])
+}
+
+model NotificationLog {
+  id        String   @id @default(cuid())
+  channel   String
+  target    String
+  body      String
+  status    String
+  error     String?
+  orderId   String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model Setting {
+  key       String   @id
+  valueJson Json
+  updatedAt DateTime @updatedAt
+}
