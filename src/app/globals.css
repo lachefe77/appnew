@@ -95,20 +95,145 @@ body {
 }
 
 .mark {
-  font-family: "Instrument Serif", Georgia, serif;
-  font-size: 1.45rem;
-  letter-spacing: -0.03em;
+  font-family: "Instrument Sans", "Segoe UI", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   line-height: 1;
-  color: #161815;
+}
+
+.swiss .mark-tail {
+  font-weight: 500;
+}
+
+.mesa .mark {
+  letter-spacing: -0.03em;
+  text-transform: none;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.mesa .mark-tail {
+  color: #0e7c86;
+  font-weight: 600;
 }
 
 .poster-figure {
-  font-family: "Instrument Serif", Georgia, serif;
-  font-weight: 400;
-  font-size: clamp(4.5rem, 12vw, 8.5rem);
-  line-height: 0.85;
-  letter-spacing: -0.045em;
-  color: #0c6b3c;
+  font-family: "Instrument Sans", "Segoe UI", sans-serif;
+  font-weight: 600;
+  font-size: clamp(4.75rem, 13vw, 9rem);
+  line-height: 0.82;
+  letter-spacing: -0.06em;
+  color: #111;
+}
+
+.swiss {
+  background: #fff;
+  color: #111;
+  border-left: 6px solid #111;
+}
+
+.swiss .btn-primary {
+  border-radius: 0;
+  background: #111;
+  color: #fff;
+}
+
+.swiss .btn-primary:hover {
+  background: #333;
+}
+
+.swiss .btn-ghost {
+  border-radius: 0;
+  border-color: #111;
+  color: #111;
+}
+
+.swiss .text-signal {
+  color: #111;
+}
+
+.swiss .text-ink {
+  color: #111;
+}
+
+.swiss .text-mist {
+  color: #444;
+}
+
+.swiss .bg-pitch,
+.swiss .bg-card,
+.swiss .bg-felt {
+  background: #fff;
+}
+
+.swiss .border-line {
+  border-color: #111;
+}
+
+.mesa {
+  background: #eef1f4;
+  color: #122028;
+}
+
+.mesa .bg-pitch {
+  background: #eef1f4;
+}
+
+.mesa .bg-felt,
+.mesa .bg-card {
+  background: #fff;
+}
+
+.mesa .text-ink {
+  color: #122028;
+}
+
+.mesa .text-mist {
+  color: #5c6b73;
+}
+
+.mesa .text-signal {
+  color: #0e7c86;
+}
+
+.mesa .border-line {
+  border-color: #d7dee3;
+}
+
+.mesa .btn-primary {
+  border-radius: 6px;
+  background: #0e7c86;
+  color: #fff;
+}
+
+.mesa .btn-primary:hover {
+  background: #0b6770;
+}
+
+.mesa .btn-ghost {
+  border-radius: 6px;
+  border-color: #d7dee3;
+  color: #122028;
+}
+
+.mesa .sheet,
+.mesa .product .sheet {
+  border-color: #d7dee3;
+  background: #fff;
+  color: #122028;
+}
+
+.mesa .sheet th {
+  background: #f6f8f9;
+  color: #5c6b73;
+}
+
+.mesa .ops h1 {
+  font-family: "Instrument Sans", "Segoe UI", sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
 .ops h1,

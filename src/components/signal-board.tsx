@@ -549,7 +549,7 @@ export function SignalBoard(props: Props) {
                 data-signal={signal.key}
                 data-profit={signal.profitPercent.toFixed(2)}
                 data-highlight={signal.highlight ? "sim" : "nao"}
-                className={signal.highlight ? "bg-[#e7f3ec]" : ""}
+                className={signal.highlight ? "bg-[#e5f4f5]" : ""}
                 onClick={() => setOpenKey(openKey === signal.key ? null : signal.key)}
               >
                 <td className="px-3 py-3">
@@ -692,7 +692,7 @@ function SignalCard({
   onLaunch: () => void
 }) {
   return (
-    <article className={`border border-line bg-card p-4 ${signal.highlight ? "bg-[#e7f3ec]" : ""}`}>
+    <article className={`border border-line bg-white p-4 ${signal.highlight ? "bg-[#e5f4f5]" : ""}`}>
       <button type="button" className="w-full text-left" onClick={onOpen}>
         <p className="text-xs uppercase text-mist">{signal.sportName}</p>
         <p className="font-semibold">{signal.eventName}</p>

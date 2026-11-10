@@ -23,7 +23,7 @@ export function PlanGrid({ plans, note }: { plans: PublicPlan[]; note: string })
           </p>
           <h3 className="mt-2 font-display text-3xl">{plan.name}</h3>
           <p className="mt-2 flex-1 text-sm leading-6 text-mist">{plan.description}</p>
-          <p className="mt-6 font-display text-4xl text-signal">{formatMoney(plan.priceCents, plan.currency)}</p>
+          <p className="mt-6 font-display text-4xl">{formatMoney(plan.priceCents, plan.currency)}</p>
           <p className="text-sm text-mist">{plan.durationDays} dias de grade</p>
           <p className="mt-4 text-sm text-mist">{note}</p>
           <Link href="/cadastro" className={index === 1 ? "btn-primary mt-4" : "btn-ghost mt-4"}>
