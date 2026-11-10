@@ -17,7 +17,7 @@ export default async function LoginPage({
   return (
     <section className="mx-auto max-w-md px-4 py-16">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-signal">{settings.get("brand.name")}</p>
-      <h1 className="mt-2 font-display text-5xl uppercase">Entrar</h1>
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Entrar</h1>
       <p className="mt-2 text-sm text-mist">{settings.get("auth.loginLead")}</p>
       {!settings.flag("site.online") ? (
         <p className="mt-4 text-sm text-mist">A casa está fechada para o público. A administração entra por aqui.</p>

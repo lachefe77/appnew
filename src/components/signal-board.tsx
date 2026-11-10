@@ -308,7 +308,7 @@ export function SignalBoard(props: Props) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-signal">Operação</p>
-          <h1 className="font-display text-6xl uppercase">Sinais</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Sinais</h1>
           <p className="mt-1 text-sm text-mist">{props.sourceLine}</p>
         </div>
         <div className="rounded-xl border border-line bg-card px-4 py-3">
@@ -549,7 +549,7 @@ export function SignalBoard(props: Props) {
                 data-signal={signal.key}
                 data-profit={signal.profitPercent.toFixed(2)}
                 data-highlight={signal.highlight ? "sim" : "nao"}
-                className={signal.highlight ? "bg-[#fff4d6]" : ""}
+                className={signal.highlight ? "bg-[#2a2418]" : ""}
                 onClick={() => setOpenKey(openKey === signal.key ? null : signal.key)}
               >
                 <td className="px-3 py-3">
@@ -569,7 +569,7 @@ export function SignalBoard(props: Props) {
                 <td className="px-3 py-3">
                   <p className="font-display text-2xl text-signal">{percentLabel(signal.profitPercent)}</p>
                   <p className="text-mist">{formatMoney(signal.profitCents, props.currency)}</p>
-                  {signal.highlight ? <p className="text-xs font-semibold uppercase text-[#8a5a00]">Anomalia, raro</p> : null}
+                  {signal.highlight ? <p className="text-xs font-semibold uppercase text-signal">Anomalia, raro</p> : null}
                   {signal.leftoverCents ? <p className="text-xs text-mist">Sobra {formatMoney(signal.leftoverCents, props.currency)}</p> : null}
                 </td>
                 <td className="px-3 py-3">
@@ -588,7 +588,7 @@ export function SignalBoard(props: Props) {
               </tr>
               {openKey === signal.key ? (
                 <tr key={`${signal.key}-open`}>
-                  <td colSpan={7} className="bg-white px-3 py-3">
+                  <td colSpan={7} className="bg-felt px-3 py-3">
                     <SignalDetail signal={signal} currency={props.currency} />
                   </td>
                 </tr>
@@ -692,12 +692,12 @@ function SignalCard({
   onLaunch: () => void
 }) {
   return (
-    <article className={`rounded-2xl border border-line bg-white p-4 ${signal.highlight ? "bg-[#fff4d6]" : ""}`}>
+    <article className={`border border-line bg-card p-4 ${signal.highlight ? "bg-[#2a2418]" : ""}`}>
       <button type="button" className="w-full text-left" onClick={onOpen}>
         <p className="text-xs uppercase text-mist">{signal.sportName}</p>
         <p className="font-semibold">{signal.eventName}</p>
         <p className="text-signal">{percentLabel(signal.profitPercent)}</p>
-        {signal.highlight ? <p className="text-xs font-semibold uppercase text-[#8a5a00]">Anomalia, raro</p> : null}
+        {signal.highlight ? <p className="text-xs font-semibold uppercase text-signal">Anomalia, raro</p> : null}
       </button>
       {open ? <div className="mt-3"><SignalDetail signal={signal} currency={currency} /></div> : null}
       <button type="button" className="btn-primary mt-3" disabled={launched || pending} onClick={onLaunch}>

@@ -7,13 +7,13 @@ export default async function HousesStatusPage() {
   const houses = await prisma.house.findMany({ where: { operable: true }, orderBy: { sortOrder: "asc" } })
   return (
     <section className="mx-auto max-w-3xl px-4 py-12">
-      <h1 className="font-display text-5xl uppercase">Casas</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Casas</h1>
       <p className="mt-2 text-sm text-mist">
         Só entra como fonte real a casa que respondeu com odd. As outras ficam em teste, com o motivo. Não usamos proxy.
       </p>
       <ul className="mt-6 space-y-3">
         {houses.map((house) => (
-          <li key={house.id} className="rounded-2xl border border-line bg-white p-4">
+          <li key={house.id} className="border border-line bg-card p-4">
             <p className="font-semibold">{house.name}</p>
             <p className="text-sm text-mist">
               {house.feed === "ao_vivo" ? "Fonte real." : "Odd de teste."}{" "}

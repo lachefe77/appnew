@@ -8,25 +8,26 @@
 
 body {
   font-family: Outfit, "Segoe UI", sans-serif;
-  background: #07140f;
+  background: #0e1014;
+  color: #f4f1ea;
 }
 
 ::selection {
-  background: #1ed37a;
-  color: #07140f;
+  background: #d6a15a;
+  color: #1c1408;
 }
 
 :focus-visible {
-  outline: 2px solid #1ed37a;
+  outline: 2px solid #d6a15a;
   outline-offset: 2px;
 }
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-md bg-signal px-4 py-2 text-sm font-semibold text-pitch transition hover:bg-[#3bde8d];
+    @apply inline-flex items-center justify-center rounded-sm bg-signal px-4 py-2 text-sm font-semibold text-[#1c1408] transition hover:bg-[#e4c27a];
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink transition hover:border-signal hover:text-signal;
+    @apply inline-flex items-center justify-center rounded-sm border border-line bg-transparent px-4 py-2 text-sm font-semibold text-ink transition hover:border-signal hover:text-signal;
   }
   .btn-admin {
     @apply inline-flex items-center justify-center rounded-md bg-[#085c34] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0a7040];
@@ -74,65 +75,21 @@ body {
 
 .backoffice {
   color-scheme: light;
+  background: #e7ece9;
+  color: #121816;
 }
 
-.light-ui {
-  color-scheme: light;
-  background: #f4f6f3;
-  color: #17241c;
+.product .sheet {
+  border-color: #313744;
+  background: #1c2028;
+  color: #f4f1ea;
 }
 
-.light-ui .text-ink {
-  color: #17241c;
+.product .sheet th {
+  background: #161922;
+  color: #a39e94;
 }
 
-.light-ui .text-mist {
-  color: #5d6d64;
-}
-
-.light-ui .text-signal {
-  color: #0c7a45;
-}
-
-.light-ui .bg-pitch,
-.light-ui .bg-pitch\/95 {
-  background: #f7f8f6;
-}
-
-.light-ui .bg-card,
-.light-ui .bg-felt {
-  background: #fff;
-}
-
-.light-ui .border-line {
-  border-color: #e3e8e4;
-}
-
-.light-ui .bg-white\/10 {
-  background: #e7f6ee;
-}
-
-.light-ui .field,
-.light-ui .label {
-  color: #3d4d45;
-}
-
-.light-ui .field {
-  background: #fff;
-  border-color: #d5ddd8;
-  color: #17241c;
-}
-
-.light-ui .btn-ghost {
-  color: #17241c;
-  border-color: #cfd8d2;
-}
-
-.light-ui .btn-primary {
-  background: #0e8f4e;
-  color: #fff;
-}
-
-.light-ui .bg-\[\#163222\] {
-  background: #e7f6ee;
+.product .sheet tbody tr + tr td {
+  border-color: #313744;
 }

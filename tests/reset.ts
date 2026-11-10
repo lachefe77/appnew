@@ -15,6 +15,7 @@ export async function resetDb() {
   await prisma.pageTiming.deleteMany()
   await prisma.supportReply.deleteMany()
   await prisma.supportMessage.deleteMany()
+  await prisma.supportConversation.deleteMany()
   await prisma.stakePreset.deleteMany()
   await prisma.alertDispatch.deleteMany()
   await prisma.stakeLaunch.deleteMany()
