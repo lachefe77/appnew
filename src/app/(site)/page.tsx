@@ -34,81 +34,37 @@ export default async function HomePage() {
     : []
 
   return (
-    <>
-      <section className="pitch-hero border-b border-line">
-        <div className="relative z-[1] mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 md:grid-cols-[1.05fr_0.95fr] md:py-20">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-signal">Casa de sinais</p>
-            <h1 className="mt-4 max-w-xl font-display text-5xl leading-[0.95] text-ink md:text-6xl">
-              Duas casas. Um jogo. Conta positiva.
-            </h1>
-            <p className="mt-5 max-w-lg text-base leading-7 text-mist">
-              Surebet é quando os preços do mesmo jogo, somados, fecham no positivo. Você cobre os dois lados. Um ganha, o
-              outro perde, e a diferença fica com você. O plano abre a grade.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link href="/cadastro" className="btn-primary">
-                Criar conta
-              </Link>
-              <Link href="/planos" className="btn-ghost">
-                Ver planos
-              </Link>
-            </div>
-          </div>
-          <aside className="ticket" aria-label="Exemplo de surebet">
-            <div className="ticket-head">
-              <span>Pré-live · Futebol</span>
-              <span className="stamp">+2,50%</span>
-            </div>
-            <div className="ticket-body">
-              <p className="ticket-match">Flamengo x Palmeiras</p>
-              <div className="ticket-odds">
-                <div>
-                  <small>Casa</small>
-                  <strong>2,05</strong>
-                  <em>Stake R$ 50</em>
-                </div>
-                <div>
-                  <small>Fora</small>
-                  <strong>2,05</strong>
-                  <em>Stake R$ 50</em>
-                </div>
-              </div>
-            </div>
-            <p className="ticket-foot">
-              O comum fica em 2% a 3% e vai até cerca de 7%. Acima disso é raro e some em segundos. A compra do plano ainda não abre.
-            </p>
-          </aside>
+    <div className="poster">
+      <section className="mx-auto max-w-6xl px-4 pb-8 pt-10 md:pt-16">
+        <p className="poster-figure">2,50%</p>
+        <h1 className="mt-6 max-w-3xl font-display text-4xl leading-[1.05] md:text-5xl">
+          Duas odds de 2,05 no mesmo jogo. O que sobra é seu.
+        </h1>
+        <div className="mt-8 grid max-w-3xl grid-cols-2 gap-6 border-y border-ink/15 py-4 text-sm">
+          <p>
+            <span className="block text-mist">Casa</span>
+            <span className="font-display text-3xl">2,05</span>
+            <span className="mt-1 block text-mist">R$ 50</span>
+          </p>
+          <p>
+            <span className="block text-mist">Fora</span>
+            <span className="font-display text-3xl">2,05</span>
+            <span className="mt-1 block text-mist">R$ 50</span>
+          </p>
         </div>
-      </section>
-
-      <section className="border-b border-line">
-        <div className="mx-auto grid max-w-6xl grid-cols-3">
-          {[
-            ["2% a 3%", "Lucro típico"],
-            ["até ~7%", "Faixa comum"],
-            ["segundos", "A odd errada some"],
-          ].map(([value, label]) => (
-            <div key={label} className="border-line px-4 py-5 md:px-6 [&:not(:first-child)]:border-l">
-              <p className="font-display text-3xl text-signal md:text-4xl">{value}</p>
-              <p className="mt-1 text-xs text-mist">{label}</p>
-            </div>
-          ))}
+        <p className="mt-6 max-w-xl text-base leading-7 text-mist">
+          Surebet é essa conta. Você cobre os dois lados. Um ganha, o outro perde, e a diferença fica com você. O típico é
+          2% a 3%. O comum vai até cerca de 7%. Acima disso é raro e some em segundos. O plano abre a grade. A compra ainda
+          não abre.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link href="/cadastro" className="btn-primary">
+            Criar conta
+          </Link>
+          <Link href="/planos" className="btn-ghost">
+            Ver planos
+          </Link>
         </div>
-      </section>
-
-      <section className="mx-auto grid max-w-6xl gap-px bg-line px-4 py-12 md:grid-cols-3">
-        {[
-          ["01", "A grade", "Esporte, jogo, duas casas, as duas odds e o lucro em % e em reais. Pré-live e ao vivo."],
-          ["02", "A banca", "O stake sai do saldo. Há valores prontos, planilha e uma calculadora para conferir a conta."],
-          ["03", "O plano", "Sem plano a grade fica fechada. Com plano ela abre. O pagamento fica para a próxima etapa."],
-        ].map(([index, title, body]) => (
-          <article key={title} className="bg-pitch p-5">
-            <p className="text-[11px] font-semibold tracking-[0.16em] text-signal">{index}</p>
-            <h2 className="mt-2 text-lg font-semibold tracking-tight">{title}</h2>
-            <p className="mt-2 text-sm leading-6 text-mist">{body}</p>
-          </article>
-        ))}
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-12">
@@ -179,6 +135,6 @@ export default async function HomePage() {
           </div>
         </section>
       ) : null}
-    </>
+    </div>
   )
 }

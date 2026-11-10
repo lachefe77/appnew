@@ -51,7 +51,7 @@ export function SupportThread({
       <p className="mb-3 text-sm text-mist">{state === "resolvido" ? "A moderação marcou esta conversa como resolvida." : "Conversa aberta com a moderação."}</p>
       <div className="space-y-2">
         {notes.map((note) => (
-          <article key={note.id} className={`max-w-xl border border-line px-4 py-3 text-sm ${note.mine ? "ml-auto bg-[#2a2418]" : "bg-card"}`}>
+          <article key={note.id} className={`max-w-xl border border-line px-4 py-3 text-sm ${note.mine ? "ml-auto bg-[#e7f3ec]" : "bg-card"}`}>
             <p className="text-xs text-mist">{note.mine ? "Você" : note.author}</p>
             <p className="mt-1 whitespace-pre-wrap">{note.body}</p>
           </article>

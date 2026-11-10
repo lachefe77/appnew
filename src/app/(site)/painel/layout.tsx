@@ -55,7 +55,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </form>
         </div>
         {grant && grant.endsAt.getTime() - Date.now() < warnMs ? (
-          <p className="border-b border-line bg-[#2a2418] px-4 py-2 text-sm text-signal">
+          <p className="border-b border-line bg-[#e7f3ec] px-4 py-2 text-sm text-signal">
             Seu plano {grant.plan.name} expira em {formatDate(grant.endsAt)}.
           </p>
         ) : null}
