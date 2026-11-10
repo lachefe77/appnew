@@ -618,3 +618,50 @@ export async function updatePlanCatalog(
   })
   return { ok: true }
 }
+
+const HOUSE_CURRENCIES = ["BRL", "USD", "EUR"]
+const HOUSE_SIDES = ["", "casa", "fora", "over", "under"]
+
+export async function updateHouse(
+  actorId: string,
+  houseId: string,
+  input: { currency: string; active: boolean; fixedSide: string },
+): Promise<OpResult> {
+  const currency = input.currency.trim().toUpperCase()
+  if (!HOUSE_CURRENCIES.includes(currency)) return { ok: false, error: "A moeda é BRL, USD ou EUR." }
+  if (!HOUSE_SIDES.includes(input.fixedSide)) return { ok: false, error: "Lado fixo inválido." }
+  const current = await prisma.house.findUnique({ where: { id: houseId } })
+  if (!current || !current.operable) return { ok: false, error: "Casa não encontrada." }
+  await prisma.$transaction(async (tx) => {
+    await tx.house.update({
+      where: { id: houseId },
+      data: { currency, active: input.active, fixedSide: input.fixedSide },
+    })
+    await audit(tx, {
+      actorId,
+      action: "casa.editar",
+      entityType: "casa",
+      entityId: houseId,
+      summary: `Casa ${current.name} atualizada.`,
+      before: { currency: current.currency, active: current.active, fixedSide: current.fixedSide },
+      after: { currency, active: input.active, fixedSide: input.fixedSide },
+    })
+  })
+  return { ok: true }
+}
+
+export async function closeTicket(actorId: string, ticketId: string): Promise<OpResult> {
+  const ticket = await prisma.supportTicket.findUnique({ where: { id: ticketId }, include: { user: true } })
+  if (!ticket) return { ok: false, error: "Mensagem não encontrada." }
+  await prisma.$transaction(async (tx) => {
+    await tx.supportTicket.update({ where: { id: ticketId }, data: { status: "fechado" } })
+    await audit(tx, {
+      actorId,
+      action: "suporte.fechar",
+      entityType: "suporte",
+      entityId: ticketId,
+      summary: `Mensagem de ${ticket.user.email} fechada.`,
+    })
+  })
+  return { ok: true }
+}

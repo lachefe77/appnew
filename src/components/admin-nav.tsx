@@ -9,6 +9,7 @@ const items = [
   { href: "/admin/vendas", label: "Vendas e pedidos" },
   { href: "/admin/usuarios", label: "Usuários" },
   { href: "/admin/planos", label: "Planos e preços" },
+  { href: "/admin/casas", label: "Casas" },
   { href: "/admin/pagamentos", label: "Pagamentos" },
   { href: "/admin/afiliados", label: "Afiliados e cupons" },
   { href: "/admin/suporte", label: "Suporte" },

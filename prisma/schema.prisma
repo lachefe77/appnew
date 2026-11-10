@@ -68,6 +68,8 @@ model User {
   notices      Notice[]               @relation("NoticeAuthor")
   audits       AuditLog[]             @relation("AuditActor")
   affiliate    Affiliate?
+  tickets      SupportTicket[]
+  stakeLaunches StakeLaunch[]
 }
 
 model Plan {
@@ -138,17 +140,21 @@ model House {
   url       String   @default("")
   logoUrl   String   @default("")
   cloneOfId String?
-  currency  String   @default("BRL")
-  active    Boolean  @default(true)
-  fixedSide String   @default("")
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  currency   String  @default("BRL")
+  active     Boolean @default(true)
+  operable   Boolean @default(true)
+  fixedSide  String  @default("")
+  cloneLabel String  @default("")
+  feed       String  @default("fixture")
+  sortOrder  Int     @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   cloneOf  House?   @relation("HouseClone", fields: [cloneOfId], references: [id])
   clones   House[]  @relation("HouseClone")
   signalsA Signal[] @relation("SignalHouseA")
   signalsB Signal[] @relation("SignalHouseB")
+  quotes   Quote[]
 }
 
 model Sport {
@@ -173,6 +179,7 @@ model Event {
 
   sport   Sport    @relation(fields: [sportId], references: [id])
   signals Signal[]
+  quotes  Quote[]
 }
 
 model Signal {
@@ -297,4 +304,62 @@ model Setting {
   kind      String
   value     String
   updatedAt DateTime @updatedAt
+}
+
+model Quote {
+  id        String     @id @default(cuid())
+  eventId   String
+  houseId   String
+  market    String
+  side      String
+  odd       Decimal    @db.Decimal(8, 3)
+  phase     EventPhase @default(prelive)
+  source    String     @default("fixture")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  house House @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, houseId, market, side])
+  @@index([phase])
+}
+
+model StakeLaunch {
+  id          String   @id @default(cuid())
+  userId      String
+  signalKey   String
+  amountCents Int
+  profitCents Int
+  note        String   @default("")
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, signalKey])
+}
+
+model SupportTicket {
+  id        String   @id @default(cuid())
+  userId    String
+  kind      String
+  body      String
+  status    String   @default("aberto")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model AlertDispatch {
+  id        String   @id @default(cuid())
+  signalKey String
+  channel   String
+  message   String
+  status    String
+  detail    String   @default("")
+  createdAt DateTime @default(now())
+
+  @@unique([signalKey, channel])
 }

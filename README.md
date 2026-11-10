@@ -47,6 +47,23 @@ Os testes usam o banco `futsurebet_test` na mesma instância:
 npm test
 ```
 
+## Operador de teste
+
+O seed também cria, se ainda não existir:
+
+- E-mail: `operador@futsurebet.com`
+- Senha: `Operador#2026`
+
+Essa conta já tem plano mensal e banca de R$ 1.000,00. O stake automático começa em 10% da banca.
+
+## Grade e odds
+
+As onze casas estão cadastradas com marca própria, não o logo oficial, e moeda de cálculo. Todas as odds desta versão são de teste. Nenhuma casa tem coleta ao vivo. A linha ao vivo de Real Madrid x Barcelona se move sozinha para a surebet aparecer e sumir.
+
+Há uma surebet de 2,50% (Flamengo x Palmeiras, odds 2,05 e 2,05) e outra de 8,00% (Lakers x Celtics, odds 2,16 e 2,16). A de 8% passa de 7% e fica destacada.
+
+O alerta usa um canal só, escolhido na configuração: Discord, Telegram ou WhatsApp. Sem um destino real, o envio fica registrado como sem destino. O som toca no navegador quando nasce um sinal acima do piso.
+
 ## Fora deste recorte
 
-Pix, cripto, coleta de odds, motor de surebet, stake, alerta e a fila de suporte.
+Pix, cripto e checkout. A forma de pagamento fica para uma decisão posterior.
