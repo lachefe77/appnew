@@ -304,11 +304,11 @@ export function SignalBoard(props: Props) {
   })
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div className="ops mx-auto max-w-6xl px-4 py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-signal">Operação</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Sinais</h1>
+          <h1 className="font-display text-4xl">Sinais</h1>
           <p className="mt-1 text-sm text-mist">{props.sourceLine}</p>
         </div>
         <div className="rounded-xl border border-line bg-card px-4 py-3">

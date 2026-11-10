@@ -35,18 +35,18 @@ export default async function HomePage() {
 
   return (
     <>
-      <section className="border-b border-line">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-[1.15fr_0.85fr] md:items-end md:py-16">
+      <section className="pitch-hero border-b border-line">
+        <div className="relative z-[1] mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 md:grid-cols-[1.05fr_0.95fr] md:py-20">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-signal">Surebet para quem opera</p>
-            <h1 className="mt-3 max-w-xl text-4xl font-semibold leading-[1.05] tracking-tight md:text-5xl">
-              Duas casas, um jogo, conta positiva.
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-signal">Casa de sinais</p>
+            <h1 className="mt-4 max-w-xl font-display text-5xl leading-[0.95] text-ink md:text-6xl">
+              Duas casas. Um jogo. Conta positiva.
             </h1>
-            <p className="mt-4 max-w-xl text-base leading-7 text-mist">
+            <p className="mt-5 max-w-lg text-base leading-7 text-mist">
               Surebet é quando os preços do mesmo jogo, somados, fecham no positivo. Você cobre os dois lados. Um ganha, o
-              outro perde, e a diferença fica com você. O plano abre a grade. Sem plano, a conta entra e os sinais ficam fechados.
+              outro perde, e a diferença fica com você. O plano abre a grade.
             </p>
-            <div className="mt-6 flex flex-wrap gap-2">
+            <div className="mt-7 flex flex-wrap gap-3">
               <Link href="/cadastro" className="btn-primary">
                 Criar conta
               </Link>
@@ -55,24 +55,27 @@ export default async function HomePage() {
               </Link>
             </div>
           </div>
-          <aside className="border border-line bg-card">
-            <div className="flex items-center justify-between border-b border-line px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-mist">Exemplo de linha</p>
-              <p className="text-sm font-semibold text-signal">2,50%</p>
+          <aside className="ticket" aria-label="Exemplo de surebet">
+            <div className="ticket-head">
+              <span>Pré-live · Futebol</span>
+              <span className="stamp">+2,50%</span>
             </div>
-            <div className="grid grid-cols-2 gap-px bg-line">
-              <div className="bg-felt px-4 py-3">
-                <p className="text-xs text-mist">Casa</p>
-                <p className="mt-1 font-semibold">2,05</p>
-                <p className="text-xs text-mist">Stake 50,00</p>
-              </div>
-              <div className="bg-felt px-4 py-3">
-                <p className="text-xs text-mist">Fora</p>
-                <p className="mt-1 font-semibold">2,05</p>
-                <p className="text-xs text-mist">Stake 50,00</p>
+            <div className="ticket-body">
+              <p className="ticket-match">Flamengo x Palmeiras</p>
+              <div className="ticket-odds">
+                <div>
+                  <small>Casa</small>
+                  <strong>2,05</strong>
+                  <em>Stake R$ 50</em>
+                </div>
+                <div>
+                  <small>Fora</small>
+                  <strong>2,05</strong>
+                  <em>Stake R$ 50</em>
+                </div>
               </div>
             </div>
-            <p className="px-4 py-3 text-sm leading-6 text-mist">
+            <p className="ticket-foot">
               O comum fica em 2% a 3% e vai até cerca de 7%. Acima disso é raro e some em segundos. A compra do plano ainda não abre.
             </p>
           </aside>
@@ -87,7 +90,7 @@ export default async function HomePage() {
             ["segundos", "A odd errada some"],
           ].map(([value, label]) => (
             <div key={label} className="border-line px-4 py-5 md:px-6 [&:not(:first-child)]:border-l">
-              <p className="text-xl font-semibold tracking-tight text-signal md:text-2xl">{value}</p>
+              <p className="font-display text-3xl text-signal md:text-4xl">{value}</p>
               <p className="mt-1 text-xs text-mist">{label}</p>
             </div>
           ))}
