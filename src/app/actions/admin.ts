@@ -1,6 +1,7 @@
 "use server"
 
 import { redirect } from "next/navigation"
+import { prisma } from "@/lib/db"
 import { requireAdmin } from "@/lib/session"
 import { centsFromInput, daysFromInput } from "@/server/parse"
 import {
@@ -267,4 +268,15 @@ export async function closeTicketAction(formData: FormData) {
   const admin = await requireAdmin()
   const result = await closeTicket(admin.id, String(formData.get("ticketId") ?? ""))
   bounce(result, "/admin/suporte")
+}
+
+export async function replySupportAction(formData: FormData) {
+  const admin = await requireAdmin()
+  const userId = String(formData.get("userId") ?? "")
+  const body = String(formData.get("body") ?? "").trim()
+  if (body.length < 2) redirect("/admin/suporte?erro=Escreva%20a%20resposta.")
+  const user = await prisma.user.findUnique({ where: { id: userId } })
+  if (!user) redirect("/admin/suporte?erro=Cliente%20não%20encontrado.")
+  await prisma.supportMessage.create({ data: { userId, authorId: admin.id, body: body.slice(0, 2000) } })
+  redirect("/admin/suporte?ok=1")
 }

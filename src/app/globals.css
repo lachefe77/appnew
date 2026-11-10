@@ -75,3 +75,64 @@ body {
 .backoffice {
   color-scheme: light;
 }
+
+.light-ui {
+  color-scheme: light;
+  background: #f4f6f3;
+  color: #17241c;
+}
+
+.light-ui .text-ink {
+  color: #17241c;
+}
+
+.light-ui .text-mist {
+  color: #5d6d64;
+}
+
+.light-ui .text-signal {
+  color: #0c7a45;
+}
+
+.light-ui .bg-pitch,
+.light-ui .bg-pitch\/95 {
+  background: #f7f8f6;
+}
+
+.light-ui .bg-card,
+.light-ui .bg-felt {
+  background: #fff;
+}
+
+.light-ui .border-line {
+  border-color: #e3e8e4;
+}
+
+.light-ui .bg-white\/10 {
+  background: #e7f6ee;
+}
+
+.light-ui .field,
+.light-ui .label {
+  color: #3d4d45;
+}
+
+.light-ui .field {
+  background: #fff;
+  border-color: #d5ddd8;
+  color: #17241c;
+}
+
+.light-ui .btn-ghost {
+  color: #17241c;
+  border-color: #cfd8d2;
+}
+
+.light-ui .btn-primary {
+  background: #0e8f4e;
+  color: #fff;
+}
+
+.light-ui .bg-\[\#163222\] {
+  background: #e7f6ee;
+}

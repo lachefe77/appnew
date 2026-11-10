@@ -1,139 +1,66 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { SignalBoard } from "@/components/signal-board"
 import { prisma } from "@/lib/db"
+import { formatDate, formatMoney } from "@/lib/format"
 import { getSession } from "@/lib/session"
-import { loadSignals } from "@/server/feed"
-import { panelReasonLabel } from "@/server/labels"
-import { loadPanelGate } from "@/server/panel-access"
-import { getSettings } from "@/server/settings"
 
 export const dynamic = "force-dynamic"
 
-export default async function PanelPage() {
+export default async function DashboardPage() {
   const session = await getSession()
   if (!session) redirect("/entrar?next=/painel")
   const user = await prisma.user.findUnique({
     where: { id: session.sub },
-    include: { bankrolls: true, plans: { include: { plan: true }, orderBy: { createdAt: "desc" } } },
+    include: {
+      bankrolls: true,
+      plans: { where: { status: "ativo" }, include: { plan: true }, orderBy: { endsAt: "desc" }, take: 1 },
+    },
   })
   if (!user) redirect("/api/sessao/encerrar")
-
-  const settings = await getSettings()
-  const gate = await loadPanelGate(user.id)
-  const notices = settings.flag("site.noticesVisible")
-    ? await prisma.notice.findMany({
-        where: { published: true, audience: { in: ["todos", "painel"] } },
-        orderBy: { publishedAt: "desc" },
-        take: 3,
-      })
-    : []
-
-  if (!gate.open) {
-    const reason = panelReasonLabel[gate.reason]
-    return (
-      <section className="mx-auto flex min-h-[70vh] max-w-xl items-center px-4 py-16">
-        <div className="rounded-2xl border border-line bg-card px-6 py-10 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-signal">{reason}</p>
-          <h1 className="mt-3 font-display text-6xl uppercase">{settings.get("panel.lockedTitle")}</h1>
-          <p className="mt-4 text-mist">{settings.get("panel.lockedBody")}</p>
-          <p className="mt-6 text-sm text-mist">
-            Conta de {user.name}. {reason}.
-          </p>
-          <Link href="/planos" className="btn-primary mt-6">
-            Ver planos
-          </Link>
-        </div>
-        {notices.length ? <NoticeList notices={notices} /> : null}
-      </section>
-    )
-  }
-
-  const bankroll = user.bankrolls[0]
-  const loaded = await loadSignals({
-    userId: user.id,
-    phase: "prelive",
-    simulate: false,
-    refresh: true,
-    options: { sort: "clone" },
-  })
-  const houses = await prisma.house.findMany({
-    where: { active: true, operable: true },
-    orderBy: { sortOrder: "asc" },
-  })
-  const autoMarketIds = houses.filter((house) => house.slug === "pinnacle" || house.slug === "bcgame").map((house) => house.id)
-  const realNames = houses.filter((house) => house.feed === "ao_vivo").map((house) => house.name)
-  const sourceLine = realNames.length
-    ? `Fonte real: ${realNames.join(", ")}. As outras casas seguem em odd de teste.`
-    : "As casas seguem em odd de teste até a fonte responder."
-  const entries = bankroll
-    ? await prisma.bankrollEntry.findMany({
-        where: { bankrollId: bankroll.id },
-        orderBy: { createdAt: "desc" },
-        take: 6,
-      })
-    : []
-  const launches = await prisma.stakeLaunch.findMany({ where: { userId: user.id }, select: { signalKey: true } })
-  const quickReais = settings
-    .get("stake.quick")
-    .split(",")
-    .map((item) => Number(item.trim()))
-    .filter((item) => Number.isFinite(item) && item > 0)
-  const stakePercent = Number(settings.get("stake.percent").replace(",", ".")) || 10
-  const minProfit = Number(settings.get("signal.minProfit").replace(",", ".")) || 0
-  const pollSeconds = Number(settings.get("signal.pollSeconds").replace(",", ".")) || 3
+  const [launches, messages] = await Promise.all([
+    prisma.stakeLaunch.count({ where: { userId: user.id } }),
+    prisma.supportMessage.count({ where: { userId: user.id } }),
+  ])
+  const plan = user.plans[0]
+  const bank = user.bankrolls[0]
+  const cards = [
+    ["Operações", "Grade de sinais, pré-live e ao vivo.", "/painel/operacoes"],
+    ["Gestão de banca", "Saldo, entrada, ajuste e histórico.", "/painel/banca"],
+    ["Planilhamento", "Stakes já lançados, em tabela.", "/painel/planilhamento"],
+    ["Calculadora", "Confira stake e lucro de duas odds.", "/painel/calculadora"],
+    ["Suporte", "Conversa com a moderação.", "/painel/suporte"],
+    ["Planos", "O que cada plano libera. Pagamento depois.", "/painel/planos"],
+  ]
 
   return (
-    <>
-      <SignalBoard
-        houses={houses.map((house) => ({
-          id: house.id,
-          slug: house.slug,
-          name: house.name,
-          logoUrl: house.logoUrl,
-          currency: house.currency,
-          cloneLabel: house.cloneLabel,
-          fixedSide: house.fixedSide,
-          feed: house.feed,
-        }))}
-        initialSignals={loaded.signals}
-        initialRealRows={loaded.realRows}
-        sourceLine={sourceLine}
-        balanceCents={bankroll?.balanceCents ?? 0}
-        currency={bankroll?.currency ?? "BRL"}
-        initialStakeCents={loaded.totalStakeCents}
-        pollSeconds={pollSeconds}
-        quickReais={quickReais.length ? quickReais : [50, 100, 200, 500]}
-        stakePercent={stakePercent}
-        minProfit={minProfit}
-        autoMarketIds={autoMarketIds}
-        launched={launches.map((item) => item.signalKey)}
-        entries={entries.map((entry) => ({
-          id: entry.id,
-          amountCents: entry.amountCents,
-          kind: entry.kind,
-          note: entry.note,
-          createdAt: entry.createdAt.toISOString(),
-        }))}
-      />
-      {notices.length ? (
-        <div className="mx-auto max-w-6xl px-4 pb-8">
-          <NoticeList notices={notices} />
-        </div>
-      ) : null}
-    </>
-  )
-}
-
-function NoticeList({ notices }: { notices: { id: string; title: string; body: string }[] }) {
-  return (
-    <div className="mt-8 space-y-3">
-      {notices.map((notice) => (
-        <article key={notice.id} className="rounded-2xl border border-line bg-card p-4 text-left">
-          <h2 className="font-semibold">{notice.title}</h2>
-          <p className="mt-1 whitespace-pre-wrap text-sm text-mist">{notice.body}</p>
+    <section className="mx-auto max-w-5xl px-4 py-8">
+      <p className="text-xs font-semibold uppercase tracking-wide text-signal">Dashboard</p>
+      <h1 className="mt-1 font-display text-5xl uppercase">{user.name}</h1>
+      <p className="mt-2 text-sm text-mist">
+        {plan ? `${plan.plan.name} expira em ${formatDate(plan.endsAt)}` : "Sem plano ativo. A grade de sinais fica fechada."}
+      </p>
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <article className="rounded-2xl border border-line bg-white p-4">
+          <p className="text-xs uppercase text-mist">Banca</p>
+          <p className="font-display text-4xl">{formatMoney(bank?.balanceCents ?? 0, bank?.currency ?? "BRL")}</p>
         </article>
-      ))}
-    </div>
+        <article className="rounded-2xl border border-line bg-white p-4">
+          <p className="text-xs uppercase text-mist">Stakes lançados</p>
+          <p className="font-display text-4xl">{launches}</p>
+        </article>
+        <article className="rounded-2xl border border-line bg-white p-4">
+          <p className="text-xs uppercase text-mist">Mensagens no suporte</p>
+          <p className="font-display text-4xl">{messages}</p>
+        </article>
+      </div>
+      <div className="mt-6 grid gap-3 md:grid-cols-2">
+        {cards.map(([title, body, href]) => (
+          <Link key={href} href={href} className="rounded-2xl border border-line bg-white p-4 hover:border-[#0e8f4e]">
+            <h2 className="font-display text-2xl uppercase">{title}</h2>
+            <p className="mt-1 text-sm text-mist">{body}</p>
+          </Link>
+        ))}
+      </div>
+    </section>
   )
 }

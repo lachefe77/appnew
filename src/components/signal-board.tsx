@@ -542,64 +542,6 @@ export function SignalBoard(props: Props) {
         </table>
         {!visible.length && !visibleReal.length ? <p className="px-4 py-10 text-center text-sm text-mist">Nenhuma surebet com essas casas agora.</p> : null}
       </div>
-
-      <section className="mt-6 grid gap-4 md:grid-cols-2">
-        <form
-          className="rounded-2xl border border-line bg-card p-4"
-          onSubmit={(event) => {
-            event.preventDefault()
-            void onBank("entrada")
-          }}
-        >
-          <h2 className="font-display text-3xl uppercase">Banca</h2>
-          <label className="mt-3 block">
-            <span className="label">Valor em reais</span>
-            <input className="field" value={amount} onChange={(event) => setAmount(event.target.value)} />
-          </label>
-          <div className="mt-3 flex gap-2">
-            <button className="btn-primary" type="submit">
-              Entrada
-            </button>
-            <button
-              className="btn-ghost"
-              type="button"
-              onClick={() => void onBank("ajuste")}
-            >
-              Tirar ajuste
-            </button>
-          </div>
-          <ul className="mt-4 space-y-1 text-sm text-mist">
-            {props.entries.map((entry) => (
-              <li key={entry.id}>
-                {entry.kind} · {formatMoney(entry.amountCents, props.currency)} · {entry.note}
-              </li>
-            ))}
-          </ul>
-        </form>
-        <form
-          className="rounded-2xl border border-line bg-card p-4"
-          onSubmit={(event) => {
-            event.preventDefault()
-            void onSupport()
-          }}
-        >
-          <h2 className="font-display text-3xl uppercase">Suporte</h2>
-          <label className="mt-3 block">
-            <span className="label">Tipo</span>
-            <select className="field" value={supportKind} onChange={(event) => setSupportKind(event.target.value as "sugestao" | "bug")}>
-              <option value="sugestao">Sugestão</option>
-              <option value="bug">Bug</option>
-            </select>
-          </label>
-          <label className="mt-3 block">
-            <span className="label">Mensagem</span>
-            <textarea className="field min-h-24" value={supportBody} onChange={(event) => setSupportBody(event.target.value)} />
-          </label>
-          <button className="btn-primary mt-3" type="submit">
-            Enviar
-          </button>
-        </form>
-      </section>
     </div>
   )
 }
