@@ -10,6 +10,9 @@ export const HOUSE_SEED = [
   { slug: "sbobet", name: "Sbobet", currency: "BRL", cloneLabel: "", cloneOf: "", sortOrder: 9 },
   { slug: "stake", name: "Stake.com", currency: "USD", cloneLabel: "", cloneOf: "", sortOrder: 10 },
   { slug: "winamaxes", name: "WinamaxES", currency: "EUR", cloneLabel: "", cloneOf: "", sortOrder: 11 },
+  { slug: "99play", name: "99play", currency: "BRL", cloneLabel: "", cloneOf: "", sortOrder: 12, url: "https://99play.io/sports" },
+  { slug: "girocerto", name: "Giro Certo", currency: "BRL", cloneLabel: "", cloneOf: "", sortOrder: 13, url: "https://girocerto.io/esportes" },
+  { slug: "bingoemcasa", name: "Bingo em Casa", currency: "BRL", cloneLabel: "", cloneOf: "", sortOrder: 14, url: "https://www.bingoemcasa.com/" },
 ] as const
 
 export const SPORT_SEED = [
@@ -38,6 +41,11 @@ export const QUOTE_SEED = [
   { event: "tenis-extra", house: "sbobet", market: "Resultado", side: "fora", odd: 1.8, phase: "prelive" as const },
   { event: "teste-ps-bc", house: "ps3838", market: "Resultado", side: "casa", odd: 2.05, phase: "prelive" as const },
   { event: "teste-ps-bc", house: "bcgame", market: "Resultado", side: "fora", odd: 2.05, phase: "prelive" as const },
+  { event: "fut-classico", house: "99play", market: "Resultado", side: "fora", odd: 2.08, phase: "prelive" as const },
+  { event: "fut-classico", house: "girocerto", market: "Total", side: "over", odd: 1.9, phase: "prelive" as const },
+  { event: "fut-classico", house: "bingoemcasa", market: "Resultado", side: "casa", odd: 2.12, phase: "prelive" as const },
+  { event: "nba-classico", house: "99play", market: "Resultado", side: "fora", odd: 1.95, phase: "prelive" as const },
+  { event: "nba-classico", house: "bingoemcasa", market: "Resultado", side: "casa", odd: 1.88, phase: "prelive" as const },
 ]
 
 export const OPERATOR_EMAIL = "operador@futsurebet.com"

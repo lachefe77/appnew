@@ -17,6 +17,9 @@ const houses = [
   { name: "Sbobet", note: "Página pública sem feed de odds. Odd de teste." },
   { name: "Stake.com", note: "Bloqueada (HTTP 403). Odd de teste." },
   { name: "WinamaxES", note: "Página pública sem feed de odds. Odd de teste." },
+  { name: "99play", note: "A página abre. O feed de odds da Altenar responde HTTP 403 daqui. Odd de teste." },
+  { name: "Giro Certo", note: "Fonte real, pública, sem chave." },
+  { name: "Bingo em Casa", note: "O esporte pede login (HTTP 401). Sem feed público. Odd de teste." },
 ]
 
 export default async function HomePage() {
@@ -81,8 +84,8 @@ export default async function HomePage() {
       <section className="mx-auto max-w-6xl px-4 pb-12">
         <h2 className="font-display text-4xl uppercase">Casas</h2>
         <p className="mt-2 max-w-2xl text-sm text-mist">
-          Só Pinnacle.com e Cloudbet estão com odd real nesta versão. As outras aparecem marcadas como teste. Não prometemos
-          odd ao vivo de casa bloqueada.
+          Pinnacle.com, Cloudbet e Giro Certo estão com odd real nesta versão. 99play e Bingo em Casa seguem em teste: a
+          primeira não entrega a odd daqui, a segunda pede login. Não prometemos odd ao vivo de casa bloqueada.
         </p>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2">
           {houses.map((house) => (

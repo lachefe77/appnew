@@ -23,7 +23,7 @@ export default async function HousesPage({
     <>
       <AdminHeading
         title="Casas"
-        lede="As onze casas entram na grade com marca própria e odd de teste. A moeda é a da conta do stake, não o caixa da casa."
+        lede="Cada casa entra na grade com marca própria. A moeda é a da conta do stake, não o caixa da casa."
       />
       <Flash erro={query.erro} ok={query.ok} tone="light" />
       <div className="panel mb-4 space-y-2 text-sm">

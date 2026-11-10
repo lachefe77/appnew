@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/db"
 import { pullBcgame } from "@/server/feeds/bcgame"
 import { pullCloudbet } from "@/server/feeds/cloudbet"
+import { pullGirocerto } from "@/server/feeds/girocerto"
 import { pullPinnacle } from "@/server/feeds/pinnacle"
 import { pullPs3838 } from "@/server/feeds/ps3838"
-import { BLOCKED_HOUSES, pullBlocked } from "@/server/feeds/status"
+import { BLOCKED_HOUSES, pull99play, pullBingoemcasa, pullBlocked } from "@/server/feeds/status"
 import type { Offer, PullResult } from "@/server/feeds/types"
 import { getSettings } from "@/server/settings"
 
@@ -38,6 +39,9 @@ async function run() {
     ),
     pullBcgame().then((result) => applyHouse("bcgame", result)),
     pullCloudbet().then((result) => applyHouse("cloudbet", result)),
+    pullGirocerto().then((result) => applyHouse("girocerto", result)),
+    pull99play().then((result) => applyHouse("99play", result)),
+    pullBingoemcasa().then((result) => applyHouse("bingoemcasa", result)),
     ...BLOCKED_HOUSES.map((house) => pullBlocked(house.slug).then((result) => applyHouse(house.slug, result))),
   ])
 }
