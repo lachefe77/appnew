@@ -25,8 +25,8 @@ export function PanelNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`whitespace-nowrap border-l-2 px-3 py-2 text-sm ${
-              active ? "border-signal bg-felt text-ink" : "border-transparent text-mist hover:text-ink"
+            className={`whitespace-nowrap rounded-full px-3 py-2 text-sm ${
+              active ? "bg-signal text-[#1a1406]" : "text-mist hover:bg-card hover:text-ink"
             }`}
             aria-current={active ? "page" : undefined}
           >

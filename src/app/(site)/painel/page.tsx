@@ -37,7 +37,7 @@ export default async function DashboardPage() {
   return (
     <section className="mx-auto max-w-5xl px-4 py-8">
       <p className="text-xs font-semibold uppercase tracking-wide text-signal">Dashboard</p>
-      <h1 className="mt-1 text-3xl font-semibold tracking-tight">{user.name}</h1>
+      <h1 className="mt-1 font-display text-4xl">{user.name}</h1>
       <p className="mt-2 text-sm text-mist">
         {plan ? `${plan.plan.name} expira em ${formatDate(plan.endsAt)}` : "Sem plano ativo. A grade de sinais fica fechada."}
       </p>

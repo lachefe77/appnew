@@ -7,9 +7,9 @@
 }
 
 body {
-  font-family: Outfit, "Segoe UI", sans-serif;
-  background: #0e1014;
-  color: #f4f1ea;
+  font-family: "Instrument Sans", "Segoe UI", sans-serif;
+  background: #07140e;
+  color: #f4f8f5;
 }
 
 ::selection {
@@ -24,10 +24,10 @@ body {
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-sm bg-signal px-4 py-2 text-sm font-semibold text-[#1c1408] transition hover:bg-[#e4c27a];
+    @apply inline-flex items-center justify-center rounded-full bg-signal px-4 py-2 text-sm font-semibold text-[#1a1406] transition hover:bg-[#ffd56a];
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center rounded-sm border border-line bg-transparent px-4 py-2 text-sm font-semibold text-ink transition hover:border-signal hover:text-signal;
+    @apply inline-flex items-center justify-center rounded-full border border-line bg-transparent px-4 py-2 text-sm font-medium text-ink transition hover:border-signal;
   }
   .btn-admin {
     @apply inline-flex items-center justify-center rounded-md bg-[#085c34] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0a7040];
@@ -80,16 +80,154 @@ body {
 }
 
 .product .sheet {
-  border-color: #313744;
-  background: #1c2028;
-  color: #f4f1ea;
+  border-color: #2c4a3a;
+  background: #123026;
+  color: #f4f8f5;
 }
 
 .product .sheet th {
-  background: #161922;
-  color: #a39e94;
+  background: #0d2218;
+  color: #9db5a6;
 }
 
 .product .sheet tbody tr + tr td {
-  border-color: #313744;
+  border-color: #2c4a3a;
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #f4f8f5;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.mark svg {
+  width: 34px;
+  height: 22px;
+  flex: none;
+}
+
+.pitch-hero {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 80% at 80% 0%, rgba(240, 193, 78, 0.16), transparent 55%),
+    linear-gradient(#07140e, #07140e);
+}
+
+.pitch-hero::before {
+  content: "";
+  position: absolute;
+  inset: 18% 8% auto;
+  height: 70%;
+  border: 1px solid rgba(244, 248, 245, 0.08);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.pitch-hero::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 18%;
+  width: 120px;
+  height: 120px;
+  margin-left: -60px;
+  border: 1px solid rgba(244, 248, 245, 0.08);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.ticket {
+  position: relative;
+  z-index: 1;
+  background: #10291c;
+  color: #f4f8f5;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.ticket-head,
+.ticket-body,
+.ticket-foot {
+  padding: 16px 18px;
+}
+
+.ticket-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #0d2218;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9db5a6;
+}
+
+.stamp {
+  color: #1a1406;
+  background: #f0c14e;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.ticket-match {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 1.7rem;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.ticket-odds {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.ticket-odds div {
+  background: #0d2218;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.ticket-odds small,
+.ticket-odds em {
+  display: block;
+  color: #9db5a6;
+  font-style: normal;
+  font-size: 12px;
+}
+
+.ticket-odds strong {
+  display: block;
+  margin: 4px 0;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: #f0c14e;
+}
+
+.ticket-foot {
+  border-top: 1px dashed rgba(244, 248, 245, 0.2);
+  color: #9db5a6;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ops h1 {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.ops table {
+  font-variant-numeric: tabular-nums;
 }
