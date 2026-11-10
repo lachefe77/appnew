@@ -29,6 +29,7 @@ export async function POST(request: Request) {
   const loaded = await loadSignals({
     userId: session.sub,
     phase,
+    refresh: true,
     options: {
       includedHouseIds: Array.isArray(body.houseIds) ? body.houseIds : undefined,
       fixedSides: body.fixedSides ?? {},
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
   const bankroll = await prisma.bankroll.findFirst({ where: { userId: session.sub }, orderBy: { createdAt: "asc" } })
   return NextResponse.json({
     signals: loaded.signals,
+    realRows: loaded.realRows,
     totalStakeCents: loaded.totalStakeCents,
     balanceCents: bankroll?.balanceCents ?? 0,
     alerted,

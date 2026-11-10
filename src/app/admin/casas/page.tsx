@@ -2,6 +2,7 @@ import { updateHouseAction } from "@/app/actions/admin"
 import { AdminHeading } from "@/components/admin-ui"
 import { Flash } from "@/components/flash"
 import { prisma } from "@/lib/db"
+import { getSettings } from "@/server/settings"
 
 export const dynamic = "force-dynamic"
 
@@ -11,6 +12,7 @@ export default async function HousesPage({
   searchParams: Promise<{ erro?: string; ok?: string }>
 }) {
   const query = await searchParams
+  const settings = await getSettings()
   const houses = await prisma.house.findMany({
     where: { operable: true },
     orderBy: { sortOrder: "asc" },
@@ -23,6 +25,12 @@ export default async function HousesPage({
         lede="As onze casas entram na grade com marca própria e odd de teste. A moeda é a da conta do stake, não o caixa da casa."
       />
       <Flash erro={query.erro} ok={query.ok} tone="light" />
+      <div className="panel mb-4 space-y-2 text-sm">
+        <p><strong>Pinnacle.com:</strong> fonte pública, sem chave. {settings.get("feed.pinnacle.detail")}</p>
+        <p><strong>Ps3838:</strong> cole o usuário em Usuário da API Ps3838 e a senha em Senha da API Ps3838, na Configuração. A conta precisa ter saldo. {settings.get("feed.ps3838.detail")}</p>
+        <p><strong>Bcgame:</strong> a fonte pública não pediu chave e respondeu bloqueada. Não há o que colar. {settings.get("feed.bcgame.detail")}</p>
+        <p>As outras oito casas continuam com odd de teste.</p>
+      </div>
       <div className="grid gap-3">
         {houses.map((house) => (
           <form key={house.id} action={updateHouseAction} className="panel flex flex-wrap items-end gap-3">
@@ -31,7 +39,7 @@ export default async function HousesPage({
             <div className="min-w-[10rem]">
               <p className="font-semibold">{house.name}</p>
               <p className="text-xs text-black/55">
-                Fonte: teste
+                Fonte: {house.feed === "ao_vivo" ? "real" : "teste"}
                 {house.cloneLabel ? ` · clone ${house.cloneLabel}` : ""}
                 {house.cloneOf ? ` · de ${house.cloneOf.name}` : ""}
               </p>
