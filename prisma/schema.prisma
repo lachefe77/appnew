@@ -68,8 +68,12 @@ model User {
   notices      Notice[]               @relation("NoticeAuthor")
   audits       AuditLog[]             @relation("AuditActor")
   affiliate    Affiliate?
-  tickets      SupportTicket[]
-  stakeLaunches StakeLaunch[]
+  tickets        SupportTicket[]
+  stakeLaunches  StakeLaunch[]
+  supportThreads SupportMessage[] @relation("SupportOwner")
+  supportNotes   SupportMessage[] @relation("SupportAuthor")
+  ticketReplies  SupportReply[]   @relation("TicketReplyAuthor")
+  stakePresets   StakePreset[]
 }
 
 model Plan {
@@ -347,9 +351,47 @@ model SupportTicket {
   status    String   @default("aberto")
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replies SupportReply[]
 
   @@index([status])
+}
+
+model SupportReply {
+  id        String   @id @default(cuid())
+  ticketId  String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User          @relation("TicketReplyAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+}
+
+model SupportMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  user   User @relation("SupportOwner", fields: [userId], references: [id], onDelete: Cascade)
+  author User @relation("SupportAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model StakePreset {
+  id          String   @id @default(cuid())
+  userId      String
+  amountCents Int
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model AlertDispatch {

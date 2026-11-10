@@ -7,6 +7,9 @@ export async function resetDb() {
   if (!url.includes(testDatabase)) {
     throw new Error(`Testes recusados fora do banco ${testDatabase}.`)
   }
+  await prisma.supportReply.deleteMany()
+  await prisma.supportMessage.deleteMany()
+  await prisma.stakePreset.deleteMany()
   await prisma.alertDispatch.deleteMany()
   await prisma.stakeLaunch.deleteMany()
   await prisma.supportTicket.deleteMany()

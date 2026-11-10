@@ -22,14 +22,24 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   const brand = settings.get("brand.name")
   const online = settings.flag("site.online")
   const closed = !online && pathname !== "/entrar"
+  const panel = pathname.startsWith("/painel")
+  const grant = session
+    ? await prisma.userPlan.findFirst({
+        where: { userId: session.sub, status: "ativo", endsAt: { gte: new Date() } },
+        orderBy: { endsAt: "desc" },
+      })
+    : null
 
   return (
-    <div className="flex min-h-screen flex-col bg-pitch text-ink">
-      <SiteHeader
-        brand={brand}
-        pathname={pathname}
-        session={session ? { email: session.email, role: session.role } : null}
-      />
+    <div className="light-ui flex min-h-screen flex-col">
+      {panel ? null : (
+        <SiteHeader
+          brand={brand}
+          pathname={pathname}
+          session={session ? { email: session.email, role: session.role } : null}
+          planEndsAt={grant?.endsAt ?? null}
+        />
+      )}
       <main className="flex-1">
         {closed ? (
           <section className="mx-auto max-w-xl px-4 py-20 text-center">
@@ -44,7 +54,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           children
         )}
       </main>
-      <SiteFooter text={settings.get("site.footer")} />
+      {panel ? null : <SiteFooter text={settings.get("site.footer")} />}
     </div>
   )
 }

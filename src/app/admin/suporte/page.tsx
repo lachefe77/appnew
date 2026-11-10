@@ -1,4 +1,4 @@
-import { closeTicketAction } from "@/app/actions/admin"
+import { replySupportAction } from "@/app/actions/admin"
 import { AdminHeading, EmptyNote } from "@/components/admin-ui"
 import { Flash } from "@/components/flash"
 import { prisma } from "@/lib/db"
@@ -12,53 +12,46 @@ export default async function SupportPage({
   searchParams: Promise<{ erro?: string; ok?: string }>
 }) {
   const query = await searchParams
-  const tickets = await prisma.supportTicket.findMany({
-    include: { user: true },
-    orderBy: { createdAt: "desc" },
-    take: 100,
+  const threads = await prisma.user.findMany({
+    where: { supportThreads: { some: {} } },
+    include: {
+      supportThreads: { orderBy: { createdAt: "asc" }, include: { author: true } },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 50,
   })
   return (
     <>
-      <AdminHeading title="Suporte" lede="Sugestões e bugs enviados pelo painel." />
+      <AdminHeading title="Suporte" lede="Conversas do painel. A resposta aparece para o cliente sem recarregar a página dele." />
       <Flash erro={query.erro} ok={query.ok} tone="light" />
-      {tickets.length ? (
-        <div className="sheet">
-          <table>
-            <thead>
-              <tr>
-                <th>Quando</th>
-                <th>Quem</th>
-                <th>Tipo</th>
-                <th>Mensagem</th>
-                <th>Estado</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {tickets.map((ticket) => (
-                <tr key={ticket.id}>
-                  <td className="whitespace-nowrap">{formatDate(ticket.createdAt)}</td>
-                  <td>{ticket.user.email}</td>
-                  <td>{ticket.kind === "bug" ? "Bug" : "Sugestão"}</td>
-                  <td className="max-w-md whitespace-pre-wrap">{ticket.body}</td>
-                  <td>{ticket.status === "fechado" ? "Fechado" : "Aberto"}</td>
-                  <td>
-                    {ticket.status === "aberto" ? (
-                      <form action={closeTicketAction}>
-                        <input type="hidden" name="ticketId" value={ticket.id} />
-                        <button className="btn-admin-ghost" type="submit">
-                          Fechar
-                        </button>
-                      </form>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {threads.length ? (
+        <div className="grid gap-4">
+          {threads.map((user) => (
+            <article key={user.id} className="panel">
+              <h2 className="font-semibold">{user.name}</h2>
+              <p className="text-xs text-black/50">{user.email}</p>
+              <div className="mt-3 space-y-2">
+                {user.supportThreads.map((note) => (
+                  <p key={note.id} className="rounded-md bg-[#f6f8f7] px-3 py-2 text-sm">
+                    <span className="text-xs text-black/50">
+                      {note.author.role === "admin" ? "Moderação" : "Cliente"} · {formatDate(note.createdAt)}
+                    </span>
+                    <span className="mt-1 block whitespace-pre-wrap">{note.body}</span>
+                  </p>
+                ))}
+              </div>
+              <form action={replySupportAction} className="mt-3 flex gap-2">
+                <input type="hidden" name="userId" value={user.id} />
+                <input className="field-light" name="body" placeholder="Resposta" required />
+                <button className="btn-admin" type="submit">
+                  Responder
+                </button>
+              </form>
+            </article>
+          ))}
         </div>
       ) : (
-        <EmptyNote>Nenhuma sugestão ou bug ainda. O botão fica no painel de sinais.</EmptyNote>
+        <EmptyNote>Nenhuma conversa ainda. O cliente escreve em Suporte integrado.</EmptyNote>
       )}
     </>
   )

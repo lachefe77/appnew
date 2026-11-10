@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { logoutAction } from "@/app/actions/auth"
 import { Wordmark } from "@/components/wordmark"
+import { formatDate } from "@/lib/format"
 
 const links = [
   { href: "/", label: "Início" },
@@ -12,10 +13,12 @@ export function SiteHeader({
   brand,
   pathname,
   session,
+  planEndsAt = null,
 }: {
   brand: string
   pathname: string
   session: { email: string; role: "cliente" | "admin" } | null
+  planEndsAt?: Date | null
 }) {
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-pitch/95 backdrop-blur">
@@ -42,7 +45,12 @@ export function SiteHeader({
         <div className="ml-auto flex items-center gap-2">
           {session ? (
             <>
-              <span className="hidden max-w-[14rem] truncate text-sm text-mist sm:inline-block">{session.email}</span>
+              <span className="hidden text-right text-sm sm:block">
+                <span className="block max-w-[14rem] truncate">{session.email}</span>
+                <span className="block text-xs text-mist">
+                  {planEndsAt ? `Plano expira em ${formatDate(planEndsAt)}` : "Sem plano ativo"}
+                </span>
+              </span>
               {session.role === "admin" ? (
                 <Link className="btn-ghost" href="/admin">
                   Admin
