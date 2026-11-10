@@ -1,0 +1,86 @@
+import Link from "next/link"
+import { AdminHeading } from "@/components/admin-ui"
+import { prisma } from "@/lib/db"
+import { formatDate } from "@/lib/format"
+import { panelReasonLabel } from "@/server/labels"
+import { decidePanelAccess, expireElapsedGrants } from "@/server/panel-access"
+
+export const dynamic = "force-dynamic"
+
+export default async function UsersPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const query = await searchParams
+  const q = (query.q ?? "").trim()
+  await expireElapsedGrants()
+  const now = new Date()
+  const users = await prisma.user.findMany({
+    where: q
+      ? {
+          OR: [
+            { email: { contains: q, mode: "insensitive" } },
+            { name: { contains: q, mode: "insensitive" } },
+          ],
+        }
+      : undefined,
+    include: { plans: true },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  })
+
+  return (
+    <>
+      <AdminHeading title="Usuários" lede="Edite a conta, suspenda o acesso e conceda, congele ou remova o plano." />
+      <form action="/admin/usuarios" className="mb-4 flex flex-wrap gap-2">
+        <input className="field-light max-w-sm" name="q" defaultValue={q} placeholder="Nome ou e-mail" />
+        <button className="btn-admin" type="submit">
+          Buscar
+        </button>
+      </form>
+      <div className="sheet">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>Papel</th>
+              <th>Situação</th>
+              <th>Desde</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user) => {
+              const gate = decidePanelAccess({
+                banned: user.bannedAt != null,
+                siteOnline: true,
+                signalsVisible: true,
+                now,
+                grants: user.plans.map((plan) => ({
+                  status: plan.status,
+                  startsAt: plan.startsAt,
+                  endsAt: plan.endsAt,
+                })),
+              })
+              const situation =
+                user.role === "admin" ? "Administração" : gate.open ? "Painel aberto" : panelReasonLabel[gate.reason]
+              return (
+                <tr key={user.id}>
+                  <td>{user.name}</td>
+                  <td>{user.email}</td>
+                  <td>{user.role === "admin" ? "Admin" : "Cliente"}</td>
+                  <td>{situation}</td>
+                  <td className="whitespace-nowrap">{formatDate(user.createdAt)}</td>
+                  <td>
+                    <Link className="link-admin" href={`/admin/usuarios/${user.id}`}>
+                      Abrir
+                    </Link>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      {!users.length ? <p className="mt-4 text-sm text-black/60">Nenhum usuário encontrado.</p> : null}
+    </>
+  )
+}

@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  font-family: Outfit, "Segoe UI", sans-serif;
+  background: #07140f;
+}
+
+::selection {
+  background: #1ed37a;
+  color: #07140f;
+}
+
+:focus-visible {
+  outline: 2px solid #1ed37a;
+  outline-offset: 2px;
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-md bg-signal px-4 py-2 text-sm font-semibold text-pitch transition hover:bg-[#3bde8d];
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-md border border-line px-4 py-2 text-sm font-semibold text-ink transition hover:border-signal hover:text-signal;
+  }
+  .btn-admin {
+    @apply inline-flex items-center justify-center rounded-md bg-[#085c34] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0a7040];
+  }
+  .btn-admin-ghost {
+    @apply inline-flex items-center justify-center rounded-md border border-black/15 bg-white px-3 py-2 text-sm font-semibold text-rail transition hover:border-[#085c34];
+  }
+  .btn-admin-danger {
+    @apply inline-flex items-center justify-center rounded-md bg-[#8d2b2b] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#a33333];
+  }
+  .field {
+    @apply w-full rounded-md border border-line bg-felt px-3 py-2 text-sm text-ink outline-none placeholder:text-mist/70 focus:border-signal;
+  }
+  .field-light {
+    @apply w-full rounded-md border border-black/15 bg-white px-3 py-2 text-sm text-rail outline-none focus:border-[#085c34];
+  }
+  .label {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-mist;
+  }
+  .label-light {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-black/50;
+  }
+  .panel {
+    @apply rounded-xl border border-black/10 bg-white p-5;
+  }
+  .sheet {
+    @apply overflow-x-auto rounded-xl border border-black/10 bg-white;
+  }
+  .sheet table {
+    @apply w-full border-collapse text-left text-sm;
+  }
+  .sheet th {
+    @apply bg-[#f6f8f7] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-black/50;
+  }
+  .sheet td {
+    @apply px-3 py-3 align-middle;
+  }
+  .sheet tbody tr + tr td {
+    @apply border-t border-black/5;
+  }
+  .link-admin {
+    @apply font-semibold text-[#085c34] underline-offset-2 hover:underline;
+  }
+}
+
+.backoffice {
+  color-scheme: light;
+}

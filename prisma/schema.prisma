@@ -1,0 +1,300 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  cliente
+  admin
+}
+
+enum PlanGrantStatus {
+  ativo
+  congelado
+  removido
+  expirado
+}
+
+enum OrderStatus {
+  pendente
+  pago
+  cancelado
+  reembolsado
+}
+
+enum CouponType {
+  percentual
+  valor
+}
+
+enum NoticeAudience {
+  todos
+  clientes
+  painel
+}
+
+enum EventPhase {
+  prelive
+  live
+  encerrado
+}
+
+enum BankrollEntryKind {
+  entrada
+  ajuste
+  stake
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String
+  email          String    @unique
+  passwordHash   String
+  role           Role      @default(cliente)
+  bannedAt       DateTime?
+  banReason      String?
+  referredByCode String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  plans        UserPlan[]             @relation("PlanHolder")
+  grantedPlans UserPlan[]             @relation("PlanGranter")
+  orders       Order[]
+  bankrolls    Bankroll[]
+  notices      Notice[]               @relation("NoticeAuthor")
+  audits       AuditLog[]             @relation("AuditActor")
+  affiliate    Affiliate?
+}
+
+model Plan {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  description  String
+  priceCents   Int
+  currency     String   @default("BRL")
+  durationDays Int
+  active       Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  grants UserPlan[]
+  orders Order[]
+}
+
+model UserPlan {
+  id          String          @id @default(cuid())
+  userId      String
+  planId      String
+  status      PlanGrantStatus @default(ativo)
+  startsAt    DateTime
+  endsAt      DateTime
+  frozenAt    DateTime?
+  grantedById String?
+  note        String          @default("")
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  user      User  @relation("PlanHolder", fields: [userId], references: [id], onDelete: Cascade)
+  plan      Plan  @relation(fields: [planId], references: [id])
+  grantedBy User? @relation("PlanGranter", fields: [grantedById], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status, endsAt])
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String
+  planId      String?
+  couponId    String?
+  affiliateId String?
+  status      OrderStatus @default(pendente)
+  amountCents Int
+  currency    String      @default("BRL")
+  notes       String      @default("")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan        Plan?                 @relation(fields: [planId], references: [id])
+  coupon      Coupon?               @relation(fields: [couponId], references: [id])
+  affiliate   Affiliate?            @relation(fields: [affiliateId], references: [id])
+  commissions AffiliateCommission[]
+
+  @@index([status])
+  @@index([userId])
+}
+
+model House {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  url       String   @default("")
+  logoUrl   String   @default("")
+  cloneOfId String?
+  currency  String   @default("BRL")
+  active    Boolean  @default(true)
+  fixedSide String   @default("")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cloneOf  House?   @relation("HouseClone", fields: [cloneOfId], references: [id])
+  clones   House[]  @relation("HouseClone")
+  signalsA Signal[] @relation("SignalHouseA")
+  signalsB Signal[] @relation("SignalHouseB")
+}
+
+model Sport {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  imageUrl  String   @default("")
+  createdAt DateTime @default(now())
+
+  events Event[]
+}
+
+model Event {
+  id         String     @id @default(cuid())
+  sportId    String
+  name       String
+  startsAt   DateTime?
+  phase      EventPhase @default(prelive)
+  externalId String     @default("")
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  sport   Sport    @relation(fields: [sportId], references: [id])
+  signals Signal[]
+}
+
+model Signal {
+  id            String   @id @default(cuid())
+  eventId       String
+  market        String
+  house1Id      String
+  house2Id      String
+  odd1          Decimal  @db.Decimal(8, 3)
+  odd2          Decimal  @db.Decimal(8, 3)
+  profitPercent Decimal  @db.Decimal(7, 3)
+  status        String   @default("aberto")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  event  Event @relation(fields: [eventId], references: [id])
+  house1 House @relation("SignalHouseA", fields: [house1Id], references: [id])
+  house2 House @relation("SignalHouseB", fields: [house2Id], references: [id])
+}
+
+model Bankroll {
+  id           String   @id @default(cuid())
+  userId       String
+  currency     String   @default("BRL")
+  balanceCents Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries BankrollEntry[]
+
+  @@unique([userId, currency])
+}
+
+model BankrollEntry {
+  id          String            @id @default(cuid())
+  bankrollId  String
+  amountCents Int
+  kind        BankrollEntryKind
+  note        String            @default("")
+  createdAt   DateTime          @default(now())
+
+  bankroll Bankroll @relation(fields: [bankrollId], references: [id], onDelete: Cascade)
+}
+
+model Coupon {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  type      CouponType
+  value     Int
+  active    Boolean    @default(true)
+  maxUses   Int?
+  usedCount Int        @default(0)
+  expiresAt DateTime?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  orders Order[]
+}
+
+model Affiliate {
+  id                String   @id @default(cuid())
+  userId            String?  @unique
+  code              String   @unique
+  name              String
+  commissionPercent Int
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user        User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  orders      Order[]
+  commissions AffiliateCommission[]
+}
+
+model AffiliateCommission {
+  id          String   @id @default(cuid())
+  affiliateId String
+  orderId     String?
+  amountCents Int
+  note        String   @default("")
+  createdAt   DateTime @default(now())
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  order     Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+}
+
+model Notice {
+  id          String         @id @default(cuid())
+  title       String
+  body        String
+  audience    NoticeAudience @default(todos)
+  published   Boolean        @default(false)
+  publishedAt DateTime?
+  authorId    String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  author User? @relation("NoticeAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String   @default("")
+  summary    String   @default("")
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
+
+model Setting {
+  key       String   @id
+  label     String
+  group     String
+  kind      String
+  value     String
+  updatedAt DateTime @updatedAt
+}
