@@ -50,22 +50,22 @@ export default async function PanelPage() {
   }
 
   const bankroll = user.bankrolls[0]
-  const houses = await prisma.house.findMany({
-    where: { active: true, operable: true },
-    orderBy: { sortOrder: "asc" },
-  })
-  const autoMarketIds = houses.filter((house) => house.slug === "pinnacle" || house.slug === "bcgame").map((house) => house.id)
   const loaded = await loadSignals({
     userId: user.id,
     phase: "prelive",
     simulate: false,
     refresh: true,
-    options: {
-      includedHouseIds: houses.map((house) => house.id),
-      autoMarketHouseIds: autoMarketIds,
-      sort: "clone",
-    },
+    options: { sort: "clone" },
   })
+  const houses = await prisma.house.findMany({
+    where: { active: true, operable: true },
+    orderBy: { sortOrder: "asc" },
+  })
+  const autoMarketIds = houses.filter((house) => house.slug === "pinnacle" || house.slug === "bcgame").map((house) => house.id)
+  const realNames = houses.filter((house) => house.feed === "ao_vivo").map((house) => house.name)
+  const sourceLine = realNames.length
+    ? `Fonte real: ${realNames.join(", ")}. As outras casas seguem em odd de teste.`
+    : "As casas seguem em odd de teste até a fonte responder."
   const entries = bankroll
     ? await prisma.bankrollEntry.findMany({
         where: { bankrollId: bankroll.id },
@@ -98,6 +98,7 @@ export default async function PanelPage() {
         }))}
         initialSignals={loaded.signals}
         initialRealRows={loaded.realRows}
+        sourceLine={sourceLine}
         balanceCents={bankroll?.balanceCents ?? 0}
         currency={bankroll?.currency ?? "BRL"}
         initialStakeCents={loaded.totalStakeCents}

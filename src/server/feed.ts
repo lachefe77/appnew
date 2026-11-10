@@ -126,9 +126,13 @@ function realRowsFrom(
     groups.set(key, list)
   }
   const rows: RealRow[] = []
+  const perHouse = new Map<string, number>()
   for (const [key, list] of groups) {
     if (list.length < 2) continue
     const [first, second] = list
+    const seen = perHouse.get(first.house.slug) ?? 0
+    if (seen >= 4) continue
+    perHouse.set(first.house.slug, seen + 1)
     rows.push({
       key,
       eventName: first.event.name,
@@ -145,7 +149,7 @@ function realRowsFrom(
       sideB: second.side,
       oddB: Number(second.odd),
     })
-    if (rows.length >= 24) break
+    if (rows.length >= 32) break
   }
   return rows
 }
