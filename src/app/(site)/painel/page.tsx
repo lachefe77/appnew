@@ -59,6 +59,7 @@ export default async function PanelPage() {
     userId: user.id,
     phase: "prelive",
     simulate: false,
+    refresh: true,
     options: {
       includedHouseIds: houses.map((house) => house.id),
       autoMarketHouseIds: autoMarketIds,
@@ -96,6 +97,7 @@ export default async function PanelPage() {
           feed: house.feed,
         }))}
         initialSignals={loaded.signals}
+        initialRealRows={loaded.realRows}
         balanceCents={bankroll?.balanceCents ?? 0}
         currency={bankroll?.currency ?? "BRL"}
         initialStakeCents={loaded.totalStakeCents}

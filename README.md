@@ -58,7 +58,7 @@ Essa conta já tem plano mensal e banca de R$ 1.000,00. O stake automático come
 
 ## Grade e odds
 
-As onze casas estão cadastradas com marca própria, não o logo oficial, e moeda de cálculo. Todas as odds desta versão são de teste. Nenhuma casa tem coleta ao vivo. A linha ao vivo de Real Madrid x Barcelona se move sozinha para a surebet aparecer e sumir.
+As onze casas estão cadastradas com marca própria, não o logo oficial, e moeda de cálculo. Pinnacle.com lê a fonte pública. Ps3838 espera usuário e senha da API. Bcgame permanece em odd de teste porque a fonte pública respondeu bloqueada. As outras oito casas seguem em odd de teste. A linha ao vivo de teste de Real Madrid x Barcelona se move sozinha.
 
 Há uma surebet de 2,50% (Flamengo x Palmeiras, odds 2,05 e 2,05) e outra de 8,00% (Lakers x Celtics, odds 2,16 e 2,16). A de 8% passa de 7% e fica destacada.
 

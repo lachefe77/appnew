@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { bankrollAction, launchStakeAction, supportAction } from "@/app/actions/board"
 import { centsFromInput } from "@/server/parse"
+import type { RealRow } from "@/server/feed"
 import type { BoardSignal } from "@/server/surebet"
 import { formatMoney } from "@/lib/format"
 
@@ -22,6 +23,7 @@ type Entry = { id: string; amountCents: number; kind: string; note: string; crea
 type Props = {
   houses: HouseChip[]
   initialSignals: BoardSignal[]
+  initialRealRows: RealRow[]
   balanceCents: number
   currency: string
   initialStakeCents: number
@@ -67,7 +69,7 @@ function sideLabel(side: string) {
 }
 
 function feedLabel(feed: string) {
-  return feed === "ao_vivo" ? "Ao vivo" : "Teste"
+  return feed === "ao_vivo" || feed === "publico" ? "Fonte real" : "Teste"
 }
 
 function percentLabel(value: number) {
@@ -95,6 +97,7 @@ export function SignalBoard(props: Props) {
     volume: 70,
   }))
   const [signals, setSignals] = useState(props.initialSignals)
+  const [realRows, setRealRows] = useState(props.initialRealRows)
   const [balance, setBalance] = useState(props.balanceCents)
   const [stakeCents, setStakeCents] = useState(props.initialStakeCents)
   const [launched, setLaunched] = useState(props.launched)
@@ -167,11 +170,13 @@ export function SignalBoard(props: Props) {
     if (!response.ok) return
     const data = (await response.json()) as {
       signals: BoardSignal[]
+      realRows?: RealRow[]
       totalStakeCents: number
       balanceCents: number
       alerted: string[]
     }
     setSignals(data.signals)
+    setRealRows(data.realRows ?? [])
     setStakeCents(data.totalStakeCents)
     setBalance(data.balanceCents)
     if (data.alerted.length) {
@@ -190,13 +195,24 @@ export function SignalBoard(props: Props) {
 
   const visible = useMemo(() => {
     const query = filters.query.trim().toLocaleLowerCase("pt-BR")
-    if (!query) return signals
-    return signals.filter((signal) =>
+    const rows = signals.filter((signal) => signal.phase === filters.phase)
+    if (!query) return rows
+    return rows.filter((signal) =>
       `${signal.eventName} ${signal.sportName} ${signal.market} ${signal.leg1.houseName} ${signal.leg2.houseName}`
         .toLocaleLowerCase("pt-BR")
         .includes(query),
     )
-  }, [filters.query, signals])
+  }, [filters.phase, filters.query, signals])
+  const visibleReal = useMemo(() => {
+    const query = filters.query.trim().toLocaleLowerCase("pt-BR")
+    return realRows.filter((row) => {
+      if (row.phase !== filters.phase) return false
+      const house = props.houses.find((item) => item.slug === row.houseSlug)
+      if (house && !filters.houseIds.includes(house.id)) return false
+      if (!query) return true
+      return `${row.eventName} ${row.houseName} ${row.sportName}`.toLocaleLowerCase("pt-BR").includes(query)
+    })
+  }, [filters.houseIds, filters.phase, filters.query, props.houses, realRows])
 
   function patch(partial: Partial<Filters>) {
     setFilters((current) => ({ ...current, ...partial }))
@@ -264,7 +280,7 @@ export function SignalBoard(props: Props) {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-signal">Operação</p>
           <h1 className="font-display text-6xl uppercase">Sinais</h1>
-          <p className="mt-1 text-sm text-mist">Odds de teste. Nenhuma casa está em coleta ao vivo.</p>
+          <p className="mt-1 text-sm text-mist">Pinnacle.com entra pela fonte pública. Bcgame e Ps3838 seguem em odd de teste.</p>
         </div>
         <div className="rounded-xl border border-line bg-card px-4 py-3">
           <p className="text-xs uppercase tracking-wide text-mist">Banca</p>
@@ -493,9 +509,37 @@ export function SignalBoard(props: Props) {
                 </td>
               </tr>
             ))}
+            {visibleReal.map((row) => (
+              <tr key={row.key} data-real="sim" data-house={row.houseSlug}>
+                <td className="px-3 py-3">
+                  <div className="flex items-center gap-2">
+                    <img src={row.sportImage} alt="" width={32} height={32} className="h-8 w-8 rounded-md" />
+                    <span>{row.sportName}</span>
+                  </div>
+                </td>
+                <td className="px-3 py-3">{row.eventName}</td>
+                <td className="px-3 py-3">{row.market}</td>
+                <td className="px-3 py-3">
+                  <div className="flex items-center gap-2">
+                    <img src={row.logoUrl} alt="" width={28} height={28} className="h-7 w-7 rounded-md" />
+                    <div>
+                      <p className="font-semibold">{row.houseName}</p>
+                      <p className="text-mist">{sideLabel(row.sideA)} · {oddLabel(row.oddA)}</p>
+                      <p className="text-[10px] uppercase tracking-wide text-mist">Fonte real</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-3 py-3">
+                  <p className="font-semibold">{row.houseName}</p>
+                  <p className="text-mist">{sideLabel(row.sideB)} · {oddLabel(row.oddB)}</p>
+                </td>
+                <td className="px-3 py-3 text-mist">Sem par</td>
+                <td className="px-3 py-3"></td>
+              </tr>
+            ))}
           </tbody>
         </table>
-        {!visible.length ? <p className="px-4 py-10 text-center text-sm text-mist">Nenhuma surebet com essas casas agora.</p> : null}
+        {!visible.length && !visibleReal.length ? <p className="px-4 py-10 text-center text-sm text-mist">Nenhuma surebet com essas casas agora.</p> : null}
       </div>
 
       <section className="mt-6 grid gap-4 md:grid-cols-2">

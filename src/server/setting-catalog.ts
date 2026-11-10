@@ -343,6 +343,22 @@ export const SETTING_CATALOG: SettingItem[] = [
     defaultValue: "0",
   },
   {
+    key: "feed.ps3838.user",
+    label: "Usuário da API Ps3838",
+    group: "parametros",
+    kind: "text",
+    defaultValue: "vazio",
+    hint: "Usuário da conta com saldo. Sem isso a Ps3838 fica em odd de teste.",
+  },
+  {
+    key: "feed.ps3838.password",
+    label: "Senha da API Ps3838",
+    group: "parametros",
+    kind: "longtext",
+    defaultValue: "vazio",
+    hint: "Senha da mesma conta. A Ps3838 usa os dois no acesso Basic da API oficial.",
+  },
+  {
     key: "alert.whatsappWebhook",
     label: "Webhook do WhatsApp",
     group: "parametros",

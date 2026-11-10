@@ -83,7 +83,6 @@ async function main() {
         logoUrl: `/marcas/${house.slug}.svg`,
         cloneLabel: house.cloneLabel,
         operable: true,
-        feed: "fixture",
         sortOrder: house.sortOrder,
       },
       create: {
@@ -143,6 +142,8 @@ async function main() {
     const eventId = eventIds.get(quote.event)
     const houseId = houseIds.get(quote.house)
     if (!eventId || !houseId) continue
+    const houseRow = await prisma.house.findUnique({ where: { id: houseId } })
+    if (houseRow?.feed === "ao_vivo") continue
     await prisma.quote.upsert({
       where: {
         eventId_houseId_market_side: {

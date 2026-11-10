@@ -1,6 +1,24 @@
 import { prisma } from "@/lib/db"
+import { refreshRealFeeds } from "@/server/feeds/refresh"
 import { buildSignals, type BoardOptions, type BoardQuote, type BoardSignal } from "@/server/surebet"
 import { getSettings } from "@/server/settings"
+
+export type RealRow = {
+  key: string
+  eventName: string
+  sportName: string
+  sportImage: string
+  phase: "prelive" | "live"
+  market: string
+  houseName: string
+  houseSlug: string
+  logoUrl: string
+  feed: string
+  sideA: string
+  oddA: number
+  sideB: string
+  oddB: number
+}
 
 const liveCycle = [2.2, 2.1, 2.0, 1.95, 1.9, 1.85]
 let liveStep = 0
@@ -40,8 +58,10 @@ export async function loadSignals(input: {
   }
   userId: string
   simulate?: boolean
+  refresh?: boolean
 }) {
   const settings = await getSettings()
+  if (input.refresh) await refreshRealFeeds()
   if (input.simulate !== false && settings.flag("signal.simulateLive") && input.phase === "live") {
     await nudgeLiveDemo()
   }
@@ -80,7 +100,54 @@ export async function loadSignals(input: {
     highlightAbove: Number.isFinite(highlight) ? highlight : 7,
     minProfit: input.options.minProfit ?? (Number(settings.get("signal.minProfit").replace(",", ".")) || 0),
   })
-  return { signals, totalStakeCents: total }
+  return { signals, realRows: realRowsFrom(quotes, signals), totalStakeCents: total }
+}
+
+function realRowsFrom(
+  quotes: Array<{
+    eventId: string
+    market: string
+    side: string
+    odd: { toString(): string } | number
+    phase: string
+    source: string
+    house: { feed: string; name: string; slug: string; logoUrl: string }
+    event: { name: string; sport: { name: string; imageUrl: string } }
+  }>,
+  signals: BoardSignal[],
+): RealRow[] {
+  const used = new Set(signals.map((signal) => signal.eventId))
+  const groups = new Map<string, typeof quotes>()
+  for (const quote of quotes) {
+    if (quote.house.feed !== "ao_vivo" || quote.source !== "publico" || used.has(quote.eventId)) continue
+    const key = `${quote.eventId}:${quote.house.slug}:${quote.market}`
+    const list = groups.get(key) ?? []
+    list.push(quote)
+    groups.set(key, list)
+  }
+  const rows: RealRow[] = []
+  for (const [key, list] of groups) {
+    if (list.length < 2) continue
+    const [first, second] = list
+    rows.push({
+      key,
+      eventName: first.event.name,
+      sportName: first.event.sport.name,
+      sportImage: first.event.sport.imageUrl,
+      phase: first.phase === "live" ? "live" : "prelive",
+      market: first.market,
+      houseName: first.house.name,
+      houseSlug: first.house.slug,
+      logoUrl: first.house.logoUrl,
+      feed: "ao_vivo",
+      sideA: first.side,
+      oddA: Number(first.odd),
+      sideB: second.side,
+      oddB: Number(second.odd),
+    })
+    if (rows.length >= 24) break
+  }
+  return rows
 }
 
 export async function findSignalByKey(userId: string, phase: "prelive" | "live", key: string, options: Parameters<typeof loadSignals>[0]["options"]) {
