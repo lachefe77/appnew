@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/db"
-import { requireAdmin } from "@/lib/session"
+import { requireAdmin, requireStaff } from "@/lib/session"
+import { recordAudit } from "@/server/audit"
 import { centsFromInput, daysFromInput } from "@/server/parse"
 import {
   banUser,
@@ -28,6 +29,12 @@ import {
   type OpResult,
 } from "@/server/admin-ops"
 import { SETTING_CATALOG } from "@/server/setting-catalog"
+
+function reaisToCents(value: FormDataEntryValue | null) {
+  const parsed = Number(String(value ?? "").replace(",", "."))
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined
+  return Math.round(parsed * 100)
+}
 
 function bounce(result: OpResult, path: string): never {
   if (!result.ok) redirect(`${path}?erro=${encodeURIComponent(result.error)}`)
@@ -260,6 +267,9 @@ export async function updateHouseAction(formData: FormData) {
     currency: String(formData.get("currency") ?? ""),
     active: formData.get("active") === "true",
     fixedSide: String(formData.get("fixedSide") ?? ""),
+    stakeStepCents: reaisToCents(formData.get("step")),
+    minStakeCents: reaisToCents(formData.get("min")),
+    maxStakeCents: reaisToCents(formData.get("max")),
   })
   bounce(result, "/admin/casas")
 }
@@ -271,12 +281,48 @@ export async function closeTicketAction(formData: FormData) {
 }
 
 export async function replySupportAction(formData: FormData) {
-  const admin = await requireAdmin()
+  const admin = await requireStaff()
   const userId = String(formData.get("userId") ?? "")
   const body = String(formData.get("body") ?? "").trim()
   if (body.length < 2) redirect("/admin/suporte?erro=Escreva%20a%20resposta.")
   const user = await prisma.user.findUnique({ where: { id: userId } })
   if (!user) redirect("/admin/suporte?erro=Cliente%20não%20encontrado.")
   await prisma.supportMessage.create({ data: { userId, authorId: admin.id, body: body.slice(0, 2000) } })
+  await prisma.user.update({ where: { id: userId }, data: { supportUnread: false } })
+  await recordAudit({
+    actorId: admin.id,
+    action: "suporte.responder",
+    entityType: "suporte",
+    entityId: userId,
+    summary: `Resposta para ${user.email}.`,
+  })
   redirect("/admin/suporte?ok=1")
+}
+
+export async function resolveSupportAction(formData: FormData) {
+  const admin = await requireStaff()
+  const userId = String(formData.get("userId") ?? "")
+  await prisma.user.update({ where: { id: userId }, data: { supportStatus: "resolvido", supportUnread: false } })
+  await recordAudit({
+    actorId: admin.id,
+    action: "suporte.resolver",
+    entityType: "suporte",
+    entityId: userId,
+    summary: "Conversa marcada como resolvida.",
+  })
+  redirect("/admin/suporte?ok=1")
+}
+
+export async function testAlertAction() {
+  const { sendTestAlert } = await import("@/server/alerts")
+  const admin = await requireAdmin()
+  const result = await sendTestAlert()
+  await recordAudit({
+    actorId: admin.id,
+    action: "alerta.teste",
+    entityType: "alerta",
+    summary: result.ok ? result.detail : result.error,
+  })
+  if (!result.ok) redirect(`/admin/status?erro=${encodeURIComponent(result.error)}`)
+  redirect(`/admin/status?ok=${encodeURIComponent(result.detail)}`)
 }

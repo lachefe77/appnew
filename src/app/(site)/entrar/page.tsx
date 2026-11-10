@@ -40,6 +40,8 @@ export default async function LoginPage({
         </button>
       </form>
       <p className="mt-4 text-sm text-mist">
+        <Link href="/recuperar" className="font-semibold text-signal">Esqueci a senha</Link>
+        {" · "}
         Ainda não tem conta?{" "}
         <Link href="/cadastro" className="font-semibold text-signal">
           Cadastre-se

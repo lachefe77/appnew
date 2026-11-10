@@ -103,6 +103,22 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-6xl px-4 pb-14">
+        <h2 className="font-display text-4xl uppercase">Antes de criar a conta</h2>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {[
+            ["Quanto tempo a odd dura?", "Uma odd errada some em segundos. A grade tira a odd real que passou do tempo configurado, para não mostrar preço morto."],
+            ["O que é pré-live?", "É o mercado antes do apito. Ao vivo é o mercado com o jogo rolando. Os dois ficam em abas da grade."],
+            ["O que acontece sem plano?", "A conta entra, a banca e a calculadora funcionam, e a grade de sinais fica fechada até existir um plano ativo."],
+          ].map(([title, body]) => (
+            <article key={title} className="rounded-2xl border border-line bg-white p-5">
+              <h3 className="font-semibold">{title}</h3>
+              <p className="mt-2 text-sm text-mist">{body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       {notices.length ? (
         <section className="mx-auto max-w-6xl px-4 pb-12">
           <h2 className="font-display text-3xl uppercase">Avisos</h2>

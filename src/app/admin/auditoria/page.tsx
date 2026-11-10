@@ -1,14 +1,20 @@
 import { AdminHeading, EmptyNote } from "@/components/admin-ui"
+import { Pager } from "@/components/pager"
 import { prisma } from "@/lib/db"
 import { formatDate } from "@/lib/format"
+import { pageWindow } from "@/server/paging"
 
 export const dynamic = "force-dynamic"
 
-export default async function AuditPage() {
+export default async function AuditPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const query = await searchParams
+  const window = pageWindow(query.page)
+  const total = await prisma.auditLog.count()
   const entries = await prisma.auditLog.findMany({
     include: { actor: true },
     orderBy: { createdAt: "desc" },
-    take: 200,
+    skip: window.skip,
+    take: window.take,
   })
   return (
     <>
@@ -39,6 +45,7 @@ export default async function AuditPage() {
       ) : (
         <EmptyNote>Nenhuma ação registrada.</EmptyNote>
       )}
+      <Pager page={window.page} pages={Math.max(1, Math.ceil(total / window.take))} href="/admin/auditoria" />
     </>
   )
 }

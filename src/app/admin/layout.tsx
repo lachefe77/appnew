@@ -1,17 +1,19 @@
 import Link from "next/link"
 import { logoutAction } from "@/app/actions/auth"
 import { AdminNav } from "@/components/admin-nav"
-import { requireAdmin } from "@/lib/session"
+import { prisma } from "@/lib/db"
+import { requireStaff } from "@/lib/session"
 import { getSettings } from "@/server/settings"
 
 export const dynamic = "force-dynamic"
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const admin = await requireAdmin()
+  const admin = await requireStaff()
   const settings = await getSettings()
+  const unread = await prisma.user.count({ where: { supportUnread: true } })
   return (
     <div className="backoffice min-h-screen bg-[#e7ece9] text-rail md:grid md:grid-cols-[240px_1fr]">
-      <AdminNav brand={settings.get("brand.name")} />
+      <AdminNav brand={settings.get("brand.name")} role={admin.role} unread={unread} />
       <div>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 px-4 py-3 md:px-8">
           <p className="text-sm text-black/70">{admin.email}</p>

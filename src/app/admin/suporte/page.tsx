@@ -1,4 +1,4 @@
-import { replySupportAction } from "@/app/actions/admin"
+import { replySupportAction, resolveSupportAction } from "@/app/actions/admin"
 import { AdminHeading, EmptyNote } from "@/components/admin-ui"
 import { Flash } from "@/components/flash"
 import { prisma } from "@/lib/db"
@@ -28,7 +28,9 @@ export default async function SupportPage({
         <div className="grid gap-4">
           {threads.map((user) => (
             <article key={user.id} className="panel">
-              <h2 className="font-semibold">{user.name}</h2>
+              <h2 className="font-semibold">
+                {user.name} {user.supportUnread ? "· nova" : ""} · {user.supportStatus}
+              </h2>
               <p className="text-xs text-black/50">{user.email}</p>
               <div className="mt-3 space-y-2">
                 {user.supportThreads.map((note) => (
@@ -45,6 +47,12 @@ export default async function SupportPage({
                 <input className="field-light" name="body" placeholder="Resposta" required />
                 <button className="btn-admin" type="submit">
                   Responder
+                </button>
+              </form>
+              <form action={resolveSupportAction} className="mt-2">
+                <input type="hidden" name="userId" value={user.id} />
+                <button className="btn-admin-ghost" type="submit">
+                  Marcar como resolvida
                 </button>
               </form>
             </article>

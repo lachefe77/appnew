@@ -7,6 +7,7 @@ export type Offer = {
   side: "casa" | "fora" | "over" | "under"
   odd: number
   startsAt: string | null
+  competition?: string
 }
 
 export type PullResult = {

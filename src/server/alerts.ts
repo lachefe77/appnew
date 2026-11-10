@@ -53,21 +53,30 @@ export async function deliverAlert(channel: AlertChannel, message: string, setti
     : { status: "falhou" as const, detail: `HTTP ${response.status}` }
 }
 
-export async function dispatchAlerts(signals: BoardSignal[]) {
+export async function dispatchAlerts(signals: BoardSignal[], userId?: string) {
   const settings = await getSettings()
   const channel = settings.get("alert.channel").trim().toLowerCase()
   if (channel !== "discord" && channel !== "telegram" && channel !== "whatsapp") {
     return []
   }
   const floor = Number(settings.get("alert.minProfit").replace(",", "."))
-  const minimum = Number.isFinite(floor) ? floor : 1
+  const globalFloor = Number.isFinite(floor) ? floor : 1
+  const user = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null
+  const personal = user?.alertMinProfit == null ? null : Number(user.alertMinProfit)
+  const minimum = personal != null && Number.isFinite(personal) ? personal : globalFloor
+  const cap = Number(settings.get("alert.maxPerMinute").replace(",", "."))
+  const maxPerMinute = Number.isFinite(cap) && cap > 0 ? cap : 8
+  const sentRecently = await prisma.alertDispatch.count({
+    where: { createdAt: { gte: new Date(Date.now() - 60_000) }, status: { in: ["enviado", "enviando", "falhou"] } },
+  })
   const fresh: string[] = []
   for (const signal of signals) {
     if (signal.profitPercent < minimum) continue
+    if (sentRecently + fresh.length >= maxPerMinute) break
     const message = alertMessage(signal)
     try {
       await prisma.alertDispatch.create({
-        data: { signalKey: signal.key, channel, message, status: "enviando", detail: "" },
+        data: { signalKey: signal.key, channel, message, status: "enviando", detail: "", attempts: 1 },
       })
     } catch (error) {
       const code = typeof error === "object" && error && "code" in error ? String(error.code) : ""
@@ -82,9 +91,58 @@ export async function dispatchAlerts(signals: BoardSignal[]) {
     }
     await prisma.alertDispatch.update({
       where: { signalKey_channel: { signalKey: signal.key, channel } },
-      data: { status: result.status, detail: result.detail },
+      data: {
+        status: result.status,
+        detail: result.detail,
+        nextRetryAt: result.status === "falhou" ? new Date(Date.now() + 30_000) : null,
+      },
     })
     fresh.push(signal.key)
   }
   return fresh
+}
+
+export async function retryAlerts() {
+  const settings = await getSettings()
+  const due = await prisma.alertDispatch.findMany({
+    where: {
+      status: "falhou",
+      attempts: { lt: 3 },
+      OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: new Date() } }],
+    },
+    take: 10,
+    orderBy: { createdAt: "asc" },
+  })
+  for (const item of due) {
+    if (item.channel !== "discord" && item.channel !== "telegram" && item.channel !== "whatsapp") continue
+    let result: { status: "enviado" | "sem_destino" | "falhou"; detail: string }
+    try {
+      result = await deliverAlert(item.channel, item.message, settings)
+    } catch (error) {
+      result = { status: "falhou", detail: error instanceof Error ? error.message : "Falha ao enviar." }
+    }
+    await prisma.alertDispatch.update({
+      where: { id: item.id },
+      data: {
+        status: result.status,
+        detail: result.detail,
+        attempts: { increment: 1 },
+        nextRetryAt: result.status === "falhou" ? new Date(Date.now() + 60_000) : null,
+      },
+    })
+  }
+}
+
+export async function sendTestAlert() {
+  const settings = await getSettings()
+  const channel = settings.get("alert.channel").trim().toLowerCase()
+  if (channel !== "discord" && channel !== "telegram" && channel !== "whatsapp") {
+    return { ok: false as const, error: "Escolha discord, telegram ou whatsapp." }
+  }
+  try {
+    const result = await deliverAlert(channel, "Fut Surebet: alerta de teste.", settings)
+    return { ok: true as const, detail: `${result.status}. ${result.detail}` }
+  } catch (error) {
+    return { ok: false as const, error: error instanceof Error ? error.message : "Falha ao enviar." }
+  }
 }

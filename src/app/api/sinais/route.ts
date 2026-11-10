@@ -15,8 +15,12 @@ type Body = {
   market?: string
   minProfit?: number
   totalStakeCents?: number | null
-  sort?: "alfa" | "clone"
+  sort?: "alfa" | "clone" | "lucro" | "horario" | "esporte"
+  sport?: string
+  competition?: string
 }
+
+const SORTS = ["alfa", "clone", "lucro", "horario", "esporte"] as const
 
 export async function POST(request: Request) {
   const session = await getSession()
@@ -26,10 +30,11 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => ({}))) as Body
   const phase = body.phase === "live" ? "live" : "prelive"
+  const sort = SORTS.includes(body.sort as (typeof SORTS)[number]) ? body.sort! : "clone"
   const loaded = await loadSignals({
     userId: session.sub,
     phase,
-    refresh: true,
+    refresh: false,
     options: {
       includedHouseIds: Array.isArray(body.houseIds) ? body.houseIds : undefined,
       fixedSides: body.fixedSides ?? {},
@@ -37,12 +42,14 @@ export async function POST(request: Request) {
       autoMarketHouseIds: Array.isArray(body.autoMarketHouseIds) ? body.autoMarketHouseIds : [],
       pinnedHouseId: body.pinnedHouseId || null,
       market: body.market || "todos",
+      sport: body.sport || "todos",
+      competition: body.competition || "todos",
       minProfit: typeof body.minProfit === "number" ? body.minProfit : undefined,
       totalStakeCents: body.totalStakeCents ?? null,
-      sort: body.sort === "alfa" ? "alfa" : "clone",
+      sort,
     },
   })
-  const alerted = await dispatchAlerts(loaded.signals)
+  const alerted = await dispatchAlerts(loaded.signals, session.sub)
   const bankroll = await prisma.bankroll.findFirst({ where: { userId: session.sub }, orderBy: { createdAt: "asc" } })
   return NextResponse.json({
     signals: loaded.signals,

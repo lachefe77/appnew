@@ -31,7 +31,7 @@ export default async function AffiliatesPage({
 
   return (
     <>
-      <AdminHeading title="Afiliados e cupons" lede="Código, comissão registrada e cupom de desconto." />
+      <AdminHeading title="Afiliados e cupons" lede="Ficam só aqui até o pagamento existir. A vitrine não pede cupom." />
       <Flash erro={query.erro} ok={query.ok} tone="light" />
 
       <form action={createAffiliateAction} className="panel grid gap-3 md:grid-cols-3">

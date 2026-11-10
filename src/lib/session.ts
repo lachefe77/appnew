@@ -9,7 +9,14 @@ export async function getSession(): Promise<SessionPayload | null> {
   const jar = await cookies()
   const token = jar.get(SESSION_COOKIE)?.value
   if (!token) return null
-  return verifySession(token)
+  const session = await verifySession(token)
+  if (!session) return null
+  const user = await prisma.user.findUnique({ where: { id: session.sub } })
+  if (!user || user.bannedAt || user.sessionVersion !== session.sv) {
+    await clearSession()
+    return null
+  }
+  return { sub: user.id, role: user.role, email: user.email, sv: user.sessionVersion }
 }
 
 export async function setSession(session: SessionPayload) {
@@ -30,10 +37,16 @@ export async function clearSession() {
 }
 
 export async function requireAdmin() {
+  const user = await requireStaff()
+  if (user.role !== "admin") redirect("/admin/suporte")
+  return user
+}
+
+export async function requireStaff() {
   const session = await getSession()
   if (!session) redirect("/entrar?next=/admin")
   const user = await prisma.user.findUnique({ where: { id: session.sub } })
   if (!user || user.bannedAt) redirect("/api/sessao/encerrar")
-  if (user.role !== "admin") redirect("/painel")
+  if (user.role !== "admin" && user.role !== "moderador") redirect("/painel")
   return user
 }

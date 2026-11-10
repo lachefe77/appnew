@@ -619,23 +619,44 @@ export async function updatePlanCatalog(
   return { ok: true }
 }
 
+function centsOr(value: number | undefined, fallback: number) {
+  return Number.isInteger(value) && (value as number) > 0 ? (value as number) : fallback
+}
+
 const HOUSE_CURRENCIES = ["BRL", "USD", "EUR"]
 const HOUSE_SIDES = ["", "casa", "fora", "over", "under"]
 
 export async function updateHouse(
   actorId: string,
   houseId: string,
-  input: { currency: string; active: boolean; fixedSide: string },
+  input: {
+    currency: string
+    active: boolean
+    fixedSide: string
+    stakeStepCents?: number
+    minStakeCents?: number
+    maxStakeCents?: number
+  },
 ): Promise<OpResult> {
   const currency = input.currency.trim().toUpperCase()
   if (!HOUSE_CURRENCIES.includes(currency)) return { ok: false, error: "A moeda é BRL, USD ou EUR." }
   if (!HOUSE_SIDES.includes(input.fixedSide)) return { ok: false, error: "Lado fixo inválido." }
   const current = await prisma.house.findUnique({ where: { id: houseId } })
   if (!current || !current.operable) return { ok: false, error: "Casa não encontrada." }
+  const step = centsOr(input.stakeStepCents, current.stakeStepCents)
+  const min = centsOr(input.minStakeCents, current.minStakeCents)
+  const max = centsOr(input.maxStakeCents, current.maxStakeCents)
   await prisma.$transaction(async (tx) => {
     await tx.house.update({
       where: { id: houseId },
-      data: { currency, active: input.active, fixedSide: input.fixedSide },
+      data: {
+        currency,
+        active: input.active,
+        fixedSide: input.fixedSide,
+        stakeStepCents: step,
+        minStakeCents: min,
+        maxStakeCents: max,
+      },
     })
     await audit(tx, {
       actorId,

@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
+import { changePasswordAction } from "@/app/actions/auth"
 import { prisma } from "@/lib/db"
 import { formatDate, formatMoney } from "@/lib/format"
 import { getSession } from "@/lib/session"
@@ -61,6 +62,35 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </div>
+      <form action={saveFloor} className="mt-6 flex items-end gap-2">
+        <label>
+          <span className="label">Piso do seu alerta (%)</span>
+          <input className="field w-28" name="floor" defaultValue={user.alertMinProfit?.toString() ?? ""} placeholder="1" />
+        </label>
+        <button className="btn-primary" type="submit">
+          Salvar piso
+        </button>
+      </form>
+      <form action={changePasswordAction} className="mt-6 grid max-w-md gap-2">
+        <h2 className="font-display text-2xl uppercase">Senha</h2>
+        <input className="field" name="current" type="password" placeholder="Senha atual" required />
+        <input className="field" name="next" type="password" placeholder="Nova senha" minLength={8} required />
+        <button className="btn-ghost w-fit" type="submit">
+          Trocar senha e encerrar as outras sessões
+        </button>
+      </form>
     </section>
   )
+}
+
+async function saveFloor(formData: FormData) {
+  "use server"
+  const session = await getSession()
+  if (!session) redirect("/entrar")
+  const number = Number(String(formData.get("floor") ?? "").replace(",", "."))
+  await prisma.user.update({
+    where: { id: session.sub },
+    data: { alertMinProfit: Number.isFinite(number) ? number : null },
+  })
+  redirect("/painel")
 }

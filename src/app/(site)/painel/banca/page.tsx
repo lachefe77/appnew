@@ -10,20 +10,39 @@ export default async function BankPage({ searchParams }: { searchParams: Promise
   const session = await getSession()
   if (!session) redirect("/entrar?next=/painel/banca")
   const query = await searchParams
-  const bank = await prisma.bankroll.findFirst({
+  const { ensureBankroll } = await import("@/server/bankroll")
+  await Promise.all(["BRL", "USD", "EUR"].map((currency) => ensureBankroll(session.sub, currency)))
+  const banks = await prisma.bankroll.findMany({
     where: { userId: session.sub },
-    include: { entries: { orderBy: { createdAt: "desc" }, take: 30 } },
+    include: { entries: { orderBy: { createdAt: "desc" }, take: 20 } },
+    orderBy: { currency: "asc" },
   })
+  const bank = banks.find((item) => item.currency === "BRL") ?? banks[0]
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="font-display text-5xl uppercase">Gestão de banca</h1>
-      <p className="mt-2 font-display text-4xl text-signal">{formatMoney(bank?.balanceCents ?? 0, bank?.currency ?? "BRL")}</p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        {banks.map((item) => (
+          <article key={item.id} className="rounded-2xl border border-line bg-white p-4">
+            <p className="text-xs uppercase text-mist">{item.currency}</p>
+            <p className="font-display text-3xl">{formatMoney(item.balanceCents, item.currency)}</p>
+          </article>
+        ))}
+      </div>
       {query.erro ? <p className="mt-3 text-sm text-[#8d2b2b]">{query.erro}</p> : null}
       {query.ok ? <p className="mt-3 text-sm text-[#0c7a45]">Movimento registrado.</p> : null}
       <form action={bankForm} className="mt-6 flex flex-wrap items-end gap-2">
         <label>
-          <span className="label">Valor (R$)</span>
+          <span className="label">Moeda</span>
+          <select className="field" name="currency" defaultValue="BRL">
+            <option value="BRL">BRL</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </label>
+        <label>
+          <span className="label">Valor</span>
           <input className="field w-36" name="amount" required placeholder="100,00" />
         </label>
         <button className="btn-primary" name="kind" value="entrada" type="submit">
@@ -64,6 +83,7 @@ async function bankForm(formData: FormData) {
   const { redirect } = await import("next/navigation")
   const { centsFromInput } = await import("@/server/parse")
   const cents = centsFromInput(String(formData.get("amount") ?? ""))
+  const currency = String(formData.get("currency") ?? "BRL")
   const kind = String(formData.get("kind") ?? "") === "ajuste" ? "ajuste" : "entrada"
   if (cents == null) {
     redirect("/painel/banca?erro=Informe%20o%20valor.")
@@ -73,6 +93,7 @@ async function bankForm(formData: FormData) {
     kind,
     amountCents: kind === "ajuste" ? -Math.abs(cents) : cents,
     note: kind === "entrada" ? "Entrada" : "Ajuste",
+    currency,
   })
   if (!result.ok) redirect(`/painel/banca?erro=${encodeURIComponent(result.error)}`)
   redirect("/painel/banca?ok=1")

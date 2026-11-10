@@ -2,6 +2,7 @@ import { updateHouseAction } from "@/app/actions/admin"
 import { AdminHeading } from "@/components/admin-ui"
 import { Flash } from "@/components/flash"
 import { prisma } from "@/lib/db"
+import { formatDate } from "@/lib/format"
 import { getSettings } from "@/server/settings"
 
 export const dynamic = "force-dynamic"
@@ -29,7 +30,8 @@ export default async function HousesPage({
         {houses.map((house) => (
           <p key={house.slug}>
             <strong>{house.name}:</strong> {house.feed === "ao_vivo" ? "fonte real." : "odd de teste."}{" "}
-            {settings.get(`feed.${house.slug}.detail`)}
+            {house.lastGoodAt ? `Última odd boa em ${formatDate(house.lastGoodAt)}. ` : ""}
+            {house.lastError || settings.get(`feed.${house.slug}.detail`)}
           </p>
         ))}
         <p>Ps3838, se ainda estiver em teste: cole o usuário e a senha da API na Configuração. A conta precisa ter saldo.</p>
@@ -64,6 +66,18 @@ export default async function HousesPage({
                 <option value="over">Over</option>
                 <option value="under">Under</option>
               </select>
+            </label>
+            <label>
+              <span className="label-light">Passo (R$)</span>
+              <input className="field-light w-24" name="step" defaultValue={(house.stakeStepCents / 100).toFixed(2)} />
+            </label>
+            <label>
+              <span className="label-light">Mínima</span>
+              <input className="field-light w-24" name="min" defaultValue={(house.minStakeCents / 100).toFixed(2)} />
+            </label>
+            <label>
+              <span className="label-light">Máxima</span>
+              <input className="field-light w-28" name="max" defaultValue={(house.maxStakeCents / 100).toFixed(2)} />
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="active" value="true" defaultChecked={house.active} />

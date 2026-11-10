@@ -15,7 +15,7 @@ export default async function OperationsPage() {
   if (!session) redirect("/entrar?next=/painel/operacoes")
   const user = await prisma.user.findUnique({
     where: { id: session.sub },
-    include: { bankrolls: true },
+    include: { bankrolls: true, stakePresets: { orderBy: { amountCents: "asc" } } },
   })
   if (!user) redirect("/api/sessao/encerrar")
   const settings = await getSettings()
@@ -34,6 +34,7 @@ export default async function OperationsPage() {
   }
 
   const houses = await prisma.house.findMany({ where: { active: true, operable: true }, orderBy: { sortOrder: "asc" } })
+  const started = Date.now()
   const loaded = await loadSignals({
     userId: user.id,
     phase: "prelive",
@@ -41,13 +42,24 @@ export default async function OperationsPage() {
     refresh: false,
     options: { sort: "clone", includedHouseIds: houses.map((house) => house.id) },
   })
-  const bankroll = user.bankrolls[0]
+  await prisma.pageTiming.create({ data: { route: "/painel/operacoes", durationMs: Date.now() - started } })
+  const bankroll = user.bankrolls.find((item) => item.currency === "BRL") ?? user.bankrolls[0]
   const realNames = houses.filter((house) => house.feed === "ao_vivo").map((house) => house.name)
-  const quickReais = settings
+  const fallback = settings
     .get("stake.quick")
     .split(",")
     .map((item) => Number(item.trim()))
     .filter((item) => Number.isFinite(item) && item > 0)
+  const quickReais = user.stakePresets.length ? user.stakePresets.map((preset) => preset.amountCents / 100) : fallback
+  const quickLabels = user.stakePresets.length
+    ? user.stakePresets.map((preset) => preset.label || `R$ ${preset.amountCents / 100}`)
+    : undefined
+  let savedFilters = null
+  try {
+    savedFilters = user.boardPrefs ? JSON.parse(user.boardPrefs) : null
+  } catch {
+    savedFilters = null
+  }
 
   return (
     <SignalBoard
@@ -73,6 +85,8 @@ export default async function OperationsPage() {
       initialStakeCents={loaded.totalStakeCents}
       pollSeconds={Number(settings.get("signal.pollSeconds").replace(",", ".")) || 3}
       quickReais={quickReais.length ? quickReais : [50, 100, 200, 500]}
+      quickLabels={quickLabels}
+      savedFilters={savedFilters}
       stakePercent={Number(settings.get("stake.percent").replace(",", ".")) || 10}
       minProfit={Number(settings.get("signal.minProfit").replace(",", ".")) || 0}
       autoMarketIds={houses.filter((house) => house.slug === "pinnacle" || house.slug === "bcgame").map((house) => house.id)}

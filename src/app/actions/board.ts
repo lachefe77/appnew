@@ -15,7 +15,9 @@ type BoardFilter = {
   pinnedHouseId: string | null
   minProfit: number
   totalStakeCents: number | null
-  sort: "alfa" | "clone"
+  sort: "alfa" | "clone" | "lucro" | "horario" | "esporte"
+  sport?: string
+  competition?: string
   key: string
 }
 
@@ -45,6 +47,8 @@ export async function launchStakeAction(input: BoardFilter) {
     minProfit: input.minProfit,
     totalStakeCents: input.totalStakeCents,
     sort: input.sort,
+    sport: input.sport,
+    competition: input.competition,
   })
   if (!found.signal) return { ok: false as const, error: "Esse sinal já saiu da grade." }
   return launchStake({
@@ -52,14 +56,25 @@ export async function launchStakeAction(input: BoardFilter) {
     signalKey: found.signal.key,
     amountCents: found.signal.totalStakeCents,
     profitCents: found.signal.profitCents,
+    leftoverCents: found.signal.leftoverCents,
     note: `${found.signal.eventName} · ${found.signal.leg1.houseName} x ${found.signal.leg2.houseName}`,
+    legs: [
+      { currency: found.signal.leg1.currency, stakeHouseCents: found.signal.leg1.stakeHouseCents },
+      { currency: found.signal.leg2.currency, stakeHouseCents: found.signal.leg2.stakeHouseCents },
+    ],
   })
 }
 
-export async function bankrollAction(input: { kind: "entrada" | "ajuste"; amountCents: number; note: string }) {
+export async function bankrollAction(input: { kind: "entrada" | "ajuste"; amountCents: number; note: string; currency?: string }) {
   const access = await sessionUser()
   if (!access.ok) return access
-  return changeBankroll(access.userId, input.amountCents, input.kind, input.note.trim() || (input.kind === "entrada" ? "Entrada" : "Ajuste"))
+  return changeBankroll(
+    access.userId,
+    input.amountCents,
+    input.kind,
+    input.note.trim() || (input.kind === "entrada" ? "Entrada" : "Ajuste"),
+    input.currency ?? "BRL",
+  )
 }
 
 export async function supportAction(input: { kind: "sugestao" | "bug"; body: string }) {

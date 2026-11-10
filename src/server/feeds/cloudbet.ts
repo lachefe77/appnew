@@ -38,7 +38,7 @@ export async function pullCloudbet(get: FeedGet = httpGet): Promise<PullResult> 
         )
         if (eventsRes.status !== 200) continue
         const payload = JSON.parse(eventsRes.body) as { events?: EventDoc[] }
-        offers.push(...offersFromEvents(sport.slug, payload.events ?? [], sport.market, sport.kind))
+        offers.push(...offersFromEvents(sport.slug, payload.events ?? [], sport.market, sport.kind, key))
       }
     }
   } catch (error) {
@@ -66,6 +66,7 @@ export function offersFromEvents(
   events: EventDoc[],
   marketKey: string,
   kind: "winner" | "total",
+  competition = "",
 ) {
   const offers: Offer[] = []
   for (const event of events) {
@@ -90,6 +91,7 @@ export function offersFromEvents(
         side: leg.side,
         odd: leg.odd,
         startsAt: event.startTime ?? null,
+        competition,
       })
     }
   }

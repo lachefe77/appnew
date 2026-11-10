@@ -13,14 +13,17 @@ export const dynamic = "force-dynamic"
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession()
   if (!session) redirect("/entrar?next=/painel")
-  const [settings, grant] = await Promise.all([
+  const [settings, grant, user] = await Promise.all([
     getSettings(),
     prisma.userPlan.findFirst({
       where: { userId: session.sub, status: "ativo", endsAt: { gte: new Date() } },
       include: { plan: true },
       orderBy: { endsAt: "desc" },
     }),
+    prisma.user.findUnique({ where: { id: session.sub } }),
   ])
+  const warnDays = Number(settings.get("plan.warnDays").replace(",", ".")) || 3
+  const warnMs = warnDays * 24 * 60 * 60 * 1000
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[240px_1fr]">
@@ -51,6 +54,16 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             </button>
           </form>
         </div>
+        {grant && grant.endsAt.getTime() - Date.now() < warnMs ? (
+          <p className="bg-[#fff4d6] px-4 py-2 text-sm">
+            Seu plano {grant.plan.name} expira em {formatDate(grant.endsAt)}.
+          </p>
+        ) : null}
+        {user && !user.emailVerifiedAt ? (
+          <p className="bg-white px-4 py-2 text-sm text-mist">
+            Confirme o e-mail. O link fica no correio da administração enquanto o envio externo não está configurado.
+          </p>
+        ) : null}
         {children}
       </div>
     </div>

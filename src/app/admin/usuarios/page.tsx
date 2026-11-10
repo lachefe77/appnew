@@ -2,28 +2,34 @@ import Link from "next/link"
 import { AdminHeading } from "@/components/admin-ui"
 import { prisma } from "@/lib/db"
 import { formatDate } from "@/lib/format"
+import { Pager } from "@/components/pager"
 import { panelReasonLabel } from "@/server/labels"
+import { pageWindow } from "@/server/paging"
 import { decidePanelAccess, expireElapsedGrants } from "@/server/panel-access"
 
 export const dynamic = "force-dynamic"
 
-export default async function UsersPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function UsersPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
   const query = await searchParams
   const q = (query.q ?? "").trim()
+  const window = pageWindow(query.page)
   await expireElapsedGrants()
   const now = new Date()
+  const where = q
+    ? {
+        OR: [
+          { email: { contains: q, mode: "insensitive" as const } },
+          { name: { contains: q, mode: "insensitive" as const } },
+        ],
+      }
+    : undefined
+  const total = await prisma.user.count({ where })
   const users = await prisma.user.findMany({
-    where: q
-      ? {
-          OR: [
-            { email: { contains: q, mode: "insensitive" } },
-            { name: { contains: q, mode: "insensitive" } },
-          ],
-        }
-      : undefined,
+    where,
     include: { plans: true },
     orderBy: { createdAt: "desc" },
-    take: 100,
+    skip: window.skip,
+    take: window.take,
   })
 
   return (
@@ -66,7 +72,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                 <tr key={user.id}>
                   <td>{user.name}</td>
                   <td>{user.email}</td>
-                  <td>{user.role === "admin" ? "Admin" : "Cliente"}</td>
+                  <td>{user.role === "admin" ? "Admin" : user.role === "moderador" ? "Moderador" : "Cliente"}</td>
                   <td>{situation}</td>
                   <td className="whitespace-nowrap">{formatDate(user.createdAt)}</td>
                   <td>
@@ -81,6 +87,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         </table>
       </div>
       {!users.length ? <p className="mt-4 text-sm text-black/60">Nenhum usuário encontrado.</p> : null}
+      <Pager page={window.page} pages={Math.max(1, Math.ceil(total / window.take))} href={q ? `/admin/usuarios?q=${encodeURIComponent(q)}` : "/admin/usuarios"} />
     </>
   )
 }
