@@ -18,7 +18,9 @@ import {
   setCouponActive,
   setNoticePublished,
   unbanUser,
+  closeTicket,
   unfreezePlan,
+  updateHouse,
   updateOrder,
   updatePlanCatalog,
   updateUserProfile,
@@ -249,4 +251,20 @@ export async function updatePlanAction(formData: FormData) {
     active: formData.get("active") === "true",
   })
   bounce(result, "/admin/planos")
+}
+
+export async function updateHouseAction(formData: FormData) {
+  const admin = await requireAdmin()
+  const result = await updateHouse(admin.id, String(formData.get("houseId") ?? ""), {
+    currency: String(formData.get("currency") ?? ""),
+    active: formData.get("active") === "true",
+    fixedSide: String(formData.get("fixedSide") ?? ""),
+  })
+  bounce(result, "/admin/casas")
+}
+
+export async function closeTicketAction(formData: FormData) {
+  const admin = await requireAdmin()
+  const result = await closeTicket(admin.id, String(formData.get("ticketId") ?? ""))
+  bounce(result, "/admin/suporte")
 }
