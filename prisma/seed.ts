@@ -85,11 +85,12 @@ async function main() {
         cloneLabel: house.cloneLabel,
         operable: true,
         sortOrder: house.sortOrder,
+        url: "url" in house ? house.url : "",
       },
       create: {
         slug: house.slug,
         name: house.name,
-        url: "",
+        url: "url" in house ? house.url : "",
         logoUrl: `/marcas/${house.slug}.svg`,
         currency: house.currency,
         cloneLabel: house.cloneLabel,
