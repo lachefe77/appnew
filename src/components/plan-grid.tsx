@@ -17,10 +17,7 @@ export function PlanGrid({ plans, note }: { plans: PublicPlan[]; note: string })
   return (
     <div className="grid gap-3 md:grid-cols-3">
       {plans.map((plan, index) => (
-        <article
-          key={plan.id}
-          className={`flex flex-col border p-5 ${index === 1 ? "border-signal bg-felt" : "border-line bg-card"}`}
-        >
+        <article key={plan.id} className="flex flex-col border-t border-ink/15 py-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-mist">
             {index === 1 ? "Mais usado" : "Plano"}
           </p>
