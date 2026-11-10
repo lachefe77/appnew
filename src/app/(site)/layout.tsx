@@ -31,7 +31,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
     : null
 
   return (
-    <div className="product flex min-h-screen flex-col bg-pitch text-ink">
+    <div className={panel ? "mesa flex min-h-screen flex-col" : "swiss flex min-h-screen flex-col"}>
       {panel ? null : (
         <SiteHeader
           brand={brand}

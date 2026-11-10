@@ -37,19 +37,21 @@ export default async function HomePage() {
     <div className="poster">
       <section className="mx-auto max-w-6xl px-4 pb-8 pt-10 md:pt-16">
         <p className="poster-figure">2,50%</p>
-        <h1 className="mt-6 max-w-3xl font-display text-4xl leading-[1.05] md:text-5xl">
-          Duas odds de 2,05 no mesmo jogo. O que sobra é seu.
+        <h1 className="mt-4 max-w-3xl text-3xl font-semibold leading-tight tracking-tight md:text-4xl">
+          duas odds de 2,05.
         </h1>
-        <div className="mt-8 grid max-w-3xl grid-cols-2 gap-6 border-y border-ink/15 py-4 text-sm">
+        <div className="mt-8 grid max-w-4xl grid-cols-2 gap-4 border-t border-black py-4 text-sm md:grid-cols-4">
           <p>
-            <span className="block text-mist">Casa</span>
-            <span className="font-display text-3xl">2,05</span>
-            <span className="mt-1 block text-mist">R$ 50</span>
+            <span className="text-black/55">Casa </span>2,05
           </p>
           <p>
-            <span className="block text-mist">Fora</span>
-            <span className="font-display text-3xl">2,05</span>
-            <span className="mt-1 block text-mist">R$ 50</span>
+            <span className="text-black/55">Fora </span>2,05
+          </p>
+          <p>
+            <span className="text-black/55">Stake </span>R$ 100
+          </p>
+          <p>
+            <span className="text-black/55">Lucro </span>R$ 2,50
           </p>
         </div>
         <p className="mt-6 max-w-xl text-base leading-7 text-mist">
