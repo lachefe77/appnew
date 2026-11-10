@@ -4,7 +4,15 @@ import { useEffect, useState } from "react"
 
 type Note = { id: string; body: string; createdAt: string; author: string; mine: boolean }
 
-export function SupportThread({ initial, status }: { initial: Note[]; status: string }) {
+export function SupportThread({
+  initial,
+  status,
+  conversationId,
+}: {
+  initial: Note[]
+  status: string
+  conversationId: string
+}) {
   const [notes, setNotes] = useState(initial)
   const [state, setState] = useState(status)
   const [body, setBody] = useState("")
@@ -12,21 +20,21 @@ export function SupportThread({ initial, status }: { initial: Note[]; status: st
 
   useEffect(() => {
     const timer = window.setInterval(async () => {
-      const response = await fetch("/api/suporte")
+      const response = await fetch(`/api/suporte?conversa=${conversationId}`)
       if (!response.ok) return
       const data = (await response.json()) as { notes: Note[]; status?: string }
       setNotes(data.notes)
       if (data.status) setState(data.status)
     }, 4000)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [conversationId])
 
   async function send() {
     setError("")
     const response = await fetch("/api/suporte", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, conversationId }),
     })
     const data = (await response.json()) as { error?: string; notes?: Note[]; status?: string }
     if (!response.ok) {
@@ -43,7 +51,7 @@ export function SupportThread({ initial, status }: { initial: Note[]; status: st
       <p className="mb-3 text-sm text-mist">{state === "resolvido" ? "A moderação marcou esta conversa como resolvida." : "Conversa aberta com a moderação."}</p>
       <div className="space-y-2">
         {notes.map((note) => (
-          <article key={note.id} className={`max-w-xl rounded-xl border border-line px-4 py-3 text-sm ${note.mine ? "ml-auto bg-[#e7f6ee]" : "bg-white"}`}>
+          <article key={note.id} className={`max-w-xl border border-line px-4 py-3 text-sm ${note.mine ? "ml-auto bg-[#2a2418]" : "bg-card"}`}>
             <p className="text-xs text-mist">{note.mine ? "Você" : note.author}</p>
             <p className="mt-1 whitespace-pre-wrap">{note.body}</p>
           </article>

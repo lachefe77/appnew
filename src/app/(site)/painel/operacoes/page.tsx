@@ -24,7 +24,7 @@ export default async function OperationsPage() {
     return (
       <section className="mx-auto max-w-xl px-4 py-16 text-center">
         <p className="text-xs font-semibold uppercase tracking-wide text-signal">{panelReasonLabel[gate.reason]}</p>
-        <h1 className="mt-2 font-display text-5xl uppercase">{settings.get("panel.lockedTitle")}</h1>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">{settings.get("panel.lockedTitle")}</h1>
         <p className="mt-3 text-sm text-mist">{settings.get("panel.lockedBody")}</p>
         <Link href="/painel/planos" className="btn-primary mt-6">
           Ver planos

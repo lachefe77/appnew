@@ -23,11 +23,11 @@ export default async function SheetPage() {
   ] as const
   return (
     <section className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="font-display text-5xl uppercase">Planilhamento automático</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Planilhamento automático</h1>
       <p className="mt-2 text-sm text-mist">Cada stake lançado em Operações entra aqui uma vez. O resultado você marca depois do jogo.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         {periods.map(([label, since]) => (
-          <article key={label} className="rounded-2xl border border-line bg-white p-4">
+          <article key={label} className="border border-line bg-card p-4">
             <p className="text-xs uppercase text-mist">{label}</p>
             <p className="font-semibold">Realizado {formatMoney(realizedProfit(rows, since))}</p>
             <p className="text-sm text-mist">Previsto {formatMoney(expectedProfit(rows, since))}</p>

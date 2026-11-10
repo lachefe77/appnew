@@ -25,7 +25,7 @@ export function Calculator() {
   }, [mode, odd1, odd2, odd3, stake, target])
 
   return (
-    <form className="grid gap-3 rounded-2xl border border-line bg-white p-5" onSubmit={(event) => event.preventDefault()}>
+    <form className="grid gap-3 border border-line bg-card p-5" onSubmit={(event) => event.preventDefault()}>
       <div className="flex gap-2">
         {(["duas", "tres", "inverso"] as const).map((item) => (
           <button key={item} type="button" className={mode === item ? "btn-primary" : "btn-ghost"} onClick={() => setMode(item)}>

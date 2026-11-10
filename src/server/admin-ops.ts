@@ -382,7 +382,7 @@ export async function setCouponActive(actorId: string, couponId: string, active:
 
 export async function createAffiliate(
   actorId: string,
-  input: { code: string; name: string; commissionPercent: number },
+  input: { code: string; name: string; commissionPercent: number; email?: string },
 ): Promise<OpResult> {
   const code = input.code.trim().toUpperCase()
   const name = input.name.trim()
@@ -395,9 +395,18 @@ export async function createAffiliate(
   }
   const clash = await prisma.affiliate.findUnique({ where: { code } })
   if (clash) return { ok: false, error: "Já existe um afiliado com esse código." }
+  const email = input.email?.trim().toLowerCase() ?? ""
+  let userId: string | undefined
+  if (email) {
+    const user = await prisma.user.findUnique({ where: { email } })
+    if (!user) return { ok: false, error: "Não há conta com esse e-mail." }
+    const taken = await prisma.affiliate.findUnique({ where: { userId: user.id } })
+    if (taken) return { ok: false, error: "Essa conta já está ligada a um afiliado." }
+    userId = user.id
+  }
   await prisma.$transaction(async (tx) => {
     const affiliate = await tx.affiliate.create({
-      data: { code, name, commissionPercent: input.commissionPercent },
+      data: { code, name, commissionPercent: input.commissionPercent, userId },
     })
     await audit(tx, {
       actorId,

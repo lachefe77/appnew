@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic"
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await requireStaff()
   const settings = await getSettings()
-  const unread = await prisma.user.count({ where: { supportUnread: true } })
+  const unread = await prisma.supportConversation.count({ where: { unread: true } })
   return (
     <div className="backoffice min-h-screen bg-[#e7ece9] text-rail md:grid md:grid-cols-[240px_1fr]">
       <AdminNav brand={settings.get("brand.name")} role={admin.role} unread={unread} />

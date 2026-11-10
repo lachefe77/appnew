@@ -5,7 +5,11 @@ import { getSettings } from "@/server/settings"
 
 export const dynamic = "force-dynamic"
 
-export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ erro?: string; indicacao?: string }>
+}) {
   const query = await searchParams
   const settings = await getSettings()
   const open = settings.flag("site.registrationOpen")
@@ -13,7 +17,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
   return (
     <section className="mx-auto max-w-md px-4 py-16">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-signal">{settings.get("brand.name")}</p>
-      <h1 className="mt-2 font-display text-5xl uppercase">Criar conta</h1>
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Criar conta</h1>
       <p className="mt-2 text-sm text-mist">{open ? settings.get("auth.registerLead") : settings.get("auth.registerClosed")}</p>
       <div className="mt-6">
         <Flash erro={query.erro} />
@@ -38,7 +42,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
           </label>
           <label className="block">
             <span className="label">Código de indicação</span>
-            <input className="field" name="referral" autoComplete="off" />
+            <input className="field" name="referral" autoComplete="off" defaultValue={query.indicacao ?? ""} />
           </label>
           <button className="btn-primary w-full" type="submit">
             Cadastrar

@@ -178,6 +178,7 @@ export async function createAffiliateAction(formData: FormData) {
     code: String(formData.get("code") ?? ""),
     name: String(formData.get("name") ?? ""),
     commissionPercent: percent,
+    email: String(formData.get("email") ?? ""),
   })
   bounce(result, "/admin/afiliados")
 }
@@ -282,35 +283,41 @@ export async function closeTicketAction(formData: FormData) {
 
 export async function replySupportAction(formData: FormData) {
   const admin = await requireStaff()
-  const userId = String(formData.get("userId") ?? "")
+  const conversationId = String(formData.get("conversationId") ?? "")
   const body = String(formData.get("body") ?? "").trim()
   if (body.length < 2) redirect("/admin/suporte?erro=Escreva%20a%20resposta.")
-  const user = await prisma.user.findUnique({ where: { id: userId } })
-  if (!user) redirect("/admin/suporte?erro=Cliente%20não%20encontrado.")
-  await prisma.supportMessage.create({ data: { userId, authorId: admin.id, body: body.slice(0, 2000) } })
-  await prisma.user.update({ where: { id: userId }, data: { supportUnread: false } })
+  const conversation = await prisma.supportConversation.findUnique({ where: { id: conversationId }, include: { user: true } })
+  if (!conversation) redirect("/admin/suporte?erro=Conversa%20não%20encontrada.")
+  await prisma.supportMessage.create({
+    data: { userId: conversation.userId, authorId: admin.id, conversationId, body: body.slice(0, 2000) },
+  })
+  await prisma.supportConversation.update({ where: { id: conversationId }, data: { unread: false } })
+  await prisma.user.update({ where: { id: conversation.userId }, data: { supportUnread: false } })
   await recordAudit({
     actorId: admin.id,
     action: "suporte.responder",
     entityType: "suporte",
-    entityId: userId,
-    summary: `Resposta para ${user.email}.`,
+    entityId: conversationId,
+    summary: `Resposta para ${conversation.user.email}.`,
   })
-  redirect("/admin/suporte?ok=1")
+  redirect(`/admin/suporte?conversa=${conversationId}&ok=1`)
 }
 
 export async function resolveSupportAction(formData: FormData) {
   const admin = await requireStaff()
-  const userId = String(formData.get("userId") ?? "")
-  await prisma.user.update({ where: { id: userId }, data: { supportStatus: "resolvido", supportUnread: false } })
+  const conversationId = String(formData.get("conversationId") ?? "")
+  const conversation = await prisma.supportConversation.findUnique({ where: { id: conversationId } })
+  if (!conversation) redirect("/admin/suporte?erro=Conversa%20não%20encontrada.")
+  await prisma.supportConversation.update({ where: { id: conversationId }, data: { status: "resolvido", unread: false } })
+  await prisma.user.update({ where: { id: conversation.userId }, data: { supportStatus: "resolvido", supportUnread: false } })
   await recordAudit({
     actorId: admin.id,
     action: "suporte.resolver",
     entityType: "suporte",
-    entityId: userId,
+    entityId: conversationId,
     summary: "Conversa marcada como resolvida.",
   })
-  redirect("/admin/suporte?ok=1")
+  redirect(`/admin/suporte?conversa=${conversationId}&ok=1`)
 }
 
 export async function testAlertAction() {

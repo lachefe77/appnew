@@ -80,6 +80,7 @@ model User {
   tickets        SupportTicket[]
   stakeLaunches  StakeLaunch[]
   supportThreads SupportMessage[] @relation("SupportOwner")
+  supportConversations SupportConversation[]
   supportNotes   SupportMessage[] @relation("SupportAuthor")
   ticketReplies  SupportReply[]   @relation("TicketReplyAuthor")
   stakePresets   StakePreset[]
@@ -392,17 +393,36 @@ model SupportReply {
   @@index([ticketId, createdAt])
 }
 
-model SupportMessage {
+model SupportConversation {
   id        String   @id @default(cuid())
   userId    String
-  authorId  String
-  body      String
+  subject   String
+  status    String   @default("aberto")
+  unread    Boolean  @default(true)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user   User @relation("SupportOwner", fields: [userId], references: [id], onDelete: Cascade)
-  author User @relation("SupportAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages SupportMessage[]
+
+  @@index([userId, updatedAt])
+  @@index([status, updatedAt])
+}
+
+model SupportMessage {
+  id             String   @id @default(cuid())
+  userId         String
+  authorId       String
+  conversationId String?
+  body           String
+  createdAt      DateTime @default(now())
+
+  user         User                  @relation("SupportOwner", fields: [userId], references: [id], onDelete: Cascade)
+  author       User                  @relation("SupportAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  conversation SupportConversation?  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+  @@index([conversationId, createdAt])
 }
 
 model StakePreset {

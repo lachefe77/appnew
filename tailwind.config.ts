@@ -5,14 +5,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        pitch: "#07140f",
-        felt: "#0d1f18",
-        card: "#12281e",
-        line: "#234838",
-        signal: "#1ed37a",
-        ink: "#f4faf6",
-        mist: "#93b0a2",
-        rail: "#121816",
+        pitch: "#0e1014",
+        felt: "#161922",
+        card: "#1c2028",
+        line: "#313744",
+        signal: "#d6a15a",
+        ink: "#f4f1ea",
+        mist: "#a39e94",
+        rail: "#101218",
       },
       fontFamily: {
         sans: ["Outfit", "Segoe UI", "sans-serif"],

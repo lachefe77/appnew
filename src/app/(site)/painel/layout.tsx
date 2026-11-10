@@ -26,8 +26,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const warnMs = warnDays * 24 * 60 * 60 * 1000
 
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[240px_1fr]">
-      <aside className="border-b border-line bg-white md:sticky md:top-0 md:h-screen md:overflow-y-auto md:border-b-0 md:border-r">
+    <div className="min-h-screen bg-pitch text-ink md:grid md:grid-cols-[220px_1fr]">
+      <aside className="border-b border-line bg-felt md:sticky md:top-0 md:h-screen md:overflow-y-auto md:border-b-0 md:border-r">
         <div className="border-b border-line px-4 py-4">
           <Link href="/painel" aria-label={settings.get("brand.name")}>
             <Wordmark name={settings.get("brand.name")} />
@@ -36,7 +36,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         <PanelNav />
       </aside>
       <div>
-        <div className="flex flex-wrap items-center justify-end gap-3 border-b border-line bg-white px-4 py-3">
+        <div className="flex flex-wrap items-center justify-end gap-3 border-b border-line bg-pitch px-4 py-3">
           <p className="mr-auto text-sm">
             <span className="font-semibold">{session.email}</span>
             <span className="mt-0.5 block text-xs text-mist">
@@ -55,12 +55,12 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </form>
         </div>
         {grant && grant.endsAt.getTime() - Date.now() < warnMs ? (
-          <p className="bg-[#fff4d6] px-4 py-2 text-sm">
+          <p className="border-b border-line bg-[#2a2418] px-4 py-2 text-sm text-signal">
             Seu plano {grant.plan.name} expira em {formatDate(grant.endsAt)}.
           </p>
         ) : null}
         {user && !user.emailVerifiedAt ? (
-          <p className="bg-white px-4 py-2 text-sm text-mist">
+          <p className="border-b border-line bg-felt px-4 py-2 text-sm text-mist">
             Confirme o e-mail. O link fica no correio da administração enquanto o envio externo não está configurado.
           </p>
         ) : null}

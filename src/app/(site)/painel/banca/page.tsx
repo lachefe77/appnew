@@ -21,10 +21,10 @@ export default async function BankPage({ searchParams }: { searchParams: Promise
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="font-display text-5xl uppercase">Gestão de banca</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Gestão de banca</h1>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         {banks.map((item) => (
-          <article key={item.id} className="rounded-2xl border border-line bg-white p-4">
+          <article key={item.id} className="border border-line bg-card p-4">
             <p className="text-xs uppercase text-mist">{item.currency}</p>
             <p className="font-display text-3xl">{formatMoney(item.balanceCents, item.currency)}</p>
           </article>

@@ -13,12 +13,12 @@ export default async function StakesPage({ searchParams }: { searchParams: Promi
   const presets = await prisma.stakePreset.findMany({ where: { userId: session.sub }, orderBy: { amountCents: "asc" } })
   return (
     <section className="mx-auto max-w-xl px-4 py-8">
-      <h1 className="font-display text-5xl uppercase">Stakes pré-definidas</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Stakes pré-definidas</h1>
       <p className="mt-2 text-sm text-mist">Valores prontos da sua conta. Em Operações, os atalhos do admin continuam disponíveis.</p>
       {query.erro ? <p className="mt-3 text-sm text-[#8d2b2b]">{query.erro}</p> : null}
       <ul className="mt-6 space-y-2">
         {presets.map((preset) => (
-          <li key={preset.id} className="flex items-center justify-between rounded-xl border border-line bg-white px-4 py-3">
+          <li key={preset.id} className="flex items-center justify-between border border-line bg-card px-4 py-3">
             <span className="font-semibold">{preset.label || "Stake"} · {formatMoney(preset.amountCents)}</span>
             <form action={removePreset}>
               <input type="hidden" name="id" value={preset.id} />

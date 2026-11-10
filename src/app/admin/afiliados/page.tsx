@@ -31,7 +31,7 @@ export default async function AffiliatesPage({
 
   return (
     <>
-      <AdminHeading title="Afiliados e cupons" lede="Ficam só aqui até o pagamento existir. A vitrine não pede cupom." />
+      <AdminHeading title="Afiliados e cupons" lede="O admin cria e edita o programa. O afiliado vê código, link, indicados e comissão no painel. Cupom continua só aqui." />
       <Flash erro={query.erro} ok={query.ok} tone="light" />
 
       <form action={createAffiliateAction} className="panel grid gap-3 md:grid-cols-3">
@@ -47,6 +47,10 @@ export default async function AffiliatesPage({
         <label>
           <span className="label-light">Comissão (%)</span>
           <input className="field-light" name="percent" inputMode="numeric" required placeholder="10" />
+        </label>
+        <label>
+          <span className="label-light">E-mail da conta</span>
+          <input className="field-light" name="email" type="email" placeholder="quem vai ver o painel" />
         </label>
         <div>
           <button className="btn-admin" type="submit">

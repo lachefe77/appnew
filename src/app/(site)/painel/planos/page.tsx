@@ -21,7 +21,7 @@ export default async function PanelPlansPage() {
   ])
   return (
     <section className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="font-display text-5xl uppercase">Planos</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Planos</h1>
       <p className="mt-2 max-w-2xl text-sm text-mist">
         {grant
           ? `Seu plano ${grant.plan.name} expira em ${formatDate(grant.endsAt)}.`
