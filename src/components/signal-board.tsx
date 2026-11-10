@@ -24,6 +24,7 @@ type Props = {
   houses: HouseChip[]
   initialSignals: BoardSignal[]
   initialRealRows: RealRow[]
+  sourceLine: string
   balanceCents: number
   currency: string
   initialStakeCents: number
@@ -280,7 +281,7 @@ export function SignalBoard(props: Props) {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-signal">Operação</p>
           <h1 className="font-display text-6xl uppercase">Sinais</h1>
-          <p className="mt-1 text-sm text-mist">Pinnacle.com entra pela fonte pública. Bcgame e Ps3838 seguem em odd de teste.</p>
+          <p className="mt-1 text-sm text-mist">{props.sourceLine}</p>
         </div>
         <div className="rounded-xl border border-line bg-card px-4 py-3">
           <p className="text-xs uppercase tracking-wide text-mist">Banca</p>

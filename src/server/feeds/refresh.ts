@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/db"
 import { pullBcgame } from "@/server/feeds/bcgame"
+import { pullCloudbet } from "@/server/feeds/cloudbet"
 import { pullPinnacle } from "@/server/feeds/pinnacle"
 import { pullPs3838 } from "@/server/feeds/ps3838"
+import { BLOCKED_HOUSES, pullBlocked } from "@/server/feeds/status"
 import type { Offer, PullResult } from "@/server/feeds/types"
 import { getSettings } from "@/server/settings"
 
@@ -29,9 +31,15 @@ export function refreshRealFeeds(force = false) {
 
 async function run() {
   const settings = await getSettings()
-  await applyHouse("pinnacle", await pullPinnacle())
-  await applyHouse("ps3838", await pullPs3838(settings.get("feed.ps3838.user"), settings.get("feed.ps3838.password")))
-  await applyHouse("bcgame", await pullBcgame())
+  await Promise.all([
+    pullPinnacle().then((result) => applyHouse("pinnacle", result)),
+    pullPs3838(settings.get("feed.ps3838.user"), settings.get("feed.ps3838.password")).then((result) =>
+      applyHouse("ps3838", result),
+    ),
+    pullBcgame().then((result) => applyHouse("bcgame", result)),
+    pullCloudbet().then((result) => applyHouse("cloudbet", result)),
+    ...BLOCKED_HOUSES.map((house) => pullBlocked(house.slug).then((result) => applyHouse(house.slug, result))),
+  ])
 }
 
 async function applyHouse(slug: string, result: PullResult) {

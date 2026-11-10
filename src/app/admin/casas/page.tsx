@@ -26,10 +26,13 @@ export default async function HousesPage({
       />
       <Flash erro={query.erro} ok={query.ok} tone="light" />
       <div className="panel mb-4 space-y-2 text-sm">
-        <p><strong>Pinnacle.com:</strong> fonte pública, sem chave. {settings.get("feed.pinnacle.detail")}</p>
-        <p><strong>Ps3838:</strong> cole o usuário em Usuário da API Ps3838 e a senha em Senha da API Ps3838, na Configuração. A conta precisa ter saldo. {settings.get("feed.ps3838.detail")}</p>
-        <p><strong>Bcgame:</strong> a fonte pública não pediu chave e respondeu bloqueada. Não há o que colar. {settings.get("feed.bcgame.detail")}</p>
-        <p>As outras oito casas continuam com odd de teste.</p>
+        {houses.map((house) => (
+          <p key={house.slug}>
+            <strong>{house.name}:</strong> {house.feed === "ao_vivo" ? "fonte real." : "odd de teste."}{" "}
+            {settings.get(`feed.${house.slug}.detail`)}
+          </p>
+        ))}
+        <p>Ps3838, se ainda estiver em teste: cole o usuário e a senha da API na Configuração. A conta precisa ter saldo.</p>
       </div>
       <div className="grid gap-3">
         {houses.map((house) => (
