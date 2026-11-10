@@ -17,10 +17,14 @@ const items = [
   { href: "/admin/auditoria", label: "Auditoria" },
   { href: "/admin/status", label: "Status do site" },
   { href: "/admin/configuracao", label: "Configuração" },
+  { href: "/admin/apelidos", label: "Apelidos" },
+  { href: "/admin/correio", label: "Correio" },
+  { href: "/admin/seguranca", label: "Segurança" },
 ]
 
-export function AdminNav({ brand }: { brand: string }) {
+export function AdminNav({ brand, role = "admin", unread = 0 }: { brand: string; role?: string; unread?: number }) {
   const pathname = usePathname()
+  const visible = role === "moderador" ? items.filter((item) => item.href === "/admin/suporte") : items
   return (
     <aside className="bg-rail text-white md:sticky md:top-0 md:flex md:h-screen md:flex-col md:overflow-y-auto">
       <div className="border-b border-white/10 px-4 py-4">
@@ -30,7 +34,7 @@ export function AdminNav({ brand }: { brand: string }) {
         <p className="mt-2 text-xs uppercase tracking-[0.16em] text-white/50">Administração</p>
       </div>
       <nav className="flex flex-col gap-1 p-3" aria-label="Administração">
-        {items.map((item) => {
+        {visible.map((item) => {
           const active = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href)
           return (
             <Link
@@ -42,6 +46,7 @@ export function AdminNav({ brand }: { brand: string }) {
               aria-current={active ? "page" : undefined}
             >
               {item.label}
+              {item.href === "/admin/suporte" && unread > 0 ? ` (${unread})` : ""}
             </Link>
           )
         })}

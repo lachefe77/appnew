@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
+    "worker": "tsx src/worker.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

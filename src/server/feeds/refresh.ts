@@ -43,6 +43,7 @@ async function run() {
 }
 
 async function applyHouse(slug: string, result: PullResult) {
+  const started = Date.now()
   const house = await prisma.house.findUnique({ where: { slug } })
   if (!house) return
   await prisma.setting.upsert({
@@ -50,9 +51,24 @@ async function applyHouse(slug: string, result: PullResult) {
     update: { value: result.detail.slice(0, 500) },
     create: { key: `feed.${slug}.detail`, label: slug, group: "feed", kind: "longtext", value: result.detail.slice(0, 500) },
   })
-  if (!result.ok) return
+  if (!result.ok) {
+    await prisma.house.update({
+      where: { id: house.id },
+      data: { lastError: result.detail.slice(0, 300) },
+    })
+    await prisma.feedRun.create({
+      data: { houseSlug: slug, durationMs: Date.now() - started, ok: false, detail: result.detail.slice(0, 300) },
+    })
+    return
+  }
   await replaceOffers(house.id, result.offers)
-  await prisma.house.update({ where: { id: house.id }, data: { feed: "ao_vivo" } })
+  await prisma.house.update({
+    where: { id: house.id },
+    data: { feed: "ao_vivo", lastGoodAt: new Date(), lastError: "" },
+  })
+  await prisma.feedRun.create({
+    data: { houseSlug: slug, durationMs: Date.now() - started, ok: true, detail: result.detail.slice(0, 300) },
+  })
 }
 
 export async function replaceOffers(houseId: string, offers: Offer[]) {
@@ -85,6 +101,7 @@ export async function replaceOffers(houseId: string, offers: Offer[]) {
             phase: first.phase,
             sportId,
             startsAt: first.startsAt ? new Date(first.startsAt) : null,
+            competition: first.competition ?? "",
           },
         })
       : await prisma.event.create({
@@ -94,6 +111,7 @@ export async function replaceOffers(houseId: string, offers: Offer[]) {
             phase: first.phase,
             sportId,
             startsAt: first.startsAt ? new Date(first.startsAt) : null,
+            competition: first.competition ?? "",
           },
         })
     for (const leg of legs) {

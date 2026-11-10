@@ -19,7 +19,7 @@ export default async function StakesPage({ searchParams }: { searchParams: Promi
       <ul className="mt-6 space-y-2">
         {presets.map((preset) => (
           <li key={preset.id} className="flex items-center justify-between rounded-xl border border-line bg-white px-4 py-3">
-            <span className="font-semibold">{formatMoney(preset.amountCents)}</span>
+            <span className="font-semibold">{preset.label || "Stake"} · {formatMoney(preset.amountCents)}</span>
             <form action={removePreset}>
               <input type="hidden" name="id" value={preset.id} />
               <button className="btn-ghost" type="submit">
@@ -31,6 +31,10 @@ export default async function StakesPage({ searchParams }: { searchParams: Promi
       </ul>
       {!presets.length ? <p className="mt-4 text-sm text-mist">Nenhum valor salvo.</p> : null}
       <form action={addPreset} className="mt-6 flex items-end gap-2">
+        <label className="flex-1">
+          <span className="label">Nome</span>
+          <input className="field" name="label" placeholder="Jogo médio" />
+        </label>
         <label className="flex-1">
           <span className="label">Novo valor (R$)</span>
           <input className="field" name="amount" required placeholder="150,00" />
@@ -49,7 +53,9 @@ async function addPreset(formData: FormData) {
   if (!session) redirect("/entrar")
   const cents = centsFromInput(String(formData.get("amount") ?? ""))
   if (cents == null || cents <= 0) redirect("/painel/stakes?erro=Informe%20um%20valor.")
-  await prisma.stakePreset.create({ data: { userId: session.sub, amountCents: cents } })
+  await prisma.stakePreset.create({
+    data: { userId: session.sub, amountCents: cents, label: String(formData.get("label") ?? "").trim().slice(0, 40) },
+  })
   redirect("/painel/stakes")
 }
 

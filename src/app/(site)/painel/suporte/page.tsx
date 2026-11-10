@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic"
 export default async function SupportPanelPage() {
   const session = await getSession()
   if (!session) redirect("/entrar?next=/painel/suporte")
+  const user = await prisma.user.findUnique({ where: { id: session.sub } })
   const rows = await prisma.supportMessage.findMany({
     where: { userId: session.sub },
     orderBy: { createdAt: "asc" },
@@ -20,6 +21,7 @@ export default async function SupportPanelPage() {
       <p className="mt-2 text-sm text-mist">A conversa fica com a moderação. A resposta aparece aqui sem recarregar a página.</p>
       <div className="mt-6">
         <SupportThread
+          status={user?.supportStatus ?? "aberto"}
           initial={rows.map((row) => ({
             id: row.id,
             body: row.body,

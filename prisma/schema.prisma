@@ -10,6 +10,7 @@ datasource db {
 enum Role {
   cliente
   admin
+  moderador
 }
 
 enum PlanGrantStatus {
@@ -54,12 +55,20 @@ model User {
   name           String
   email          String    @unique
   passwordHash   String
-  role           Role      @default(cliente)
-  bannedAt       DateTime?
-  banReason      String?
-  referredByCode String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  role            Role      @default(cliente)
+  bannedAt        DateTime?
+  banReason       String?
+  referredByCode  String?
+  sessionVersion  Int       @default(0)
+  emailVerifiedAt DateTime?
+  totpSecret      String    @default("")
+  totpEnabled     Boolean   @default(false)
+  alertMinProfit  Decimal?  @db.Decimal(7, 3)
+  boardPrefs      String    @default("")
+  supportStatus   String    @default("aberto")
+  supportUnread   Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   plans        UserPlan[]             @relation("PlanHolder")
   grantedPlans UserPlan[]             @relation("PlanGranter")
@@ -74,6 +83,9 @@ model User {
   supportNotes   SupportMessage[] @relation("SupportAuthor")
   ticketReplies  SupportReply[]   @relation("TicketReplyAuthor")
   stakePresets   StakePreset[]
+  passwordResets PasswordReset[]
+  emailConfirms  EmailConfirm[]
+  mailMessages   MailMessage[]
 }
 
 model Plan {
@@ -149,8 +161,13 @@ model House {
   operable   Boolean @default(true)
   fixedSide  String  @default("")
   cloneLabel String  @default("")
-  feed       String  @default("fixture")
-  sortOrder  Int     @default(0)
+  feed           String    @default("fixture")
+  lastGoodAt     DateTime?
+  lastError      String    @default("")
+  stakeStepCents Int       @default(100)
+  minStakeCents  Int       @default(100)
+  maxStakeCents  Int       @default(5000000)
+  sortOrder      Int       @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -174,9 +191,10 @@ model Sport {
 model Event {
   id         String     @id @default(cuid())
   sportId    String
-  name       String
-  startsAt   DateTime?
-  phase      EventPhase @default(prelive)
+  name        String
+  competition String     @default("")
+  startsAt    DateTime?
+  phase       EventPhase @default(prelive)
   externalId String     @default("")
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
@@ -318,9 +336,10 @@ model Quote {
   side      String
   odd       Decimal    @db.Decimal(8, 3)
   phase     EventPhase @default(prelive)
-  source    String     @default("fixture")
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  source      String     @default("fixture")
+  firstSeenAt DateTime   @default(now())
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   house House @relation(fields: [houseId], references: [id], onDelete: Cascade)
@@ -335,8 +354,11 @@ model StakeLaunch {
   signalKey   String
   amountCents Int
   profitCents Int
-  note        String   @default("")
-  createdAt   DateTime @default(now())
+  note          String    @default("")
+  result        String    @default("pendente")
+  settledAt     DateTime?
+  leftoverCents Int       @default(0)
+  createdAt     DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -386,6 +408,7 @@ model SupportMessage {
 model StakePreset {
   id          String   @id @default(cuid())
   userId      String
+  label       String   @default("")
   amountCents Int
   createdAt   DateTime @default(now())
 
@@ -399,9 +422,78 @@ model AlertDispatch {
   signalKey String
   channel   String
   message   String
-  status    String
-  detail    String   @default("")
-  createdAt DateTime @default(now())
+  status      String
+  detail      String    @default("")
+  attempts    Int       @default(0)
+  nextRetryAt DateTime?
+  createdAt   DateTime  @default(now())
 
   @@unique([signalKey, channel])
+  @@index([status, nextRetryAt])
+}
+
+model NameAlias {
+  id        String   @id @default(cuid())
+  kind      String
+  source    String
+  target    String
+  createdAt DateTime @default(now())
+
+  @@unique([kind, source])
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EmailConfirm {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MailMessage {
+  id        String   @id @default(cuid())
+  userId    String?
+  to        String
+  subject   String
+  body      String
+  status    String   @default("fila")
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
+
+model FeedRun {
+  id         String   @id @default(cuid())
+  houseSlug  String
+  durationMs Int
+  ok         Boolean
+  detail     String   @default("")
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model PageTiming {
+  id         String   @id @default(cuid())
+  route      String
+  durationMs Int
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
 }

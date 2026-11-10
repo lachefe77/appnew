@@ -4,8 +4,9 @@ import { useEffect, useState } from "react"
 
 type Note = { id: string; body: string; createdAt: string; author: string; mine: boolean }
 
-export function SupportThread({ initial }: { initial: Note[] }) {
+export function SupportThread({ initial, status }: { initial: Note[]; status: string }) {
   const [notes, setNotes] = useState(initial)
+  const [state, setState] = useState(status)
   const [body, setBody] = useState("")
   const [error, setError] = useState("")
 
@@ -13,8 +14,9 @@ export function SupportThread({ initial }: { initial: Note[] }) {
     const timer = window.setInterval(async () => {
       const response = await fetch("/api/suporte")
       if (!response.ok) return
-      const data = (await response.json()) as { notes: Note[] }
+      const data = (await response.json()) as { notes: Note[]; status?: string }
       setNotes(data.notes)
+      if (data.status) setState(data.status)
     }, 4000)
     return () => window.clearInterval(timer)
   }, [])
@@ -26,17 +28,19 @@ export function SupportThread({ initial }: { initial: Note[] }) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ body }),
     })
-    const data = (await response.json()) as { error?: string; notes?: Note[] }
+    const data = (await response.json()) as { error?: string; notes?: Note[]; status?: string }
     if (!response.ok) {
       setError(data.error ?? "Não enviou.")
       return
     }
     setBody("")
     if (data.notes) setNotes(data.notes)
+    if (data.status) setState(data.status)
   }
 
   return (
     <div>
+      <p className="mb-3 text-sm text-mist">{state === "resolvido" ? "A moderação marcou esta conversa como resolvida." : "Conversa aberta com a moderação."}</p>
       <div className="space-y-2">
         {notes.map((note) => (
           <article key={note.id} className={`max-w-xl rounded-xl border border-line px-4 py-3 text-sm ${note.mine ? "ml-auto bg-[#e7f6ee]" : "bg-white"}`}>

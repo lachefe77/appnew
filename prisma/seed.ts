@@ -45,6 +45,7 @@ async function main() {
         email: ADMIN_EMAIL.toLowerCase(),
         passwordHash,
         role: "admin",
+        emailVerifiedAt: new Date(),
       },
     })
     console.log(`Conta admin criada: ${ADMIN_EMAIL}`)
@@ -176,6 +177,7 @@ async function main() {
         email: OPERATOR_EMAIL,
         passwordHash,
         role: "cliente",
+        emailVerifiedAt: new Date(),
         bankrolls: { create: { currency: "BRL", balanceCents: 100000 } },
         plans: mensal
           ? {
@@ -191,6 +193,10 @@ async function main() {
     })
     console.log(`Conta operador criada: ${created.email}`)
   }
+  await prisma.user.updateMany({
+    where: { email: { in: [ADMIN_EMAIL.toLowerCase(), OPERATOR_EMAIL] }, emailVerifiedAt: null },
+    data: { emailVerifiedAt: new Date() },
+  })
 }
 
 main()

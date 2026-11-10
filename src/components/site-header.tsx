@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/format"
 const links = [
   { href: "/", label: "Início" },
   { href: "/planos", label: "Planos" },
+  { href: "/casas", label: "Casas" },
   { href: "/painel", label: "Painel" },
 ]
 
@@ -17,7 +18,7 @@ export function SiteHeader({
 }: {
   brand: string
   pathname: string
-  session: { email: string; role: "cliente" | "admin" } | null
+  session: { email: string; role: "cliente" | "admin" | "moderador" } | null
   planEndsAt?: Date | null
 }) {
   return (
@@ -51,7 +52,7 @@ export function SiteHeader({
                   {planEndsAt ? `Plano expira em ${formatDate(planEndsAt)}` : "Sem plano ativo"}
                 </span>
               </span>
-              {session.role === "admin" ? (
+              {session.role === "admin" || session.role === "moderador" ? (
                 <Link className="btn-ghost" href="/admin">
                   Admin
                 </Link>

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db"
 import { refreshRealFeeds } from "@/server/feeds/refresh"
+import { matchKey } from "@/server/match"
 import { buildSignals, type BoardOptions, type BoardQuote, type BoardSignal } from "@/server/surebet"
 import { getSettings } from "@/server/settings"
 
@@ -65,6 +66,13 @@ export async function loadSignals(input: {
   if (input.simulate !== false && settings.flag("signal.simulateLive") && input.phase === "live") {
     await nudgeLiveDemo()
   }
+  const maxAgeSeconds = Number(settings.get("quote.maxAgeSeconds").replace(",", "."))
+  const maxAge = Number.isFinite(maxAgeSeconds) && maxAgeSeconds > 0 ? maxAgeSeconds : 180
+  const windowMinutes = Number(settings.get("quote.matchWindowMinutes").replace(",", "."))
+  const matchWindow = Number.isFinite(windowMinutes) && windowMinutes > 0 ? windowMinutes : 90
+  const aliases = await prisma.nameAlias.findMany()
+  const aliasMap = new Map(aliases.map((alias) => [`${alias.kind}:${alias.source}`, alias.target]))
+  const now = Date.now()
   const quotes = await prisma.quote.findMany({
     where: {
       phase: input.phase,
@@ -72,7 +80,11 @@ export async function loadSignals(input: {
     },
     include: { house: true, event: { include: { sport: true } } },
   })
-  const boardQuotes: BoardQuote[] = quotes.map((quote) => ({
+  const fresh = quotes.filter((quote) => {
+    if (quote.source !== "publico") return true
+    return now - quote.updatedAt.getTime() <= maxAge * 1000
+  })
+  const boardQuotes: BoardQuote[] = fresh.map((quote) => ({
     eventId: quote.eventId,
     eventName: quote.event.name,
     sportName: quote.event.sport.name,
@@ -88,6 +100,24 @@ export async function loadSignals(input: {
     feed: quote.house.feed || quote.source,
     side: quote.side,
     odd: Number(quote.odd),
+    competition: quote.event.competition,
+    startsAt: quote.event.startsAt?.toISOString() ?? null,
+    firstSeenAt: quote.firstSeenAt.toISOString(),
+    updatedAt: quote.updatedAt.toISOString(),
+    stakeStepCents: quote.house.stakeStepCents,
+    minStakeCents: quote.house.minStakeCents,
+    maxStakeCents: quote.house.maxStakeCents,
+    houseUrl: quote.house.url,
+    feedNote: quote.house.feed === "ao_vivo" ? "" : quote.house.lastError,
+    matchKey: matchKey({
+      eventId: quote.eventId,
+      sport: quote.event.sport.name,
+      name: quote.event.name,
+      competition: quote.event.competition,
+      startsAt: quote.event.startsAt,
+      windowMinutes: matchWindow,
+      aliases: aliasMap,
+    }),
   }))
   const total = input.options.totalStakeCents && input.options.totalStakeCents > 0
     ? input.options.totalStakeCents
@@ -116,7 +146,7 @@ function realRowsFrom(
   }>,
   signals: BoardSignal[],
 ): RealRow[] {
-  const used = new Set(signals.map((signal) => signal.eventId))
+  const used = new Set(signals.flatMap((signal) => signal.eventIds ?? [signal.eventId]))
   const groups = new Map<string, typeof quotes>()
   for (const quote of quotes) {
     if (quote.house.feed !== "ao_vivo" || quote.source !== "publico" || used.has(quote.eventId)) continue

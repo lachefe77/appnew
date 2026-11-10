@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { bankrollAction, launchStakeAction, supportAction } from "@/app/actions/board"
 import { centsFromInput } from "@/server/parse"
 import type { RealRow } from "@/server/feed"
@@ -30,6 +30,8 @@ type Props = {
   initialStakeCents: number
   pollSeconds: number
   quickReais: number[]
+  quickLabels?: string[]
+  savedFilters?: Partial<Filters> | null
   stakePercent: number
   minProfit: number
   entries: Entry[]
@@ -48,7 +50,9 @@ type Filters = {
   minProfit: number
   autoStake: boolean
   manualStakeReais: string
-  sort: "alfa" | "clone"
+  sort: "alfa" | "clone" | "lucro" | "horario" | "esporte"
+  sport: string
+  competition: string
   query: string
   volume: number
 }
@@ -84,7 +88,6 @@ function oddLabel(value: number) {
 export function SignalBoard(props: Props) {
   const [filters, setFilters] = useState<Filters>(() => ({
     phase: "prelive",
-    houseIds: props.houses.map((house) => house.id),
     fixedSides: Object.fromEntries(props.houses.filter((house) => house.fixedSide).map((house) => [house.id, house.fixedSide])),
     manualOdds: {},
     autoOdd: Object.fromEntries(props.houses.map((house) => [house.id, true])),
@@ -94,8 +97,12 @@ export function SignalBoard(props: Props) {
     autoStake: true,
     manualStakeReais: String(props.quickReais[0] ?? 100),
     sort: "clone",
+    sport: "todos",
+    competition: "todos",
     query: "",
     volume: 70,
+    ...(props.savedFilters ?? {}),
+    houseIds: props.savedFilters?.houseIds?.length ? props.savedFilters.houseIds : props.houses.map((house) => house.id),
   }))
   const [signals, setSignals] = useState(props.initialSignals)
   const [realRows, setRealRows] = useState(props.initialRealRows)
@@ -105,26 +112,25 @@ export function SignalBoard(props: Props) {
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
   const [alerts, setAlerts] = useState(0)
+  const [openKey, setOpenKey] = useState<string | null>(null)
+  const [pendingKey, setPendingKey] = useState<string | null>(null)
   const [supportKind, setSupportKind] = useState<"sugestao" | "bug">("sugestao")
   const [supportBody, setSupportBody] = useState("")
   const [amount, setAmount] = useState("100")
   const filtersRef = useRef(filters)
   filtersRef.current = filters
   const audioRef = useRef<AudioContext | null>(null)
+  const seenRef = useRef<Set<string> | null>(null)
 
   useEffect(() => {
-    const raw = window.localStorage.getItem(STORAGE)
-    if (!raw) return
-    try {
-      const saved = JSON.parse(raw) as Partial<Filters>
-      setFilters((current) => ({ ...current, ...saved, houseIds: saved.houseIds?.length ? saved.houseIds : current.houseIds }))
-    } catch {
-      window.localStorage.removeItem(STORAGE)
-    }
-  }, [])
-
-  useEffect(() => {
-    window.localStorage.setItem(STORAGE, JSON.stringify(filters))
+    const timer = window.setTimeout(() => {
+      void fetch("/api/painel/prefs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(filters),
+      })
+    }, 400)
+    return () => window.clearTimeout(timer)
   }, [filters])
 
   function beep(volume: number) {
@@ -166,6 +172,8 @@ export function SignalBoard(props: Props) {
         minProfit: current.minProfit,
         totalStakeCents: current.autoStake ? null : manualStake,
         sort: current.sort,
+        sport: current.sport,
+        competition: current.competition,
       }),
     })
     if (!response.ok) return
@@ -180,12 +188,18 @@ export function SignalBoard(props: Props) {
     setRealRows(data.realRows ?? [])
     setStakeCents(data.totalStakeCents)
     setBalance(data.balanceCents)
-    if (data.alerted.length) {
-      setAlerts((count) => count + data.alerted.length)
-      window.__fsAlerts = (window.__fsAlerts ?? 0) + data.alerted.length
-      beep(filtersRef.current.volume)
-      setMessage(`Alerta: ${data.alerted.length} sinal novo.`)
+    const keys = new Set(data.signals.map((signal) => signal.key))
+    if (seenRef.current) {
+      const born = [...keys].filter((key) => !seenRef.current?.has(key))
+      if (born.length) {
+        beep(filtersRef.current.volume)
+        setAlerts((count) => count + born.length)
+        window.__fsAlerts = (window.__fsAlerts ?? 0) + born.length
+        setMessage(`Sinal novo: ${born.length}.`)
+      }
     }
+    seenRef.current = keys
+    if (data.alerted.length) setMessage(`Alerta enviado: ${data.alerted.length}.`)
   }
 
   useEffect(() => {
@@ -196,14 +210,23 @@ export function SignalBoard(props: Props) {
 
   const visible = useMemo(() => {
     const query = filters.query.trim().toLocaleLowerCase("pt-BR")
-    const rows = signals.filter((signal) => signal.phase === filters.phase)
-    if (!query) return rows
-    return rows.filter((signal) =>
-      `${signal.eventName} ${signal.sportName} ${signal.market} ${signal.leg1.houseName} ${signal.leg2.houseName}`
+    const rows = signals.filter((signal) => {
+      if (signal.phase !== filters.phase) return false
+      if (filters.sport !== "todos" && signal.sportName !== filters.sport) return false
+      if (filters.competition !== "todos" && signal.competition !== filters.competition) return false
+      if (!query) return true
+      return `${signal.eventName} ${signal.sportName} ${signal.market} ${signal.competition} ${signal.leg1.houseName} ${signal.leg2.houseName}`
         .toLocaleLowerCase("pt-BR")
-        .includes(query),
-    )
-  }, [filters.phase, filters.query, signals])
+        .includes(query)
+    })
+    return [...rows].sort((a, b) => {
+      if (filters.sort === "lucro") return b.profitPercent - a.profitPercent
+      if (filters.sort === "horario") return (a.startsAt ?? "").localeCompare(b.startsAt ?? "")
+      if (filters.sort === "esporte") return a.sportName.localeCompare(b.sportName, "pt-BR")
+      if (filters.sort === "alfa") return a.eventName.localeCompare(b.eventName, "pt-BR")
+      return b.profitPercent - a.profitPercent
+    })
+  }, [filters.competition, filters.phase, filters.query, filters.sort, filters.sport, signals])
   const visibleReal = useMemo(() => {
     const query = filters.query.trim().toLocaleLowerCase("pt-BR")
     return realRows.filter((row) => {
@@ -220,6 +243,8 @@ export function SignalBoard(props: Props) {
   }
 
   async function onLaunch(signal: BoardSignal) {
+    if (pendingKey) return
+    setPendingKey(signal.key)
     setError("")
     const manualStake = centsFromInput(filters.manualStakeReais)
     const result = await launchStakeAction({
@@ -233,7 +258,10 @@ export function SignalBoard(props: Props) {
       minProfit: filters.minProfit,
       totalStakeCents: filters.autoStake ? null : manualStake,
       sort: filters.sort,
+      sport: filters.sport,
+      competition: filters.competition,
     })
+    setPendingKey(null)
     if (!result.ok) {
       setError(result.error)
       return
@@ -335,9 +363,34 @@ export function SignalBoard(props: Props) {
             onChange={(event) => patch({ minProfit: Number(event.target.value.replace(",", ".")) || 0 })}
           />
         </label>
-        <button type="button" className="btn-ghost" onClick={() => patch({ sort: filters.sort === "alfa" ? "clone" : "alfa" })}>
-          {filters.sort === "alfa" ? "Ordem alfabética" : "Ordem por clone"}
-        </button>
+        <label>
+          <span className="label">Ordem</span>
+          <select className="field" value={filters.sort} onChange={(event) => patch({ sort: event.target.value as Filters["sort"] })}>
+            <option value="lucro">Lucro</option>
+            <option value="horario">Horário</option>
+            <option value="esporte">Esporte</option>
+            <option value="alfa">Alfabética</option>
+            <option value="clone">Clone</option>
+          </select>
+        </label>
+        <label>
+          <span className="label">Esporte</span>
+          <select className="field" value={filters.sport} onChange={(event) => patch({ sport: event.target.value })}>
+            <option value="todos">Todos</option>
+            {[...new Set(signals.map((signal) => signal.sportName))].map((sport) => (
+              <option key={sport} value={sport}>{sport}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span className="label">Campeonato</span>
+          <select className="field" value={filters.competition} onChange={(event) => patch({ competition: event.target.value })}>
+            <option value="todos">Todos</option>
+            {[...new Set(signals.map((signal) => signal.competition).filter(Boolean))].map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+        </label>
         <button type="button" className="btn-ghost" onClick={() => patch({ houseIds: props.houses.map((house) => house.id) })}>
           Todas
         </button>
@@ -432,9 +485,9 @@ export function SignalBoard(props: Props) {
           <input type="checkbox" checked={filters.autoStake} onChange={(event) => patch({ autoStake: event.target.checked })} />
           Auto-stake ({props.stakePercent}% da banca)
         </label>
-        {props.quickReais.map((value) => (
-          <button key={value} type="button" className="btn-ghost" onClick={() => patch({ autoStake: false, manualStakeReais: String(value) })}>
-            R$ {value}
+        {props.quickReais.map((value, index) => (
+          <button key={`${value}-${index}`} type="button" className="btn-ghost" onClick={() => patch({ autoStake: false, manualStakeReais: String(value) })}>
+            {props.quickLabels?.[index] || `R$ ${value}`}
           </button>
         ))}
         <label>
@@ -462,7 +515,21 @@ export function SignalBoard(props: Props) {
         </button>
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded-2xl border border-line">
+      <div className="mt-4 grid gap-3 md:hidden">
+        {visible.map((signal) => (
+          <SignalCard
+            key={signal.key}
+            signal={signal}
+            currency={props.currency}
+            open={openKey === signal.key}
+            pending={pendingKey === signal.key}
+            launched={launched.includes(signal.key)}
+            onOpen={() => setOpenKey(openKey === signal.key ? null : signal.key)}
+            onLaunch={() => void onLaunch(signal)}
+          />
+        ))}
+      </div>
+      <div className="mt-4 hidden overflow-x-auto rounded-2xl border border-line md:block">
         <table className="w-full min-w-[860px] text-left text-sm">
           <thead className="bg-felt text-xs uppercase tracking-wide text-mist">
             <tr>
@@ -477,12 +544,13 @@ export function SignalBoard(props: Props) {
           </thead>
           <tbody>
             {visible.map((signal) => (
+              <Fragment key={signal.key}>
               <tr
-                key={signal.key}
                 data-signal={signal.key}
                 data-profit={signal.profitPercent.toFixed(2)}
                 data-highlight={signal.highlight ? "sim" : "nao"}
-                className={signal.highlight ? "bg-[#163222]" : ""}
+                className={signal.highlight ? "bg-[#fff4d6]" : ""}
+                onClick={() => setOpenKey(openKey === signal.key ? null : signal.key)}
               >
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-2">
@@ -501,14 +569,31 @@ export function SignalBoard(props: Props) {
                 <td className="px-3 py-3">
                   <p className="font-display text-2xl text-signal">{percentLabel(signal.profitPercent)}</p>
                   <p className="text-mist">{formatMoney(signal.profitCents, props.currency)}</p>
-                  {signal.highlight ? <p className="text-xs font-semibold uppercase text-[#d7c07a]">Acima de 7%</p> : null}
+                  {signal.highlight ? <p className="text-xs font-semibold uppercase text-[#8a5a00]">Anomalia, raro</p> : null}
+                  {signal.leftoverCents ? <p className="text-xs text-mist">Sobra {formatMoney(signal.leftoverCents, props.currency)}</p> : null}
                 </td>
                 <td className="px-3 py-3">
-                  <button type="button" className="btn-primary" disabled={launched.includes(signal.key)} onClick={() => void onLaunch(signal)}>
-                    {launched.includes(signal.key) ? "Na banca" : "Lançar"}
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={launched.includes(signal.key) || pendingKey === signal.key}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      void onLaunch(signal)
+                    }}
+                  >
+                    {launched.includes(signal.key) ? "Na banca" : pendingKey === signal.key ? "Lançando" : "Lançar"}
                   </button>
                 </td>
               </tr>
+              {openKey === signal.key ? (
+                <tr key={`${signal.key}-open`}>
+                  <td colSpan={7} className="bg-white px-3 py-3">
+                    <SignalDetail signal={signal} currency={props.currency} />
+                  </td>
+                </tr>
+              ) : null}
+              </Fragment>
             ))}
             {visibleReal.map((row) => (
               <tr key={row.key} data-real="sim" data-house={row.houseSlug}>
@@ -546,7 +631,15 @@ export function SignalBoard(props: Props) {
   )
 }
 
+function ageLabel(iso?: string) {
+  if (!iso) return "sem hora"
+  const seconds = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000))
+  if (seconds < 60) return `${seconds}s`
+  return `${Math.floor(seconds / 60)} min`
+}
+
 function Leg({ leg }: { leg: BoardSignal["leg1"] }) {
+  const test = leg.feed !== "ao_vivo" && leg.feed !== "publico"
   return (
     <div className="flex items-center gap-2">
       <img src={leg.logoUrl} alt="" width={28} height={28} className="h-7 w-7 rounded-md" />
@@ -555,8 +648,61 @@ function Leg({ leg }: { leg: BoardSignal["leg1"] }) {
         <p className="text-mist">
           {sideLabel(leg.side)} · {oddLabel(leg.odd)} · {formatMoney(leg.stakeHouseCents, leg.currency)}
         </p>
-        <p className="text-[10px] uppercase tracking-wide text-mist">{feedLabel(leg.feed)}</p>
+        <p className={`text-[10px] font-semibold uppercase tracking-wide ${test ? "text-[#8d2b2b]" : "text-mist"}`}>
+          {test ? "Odd de teste" : feedLabel(leg.feed)}
+        </p>
+        {leg.limitNote ? <p className="text-[10px] text-[#8a5a00]">{leg.limitNote}</p> : null}
+        {test && leg.feedNote ? <p className="text-[10px] text-mist">{leg.feedNote}</p> : null}
       </div>
     </div>
+  )
+}
+
+function SignalDetail({ signal, currency }: { signal: BoardSignal; currency: string }) {
+  return (
+    <div className="grid gap-2 text-sm md:grid-cols-2">
+      <p>Stake {formatMoney(signal.leg1.stakeCents, currency)} na primeira perna e {formatMoney(signal.leg2.stakeCents, currency)} na segunda.</p>
+      <p>Lucro previsto {formatMoney(signal.profitCents, currency)} ({percentLabel(signal.profitPercent)}).</p>
+      <p>Entrou há {ageLabel(signal.firstSeenAt)}. Vista há {ageLabel(signal.updatedAt)}.</p>
+      {signal.leftoverCents ? <p>Sobra do arredondamento: {formatMoney(signal.leftoverCents, currency)}.</p> : null}
+      <p>
+        {signal.leg1.houseUrl ? <a className="underline" href={signal.leg1.houseUrl}>{signal.leg1.houseName}</a> : signal.leg1.houseName}
+        {" · "}
+        {signal.leg2.houseUrl ? <a className="underline" href={signal.leg2.houseUrl}>{signal.leg2.houseName}</a> : signal.leg2.houseName}
+      </p>
+    </div>
+  )
+}
+
+function SignalCard({
+  signal,
+  currency,
+  open,
+  pending,
+  launched,
+  onOpen,
+  onLaunch,
+}: {
+  signal: BoardSignal
+  currency: string
+  open: boolean
+  pending: boolean
+  launched: boolean
+  onOpen: () => void
+  onLaunch: () => void
+}) {
+  return (
+    <article className={`rounded-2xl border border-line bg-white p-4 ${signal.highlight ? "bg-[#fff4d6]" : ""}`}>
+      <button type="button" className="w-full text-left" onClick={onOpen}>
+        <p className="text-xs uppercase text-mist">{signal.sportName}</p>
+        <p className="font-semibold">{signal.eventName}</p>
+        <p className="text-signal">{percentLabel(signal.profitPercent)}</p>
+        {signal.highlight ? <p className="text-xs font-semibold uppercase text-[#8a5a00]">Anomalia, raro</p> : null}
+      </button>
+      {open ? <div className="mt-3"><SignalDetail signal={signal} currency={currency} /></div> : null}
+      <button type="button" className="btn-primary mt-3" disabled={launched || pending} onClick={onLaunch}>
+        {launched ? "Na banca" : pending ? "Lançando" : "Lançar"}
+      </button>
+    </article>
   )
 }

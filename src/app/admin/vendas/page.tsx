@@ -5,6 +5,8 @@ import { Flash } from "@/components/flash"
 import { prisma } from "@/lib/db"
 import { formatDate, formatMoney } from "@/lib/format"
 import { ORDER_STATUSES, orderStatusLabel } from "@/server/labels"
+import { Pager } from "@/components/pager"
+import { pageWindow } from "@/server/paging"
 
 export const dynamic = "force-dynamic"
 
@@ -15,15 +17,18 @@ function reais(cents: number) {
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ erro?: string; ok?: string; pedido?: string }>
+  searchParams: Promise<{ erro?: string; ok?: string; pedido?: string; page?: string }>
 }) {
   const query = await searchParams
-  const [orders, users, plans] = await Promise.all([
+  const window = pageWindow(query.page)
+  const [orders, total, users, plans] = await Promise.all([
     prisma.order.findMany({
       include: { user: true, plan: true, coupon: true, affiliate: true },
       orderBy: { createdAt: "desc" },
-      take: 100,
+      skip: window.skip,
+      take: window.take,
     }),
+    prisma.order.count(),
     prisma.user.findMany({ orderBy: { email: "asc" }, take: 200 }),
     prisma.plan.findMany({ orderBy: { sortOrder: "asc" } }),
   ])
@@ -164,6 +169,7 @@ export default async function OrdersPage({
         ) : (
           <EmptyNote>Nenhum pedido registrado.</EmptyNote>
         )}
+        <Pager page={window.page} pages={Math.max(1, Math.ceil(total / window.take))} href="/admin/vendas" />
       </div>
     </>
   )
